@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <title>Mapbox</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/reset.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.2/css/all.min.css"/>
+    <script src="https://kit.fontawesome.com/872a12cba7.js" crossorigin="anonymous"></script>
+
+    <!--Noto Sans font-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet">
+
+    <!-- bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- mapbox -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.0/mapbox-gl.js"></script>
+    <link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css' type='text/css' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js'></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-language/v1.0.0/mapbox-gl-language.js'></script>
+
+
+    <!-- jQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+    <!-- Turf.js 추가 -->
+    <script src='https://unpkg.com/@turf/turf'></script>
+
+    <!--  proj4  -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+
+    <!--Spectrum-->
+    <script src="https://bgrins.github.io/spectrum/spectrum.js"></script>
+    <link rel='stylesheet' href='/css/spectrum.css'/>
+
+</head>
+<body>
+    <div class="top-nav">
+        <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기"><i class="fa-solid fa-floppy-disk"></i></button>
+        <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
+    </div>
+
+    <div id="map" style="width: calc(100% - 45px); height: calc(100vh - 45px)"></div>
+
+<!--    <div id="mode-change-btn" onclick="toggleWhiteMode()"><i class="fas fa-solid fa-moon" id="mdicon"></i></div>-->
+    <div class="tab-menu">
+        <div class="tab-links" onclick="openTab(event, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="레이어"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="tab-links" onclick="openTab(event, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+        <div class="tab-links" onclick="openTab(event, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성"><i class="fa-solid fa-list"></i></div>
+    </div>
+
+    <div id="tab1" class="tab" style = "display: none;">
+        <div class="tab-title padding-10 basic-font">
+            <h5>레이어</h5>
+            <i class="fa-solid fa-file-pen"  data-bs-toggle='modal' data-bs-target='#pluslayer'></i>
+        </div>
+
+        <div class="layer-file-list basic-font"></div>
+    </div>
+
+    <div id="tab2" class="tab">
+        <div class="tab-title padding-10 basic-font">
+            <h5>도구</h5>
+        </div>
+        <div class="map-style-change padding-10">
+            <label for="map-style" class="select-label">지도 스타일</label>
+            <select name="map-styles" id="map-style" >
+                <option value="streets-v12" class="style-option">Streets</option>
+                <option value="outdoors-v12" class="style-option">Outdoors</option>
+                <option value="light-v11" class="style-option">Light</option>
+                <option value="dark-v11" class="style-option">Dark</option>
+                <option value="satellite-v9" class="style-option">Satellite</option>
+                <option value="satellite-streets-v12" class="style-option">Satellite-streets</option>
+                <option value="navigation-day-v1" class="style-option">Navigation-day</option>
+                <option value="navigation-night-v1" class="style-option">Navigation-night</option>
+            </select>
+        </div>
+        <div class="colors-plan padding-10">
+            <div class="colors-item">
+                <label class="select-label">폴리곤 색상</label>
+                <input type="text" id="polygon-color" onchange="changePolygonColor()">
+            </div>
+        </div>
+        <div class="colors-plan padding-10">
+            <label class="select-label padding-30">폴리곤 선</label>
+            <div class="line-item" title="선 색상">
+                <input type="text" id="line-color" onchange="changeLineColor()" >
+            </div>
+            <input type="number" id="line-width" onchange="changeLineThickness()" value="2.5" title="선 굵기">
+        </div>
+        <div class="colors-plan padding-10">
+            <div class="colors-item">
+                <label class="select-label">라벨 표시</label>
+                <select id="label-list" onchange="displayLabel()">
+                    <option value="none">선택해주세요</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab3" class="tab">
+        <div class="tab-title padding-10 basic-font">
+            <h5>속성 정보</h5>
+            <i class="fa-solid fa-magnifying-glass" onclick="showSearch()"></i>
+        </div>
+        <div id="search-input" style="display: none">
+            <input type="text" ng-model="test" placeholder="검색">
+        </div>
+        <div class="padding-5">
+            <table class="file-class basic-font">
+                <thead>
+                <tr class="property-tit">
+                </tr>
+                </thead>
+            </table>
+        </div>
+            <div class="padding-5 file-class property-list">
+                <table style="table-layout: fixed;" >
+                    <tbody class="property-detail">
+                    </tbody>
+                </table>
+            </div>
+    </div>
+
+    <div id="loading-window">
+        <div class="loading-logo" style="color:white">loading..</div>
+        <div id="loading-bar"></div>
+    </div>
+
+    <div class="modal" id="newpolygon">
+        <div th:insert="~{/html/modal/modal_newPolygon.html::newpolygon}"></div>
+    </div>
+
+    <div class="modal" id="myModal">
+        <div th:insert="~{/html/modal/modal_attr.html::attr}"></div>
+    </div>
+
+    <div class="modal" id="loadFile">
+        <div th:insert="~{/html/modal/modal_loadfile.html::loadfile}"></div>
+    </div>
+
+    <div class="modal" id="pluslayer">
+        <div th:insert="~{/html/modal/modal_layer.html::pluslayer}"></div>
+    </div>
+
+</body>
+<script th:inline="javascript">
+    mapboxgl.accessToken = /*[[${mapboxAccessToken}]]*/ '';
+
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    var fileNm;
+    var dataArr = [];
+    var newProperty = [];
+    var loadProperty = [];
+    var nodeDataArr = [];
+    var linkDataArr = [];
+    var drawArr = []
+    var fileNmList = [];
+    var selectedShp;
+    var polygonColor = '#1aa3ff';
+    var lineColor = '#020202';
+    var lineWidth = 2.5;
+    var tabmenu = document.getElementById("tab");
+    var tabcontent = document.getElementsByClassName("tab");
+    var tablinks = document.getElementsByClassName("tab-links");
+    var propertyArr = []
+    var changeProper;
+    var draw = new MapboxDraw({});
+
+    let hoveredPolygonId = null;
+    let clickedPolygonId = null;
+
+    const mapSelect = document.getElementById('map-style');
+
+    const uploadContainer = document.getElementById('frmFile');
+    const fileInput = document.getElementById('fileInput');
+
+    // 맵박스 초기화
+    const map = new mapboxgl.Map({
+        container: "map",
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [126.88271541564299, 37.48151056694073],
+        zoom: 11,
+    });
+    const language = new MapboxLanguage();
+    map.addControl(language);
+    map.addControl(draw, 'bottom-left')
+
+    // 저장된 파일 고르는 함수
+    $(document).ready(function() {
+        uploadContainer.addEventListener('dragover', handleDragOver);
+        uploadContainer.addEventListener('dragleave', handleDragLeave);
+        uploadContainer.addEventListener('drop', handleDrop);
+
+        $("#polygon-color").spectrum({
+            showPaletteOnly: true,
+            togglePaletteOnly: true,
+            togglePaletteMoreText: '더보기',
+            togglePaletteLessText: '줄이기',
+            color : polygonColor,
+            palette: [
+                ["#000","#444","#666","#999","#ccc","#eee","#f3f3f3","#fff"],
+                ["#f00","#f90","#ff0","#0f0","#0ff","#00f","#90f","#f0f"],
+                ["#f4cccc","#fce5cd","#fff2cc","#d9ead3","#d0e0e3","#cfe2f3","#d9d2e9","#ead1dc"],
+                ["#ea9999","#f9cb9c","#ffe599","#b6d7a8","#a2c4c9","#9fc5e8","#b4a7d6","#d5a6bd"],
+                ["#e06666","#f6b26b","#ffd966","#93c47d","#76a5af","#6fa8dc","#8e7cc3","#c27ba0"],
+                ["#c00","#e69138","#f1c232","#6aa84f","#45818e","#3d85c6","#674ea7","#a64d79"],
+                ["#900","#b45f06","#bf9000","#38761d","#134f5c","#0b5394","#351c75","#741b47"],
+                ["#600","#783f04","#7f6000","#274e13","#0c343d","#073763","#20124d","#4c1130"]
+            ]
+        });
+        $("#line-color").spectrum({
+            showPaletteOnly: true,
+            togglePaletteOnly: true,
+            togglePaletteMoreText: '더보기',
+            togglePaletteLessText: '줄이기',
+            color : lineColor,
+            palette: [
+                ["#000","#444","#666","#999","#ccc","#eee","#f3f3f3","#fff"],
+                ["#f00","#f90","#ff0","#0f0","#0ff","#00f","#90f","#f0f"],
+                ["#f4cccc","#fce5cd","#fff2cc","#d9ead3","#d0e0e3","#cfe2f3","#d9d2e9","#ead1dc"],
+                ["#ea9999","#f9cb9c","#ffe599","#b6d7a8","#a2c4c9","#9fc5e8","#b4a7d6","#d5a6bd"],
+                ["#e06666","#f6b26b","#ffd966","#93c47d","#76a5af","#6fa8dc","#8e7cc3","#c27ba0"],
+                ["#c00","#e69138","#f1c232","#6aa84f","#45818e","#3d85c6","#674ea7","#a64d79"],
+                ["#900","#b45f06","#bf9000","#38761d","#134f5c","#0b5394","#351c75","#741b47"],
+                ["#600","#783f04","#7f6000","#274e13","#0c343d","#073763","#20124d","#4c1130"]
+            ]
+        });
+
+        $('.custom-select').click( function() {
+            $('.options').fadeToggle();
+        })
+    });
+
+
+    function deleteFileList() {
+
+    }
+</script>
+<script src="/js/main.js"></script>
+<script src="/js/layer.js"></script>
+<script src="/js/property.js"></script>
+<script src="/js/polygon.js"></script>
+<script src="/js/node.js"></script>
+<script src="/js/link.js"></script>
+</html>
