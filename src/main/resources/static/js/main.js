@@ -229,6 +229,7 @@ function sendFiles() {
         },
         error: function (error) {
             console.error('Error uploading file:', error);
+            finishLoading();
         }
     });
 }

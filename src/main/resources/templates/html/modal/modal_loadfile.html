@@ -14,27 +14,8 @@
                 <h4 class="modal-title">파일 관리</h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="padding-10">
-                <form id="frmFile" action="/api/uploadShapeFiles" method="post" enctype="multipart/form-data">
-                    <label for="shpData" id="lbShpData">
-                        <div id="file_intro">
-                            <h4>파일을 드래그해서<br>올려주세요.</h4>
-                            <p class="comment">
-                                .shp, .shx, .dbf 는 필수파일입니다.
-                                <br>
-                                최소 위 3개의 파일을 같이 올려주세요.
-                            </p>
-                        </div>
-                        <input name="shpData" id="shpData" type="file" multiple  style="display: none;"/>
-                    </label>
-                </form>
-                <button type="button" class="btn btn-primary btn-send" onclick="sendFiles()">전송</button>
-                <div class="custom-select">
-                    <div class="select-display">이전 파일 불러오기</div>
-                    <div class="options">
-                        <a href="#" th:each="shp : ${shpList}" th:text="${shp.shpName}" th:onclick="'getShpData(' + ${shp.shpId} + ')'"></a>
-                    </div>
-                </div>
+            <div class="padding-10" style="height: 330px;">
+                <iframe id="shpFrame" src="/popup/uploadPage" style="pointer-events: auto; width: 100%; height: 100%;"></iframe>
             </div>
         </div>
     </div>

@@ -182,7 +182,7 @@
 
     const mapSelect = document.getElementById('map-style');
 
-    const uploadContainer = document.getElementById('frmFile');
+    // const uploadContainer = document.getElementById('frmFile');
     const fileInput = document.getElementById('fileInput');
 
     // 맵박스 초기화
@@ -198,9 +198,9 @@
 
     // 저장된 파일 고르는 함수
     $(document).ready(function() {
-        uploadContainer.addEventListener('dragover', handleDragOver);
-        uploadContainer.addEventListener('dragleave', handleDragLeave);
-        uploadContainer.addEventListener('drop', handleDrop);
+        // uploadContainer.addEventListener('dragover', handleDragOver);
+        // uploadContainer.addEventListener('dragleave', handleDragLeave);
+        // uploadContainer.addEventListener('drop', handleDrop);
 
         $("#polygon-color").spectrum({
             showPaletteOnly: true,
@@ -237,9 +237,9 @@
             ]
         });
 
-        $('.custom-select').click( function() {
-            $('.options').fadeToggle();
-        })
+        // $('.custom-select').click( function() {
+        //     $('.options').fadeToggle();
+        // })
     });
 
 
