@@ -55,10 +55,12 @@
         })
 
         if (jsonData != null) {
-            parent.dataArr[fileName] = jsonData
-            jsonData = null
+            parent.dataArr[jsonData.fileName] = jsonData
             parent.hideModal('loadFile')
             parent.finishLoading();
+            parent.drawShpData(jsonData)
+
+            jsonData = null
         }
     });
 

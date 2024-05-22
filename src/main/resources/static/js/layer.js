@@ -121,8 +121,11 @@ function createLayer(data, type) {
         '<li onclick="saveShp(\''+data.fileName+'\')" class="dropdown-item">저장</li>' +
         '<li onclick="removePolygon(\''+data.fileName+'\')" class="dropdown-item">삭제</li>' +
         '</ul></div></div>'
+
     $(".layer-file-list").append(html);
+
     fileNmList.push(data.fileName)
+
     selectedLayer(data.fileName)
 }
 
@@ -147,5 +150,5 @@ function selectedLayer(obj) {
         html = "<option value="+title[i]+">"+title[i]+"</option>"
         $("#label-list").append(html)
     }
-    getProperties()
+    // getProperties()
 }

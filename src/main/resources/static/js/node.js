@@ -1,42 +1,50 @@
 function drawNodePoint(data) {
-    let count = 0;
-    for (const key in dataArr) {
-        if (key.indexOf(data.fileName) > -1) {count++;}
-    }
-    if (count > 0 ) {
-        data.fileName = data.fileName+'_'+count
-    }
-
-    dataArr[data.fileName] = data
-    newProperty[data.fileName] = data.data.features[0].properties
-
-    var tData = {
-        type: 'geojson',
-        data: {
-            type : 'FeatureCollection',
-            features :data.data.features
+    return new Promise(function (resolve, reject) {
+        let count = 0;
+        for (const key in dataArr) {
+            if (key.indexOf(data.fileName) > -1) { count++; }
         }
-    }
+        if (count > 0) {
+            data.fileName = data.fileName + '_' + count;
+        }
 
-    map.addSource("nodeData_"+data.fileName, tData);
-    map.addLayer({
-        'id': 'points_'+data.fileName,
-        'type': 'circle',
-        'source': 'nodeData_'+data.fileName,
-        'paint': {
-            'circle-radius': 6, // 점의 반지름 설정
-            'circle-color': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                '#007dd2', // 클릭한 점의 색상
-                '#1aa3ff', // 클릭하지 않은 점의 색상
-            ],
-            'circle-opacity': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                1,
-                1
-            ]
+        dataArr[data.fileName] = data;
+        newProperty[data.fileName] = data.data.features[0].properties;
+
+        var tData = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: data.data.features
+            }
+        };
+
+        try {
+            map.addSource("nodeData_" + data.fileName, tData);
+            map.addLayer({
+                'id': 'points_' + data.fileName,
+                'type': 'circle',
+                'source': 'nodeData_' + data.fileName,
+                'paint': {
+                    'circle-radius': 6,
+                    'circle-color': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        '#007dd2',
+                        '#1aa3ff'
+                    ],
+                    'circle-opacity': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        1,
+                        1
+                    ]
+                }
+            });
+
+            resolve();
+        } catch (error) {
+            reject(error);
         }
     });
 }

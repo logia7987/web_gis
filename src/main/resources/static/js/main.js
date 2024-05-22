@@ -163,7 +163,6 @@ function setMapBounds(data) {
     }
 }
 
-// 리스트에 db에 저장된 파일 가져오는 함수
 function sendFiles() {
     hideModal('loadFile')
 
@@ -217,15 +216,15 @@ function sendFiles() {
             * LineString: [[longitude1, latitude1], [longitude2, latitude2], ...]
             * Polygon: [[[longitude1, latitude1], [longitude2, latitude2], ...], ...]
             */
-            const dataType = checkDataType(data);
-            if (dataType === "Point")  {
-                drawNodePoint(data);
-            } else if (dataType === "MultiLineString") {
-                drawLinkLine(data)
-            } else {
-                drawPolyline(data);
-            }
-            createLayer(data, dataType);
+            // const dataType = checkDataType(data);
+            // if (dataType === "Point")  {
+            //     drawNodePoint(data);
+            // } else if (dataType === "MultiLineString") {
+            //     drawLinkLine(data)
+            // } else {
+            //     drawPolyline(data);
+            // }
+            // createLayer(data, dataType);
         },
         error: function (error) {
             console.error('Error uploading file:', error);
@@ -422,5 +421,24 @@ function handleDrop(e) {
             $("#file_intro").append(html)
             $("#shpData").prop("files", e.dataTransfer.files)
         }
+    }
+}
+
+function drawShpData(data) {
+    const dataType = checkDataType(data);
+    
+    // 메모리 누수 방지를 위해 확실히 종료된 후에 createLayer 를 실행
+    if (dataType === "Point") {
+        drawNodePoint(data).then(function () {
+            createLayer(data, dataType);
+        });
+    } else if (dataType === "MultiLineString") {
+        drawLinkLine(data).then(function () {
+            createLayer(data, dataType);
+        })
+    } else {
+        drawPolyline(data).then(function () {
+            createLayer(data, dataType);
+        });
     }
 }

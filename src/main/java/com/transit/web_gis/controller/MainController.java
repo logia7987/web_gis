@@ -40,9 +40,13 @@ public class MainController {
             File jsonFile = new File(jsonFilePath);
             try (FileReader reader = new FileReader(jsonFile)) {
                 JSONParser parser = new JSONParser();
+                JSONObject resultObj = new JSONObject();
                 JSONObject jsonObj = (JSONObject) parser.parse(reader);
-                model.addAttribute("jsonData", jsonObj);
-                model.addAttribute("fileName", fileName);
+
+                resultObj.put("data", jsonObj);
+                resultObj.put("fileName", fileName);
+
+                model.addAttribute("jsonData", resultObj);
             } catch (IOException | ParseException e) {
                 e.printStackTrace();
                 model.addAttribute("error", "JSON 파일 읽기 중 오류 발생");

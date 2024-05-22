@@ -1,35 +1,38 @@
-function polygon(data) {
-    var tData = {
-        type: 'geojson',
-        data: {
-            type : 'FeatureCollection',
-            features : data
+function drawPolyline(data) {
+    return new Promise(function (resolve, reject) {
+        const sourceId = "polylineData_" + data.fileName;
+        const layerId = "polylines_" + data.fileName;
+
+        if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
         }
-    }
-    map.addSource("data_"+fileNm, tData);
-    map.addLayer({
-        'id': 'polygons_'+fileNm,
-        'type': 'fill',
-        'source': 'data_'+fileNm,
-        'layout': {},
-        'paint': {
-            'fill-color': polygonColor,
-            'fill-opacity': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                1,
-                0.5
-            ]
+        if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
         }
-    });
-    map.addLayer({
-        'id': 'outline_'+fileNm,
-        'type': 'line',
-        'source': 'data_'+fileNm,
-        'layout': {},
-        'paint': {
-            'line-color': lineColor,
-            'line-width': Number(lineWidth),
+
+        var tData = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: data.data.features
+            }
+        };
+
+        try {
+            map.addSource(sourceId, tData);
+            map.addLayer({
+                'id': layerId,
+                'type': 'line',
+                'source': sourceId,
+                'paint': {
+                    'line-color': '#007dd2',
+                    'line-width': 2
+                }
+            });
+
+            resolve();
+        } catch (error) {
+            reject(error);
         }
     });
 }

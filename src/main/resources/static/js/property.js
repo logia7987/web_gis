@@ -17,6 +17,7 @@ function getProperties() {
         titArr.push(tit)
     }
 
+    var detail = "";
     for (j = 0; j < dataArr[fileNm].data.features.length; j++) {
         detail = "<tr>"
         for (k = 0; k < titArr.length; k++) {
@@ -25,7 +26,7 @@ function getProperties() {
             detail += proprty;
         }
         detail += "</tr>"
-        $(".property-detail").append(detail)
+        $(".property-detail").empty().append(detail)
     }
 }
 
