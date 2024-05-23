@@ -1,11 +1,13 @@
 function drawNodePoint(data) {
     return new Promise(function (resolve, reject) {
-        let count = 0;
-        for (const key in dataArr) {
-            if (key.indexOf(data.fileName) > -1) { count++; }
+        const sourceId = "data_" + data.fileName;
+        const layerId = "nodes_" + data.fileName;
+
+        if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
         }
-        if (count > 0) {
-            data.fileName = data.fileName + '_' + count;
+        if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
         }
 
         dataArr[data.fileName] = data;
@@ -20,11 +22,11 @@ function drawNodePoint(data) {
         };
 
         try {
-            map.addSource("nodeData_" + data.fileName, tData);
+            map.addSource(sourceId, tData);
             map.addLayer({
-                'id': 'points_' + data.fileName,
+                'id': layerId,
                 'type': 'circle',
-                'source': 'nodeData_' + data.fileName,
+                'source': sourceId,
                 'paint': {
                     'circle-radius': 6,
                     'circle-color': [
@@ -53,7 +55,7 @@ function getNodeDetail() {
     $('.mapboxgl-ctrl-group').show()
     $('.mapboxgl-gl-draw_line,.mapboxgl-gl-draw_point,.mapboxgl-gl-draw_combine,.mapboxgl-gl-draw_uncombine').hide()
 
-    getProperties()
+    // getProperties()
 
     if (map.getLayer('nodes_'+fileNm) !== undefined) {
         for (i = 0; i < fileNmList.length; i++) {

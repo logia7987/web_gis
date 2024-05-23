@@ -10,6 +10,9 @@ function drawPolyline(data) {
             map.removeLayer(layerId);
         }
 
+        dataArr[data.fileName] = data;
+        newProperty[data.fileName] = data.data.features[0].properties;
+
         var tData = {
             type: 'geojson',
             data: {
