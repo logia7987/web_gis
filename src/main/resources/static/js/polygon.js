@@ -1,14 +1,9 @@
 function drawPolyline(data) {
     return new Promise(function (resolve, reject) {
-        const sourceId = "polylineData_" + data.fileName;
+        const sourceId = "data_" + data.fileName;
         const layerId = "polylines_" + data.fileName;
 
-        if (map.getSource(sourceId)) {
-            map.removeSource(sourceId);
-        }
-        if (map.getLayer(layerId)) {
-            map.removeLayer(layerId);
-        }
+        checkHasSource(sourceId, layerId)
 
         var tData = {
             type: 'geojson',
@@ -36,57 +31,6 @@ function drawPolyline(data) {
         }
     });
 }
-
-function drawPolyline(data) {
-    let count = 0;
-    for (const key in dataArr) {
-        if (key.indexOf(data.fileName) > -1) {count++;}
-    }
-    if (count > 1 ) {
-        data.fileName = data.fileName+'_'+count
-    }
-
-    dataArr[data.fileName] = data
-    newProperty[data.fileName] = data.data.features[0].properties
-
-    var tData = {
-        type: 'geojson',
-        data: {
-            type : 'FeatureCollection',
-            features :data.data.features
-        }
-    }
-
-    setMapBounds(data.data);
-    map.addSource("data_"+data.fileName, tData);
-    map.addLayer({
-        'id': 'polygons_'+data.fileName,
-        'type': 'fill',
-        'source': 'data_'+data.fileName,
-        'paint': {
-            'fill-color': polygonColor,
-            'fill-opacity': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                1,
-                0.5
-            ]
-        }
-    });
-
-    map.addLayer({
-        'id': 'outline_'+data.fileName,
-        'type': 'line',
-        'source': 'data_'+data.fileName,
-        'layout': {},
-        'paint': {
-            'line-color': lineColor,
-            'line-width': Number(lineWidth)
-        }
-    });
-
-}
-
 function polygonDetail() {
     $('.mapboxgl-ctrl-group').show()
     $('.mapboxgl-gl-draw_line,.mapboxgl-gl-draw_point,.mapboxgl-gl-draw_combine,.mapboxgl-gl-draw_uncombine').hide()
@@ -95,8 +39,8 @@ function polygonDetail() {
         $(".line-item .sp-preview-inner ").css("background-color", map.getPaintProperty('outline_'+fileNm,'line-color'))
         $("#line-width").val(map.getPaintProperty('outline_'+fileNm,'line-width'))
     }
-    getProperties()
-    openTab(event, 'tab3')
+    // getProperties()
+    // openTab(event, 'tab3')
     // if (tabmenu.style.color === "#020202" || tabmenu.style.color === "" || tabmenu.style.color === "rgb(2, 2, 2)"){
     //     tablinks[2].classList.add("active-white");
     // } else {
@@ -124,7 +68,7 @@ function polygonDetail() {
                 }
                 $('#'+ id).parent().addClass("selected")
 
-                openTab(event, 'tab3')
+                // openTab(event, 'tab3')
                 // if (tabmenu.style.color === "#020202" || tabmenu.style.color === "" || tabmenu.style.color === "rgb(2, 2, 2)"){
                 //     tablinks[2].classList.add("active-white");
                 // } else {

@@ -1,12 +1,9 @@
 function drawNodePoint(data) {
     return new Promise(function (resolve, reject) {
-        let count = 0;
-        for (const key in dataArr) {
-            if (key.indexOf(data.fileName) > -1) { count++; }
-        }
-        if (count > 0) {
-            data.fileName = data.fileName + '_' + count;
-        }
+        const sourceId = "data_" + data.fileName;
+        const layerId = "nodes_" + data.fileName;
+
+        checkHasSource(sourceId, layerId)
 
         dataArr[data.fileName] = data;
         newProperty[data.fileName] = data.data.features[0].properties;
@@ -20,11 +17,11 @@ function drawNodePoint(data) {
         };
 
         try {
-            map.addSource("nodeData_" + data.fileName, tData);
+            map.addSource(sourceId, tData);
             map.addLayer({
-                'id': 'points_' + data.fileName,
+                'id': layerId,
                 'type': 'circle',
-                'source': 'nodeData_' + data.fileName,
+                'source': sourceId,
                 'paint': {
                     'circle-radius': 6,
                     'circle-color': [
@@ -39,53 +36,46 @@ function drawNodePoint(data) {
                         1,
                         1
                     ]
-                }
+                },
+                'filter': ['>', ['zoom'], 13]
+            });
+
+            // 링크를 클릭했을 때의 이벤트 핸들러
+            map.on('click', layerId, function (e) {
+                handleFeatureSelection(e.features[0]);
             });
 
             resolve();
         } catch (error) {
             reject(error);
         }
+
+
     });
 }
 
 function getNodeDetail() {
-    $('.mapboxgl-ctrl-group').show()
-    $('.mapboxgl-gl-draw_line,.mapboxgl-gl-draw_point,.mapboxgl-gl-draw_combine,.mapboxgl-gl-draw_uncombine').hide()
+    if (map.getLayer('nodes_' + fileNm) !== undefined) {
+        // 현재 선택된 노드 표시
+        map.on('click', function (e) {
+            // 클릭한 위치에서 가장 가까운 노드 찾기
+            var features = map.queryRenderedFeatures(e.point, { layers: ['nodes_' + fileNm] });
 
-    getProperties()
-
-    if (map.getLayer('nodes_'+fileNm) !== undefined) {
-        for (i = 0; i < fileNmList.length; i++) {
-            map.on('mousemove', 'nodes_'+ fileNmList[i], function () {})
-            map.on('mouseleave', 'nodes_'+ fileNmList[i], function () {})
-            map.on('click', 'nodes_'+ fileNmList[i], function () {})
-            map.setPaintProperty('nodes_'+fileNmList[i],'fill-opacity', 0.5);
-        }
-        var opacity = ['case', ['boolean', ['feature-state', 'hover'], false], 1, 0.5]
-        map.setPaintProperty('nodes_'+fileNm,'fill-opacity', opacity);
-        map.on('click', 'nodes_'+fileNm, function (e) {
-            selectedShp = e.features[0]
-            if (e.features[0].layer.id === 'nodes_'+fileNm) {
-                var property = "";
-                var id = selectedShp.properties.DIST1_ID;
-                var info = dataArr[fileNm].data.features
-                for (i = 0; i < info.length; i++) {
-                    if (info[i].properties.DIST1_ID === id) {
-                        property = info[i]
-                    }
-                }
-                $('#'+ id).parent().addClass("selected")
-
-                editShp(property)
+            if (features.length > 0) {
+                // 가장 가까운 노드에 대한 작업 수행
+                handleFeatureSelection(features[0]);
             }
         });
-
-        // map.on('mousemove', 'nodes_'+fileNm, (e) => {
-        //     selectedShp = e.features
-        // });
-        // map.on('mouseleave', 'nodes_'+fileNm, () => {
-        //
-        // });
     }
+}
+
+// 노드 속성 찾기
+function findProperty(id) {
+    const info = dataArr[fileNm].data.features;
+    for (let i = 0; i < info.length; i++) {
+        if (Number(info[i].id) === id) {
+            return info[i];
+        }
+    }
+    return null;
 }

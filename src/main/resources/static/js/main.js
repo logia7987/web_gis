@@ -258,30 +258,38 @@ function removePolygon(key) {
     }
 }
 function editShp(property) {
-    // var label = $('#label-list').val()
-    var geoData = map.getSource('data_' + fileNm)._options.data.features
-    $('.mapboxgl-ctrl-group').show()
-    $('.mapboxgl-gl-draw_line,.mapboxgl-gl-draw_point,.mapboxgl-gl-draw_combine,.mapboxgl-gl-draw_uncombine').hide()
-    if (draw.getAll().features.length > 0) {
-        draw.getAll().features.forEach(function(drawElement) {
-            for (var i = 0; i < dataArr[fileNm].data.features.length; i++) {
-                if (dataArr[fileNm].data.features[i].id === drawElement.id) {
-                    dataArr[fileNm].data.features[i] = drawElement;
-                }
+    // 맵에서 데이터를 가져옴
+    var geoData = map.getSource('data_' + fileNm)._options.data.features;
+
+    // 그리기 도구를 숨기고 표시
+    $('.mapboxgl-ctrl-group').show();
+    $('.mapboxgl-gl-draw_line, .mapboxgl-gl-draw_point, .mapboxgl-gl-draw_combine, .mapboxgl-gl-draw_uncombine').hide();
+
+    // 현재 그려진 도형들을 가져와서 갱신
+    draw.getAll().features.forEach(function(drawElement) {
+        // 데이터 배열에서 해당 ID를 가진 도형을 찾아 갱신
+        for (var i = 0; i < geoData.length; i++) {
+            if (geoData[i].id === drawElement.id) {
+                geoData[i] = drawElement;
+                break; // 해당 도형을 찾았으므로 더 이상 반복할 필요가 없음
             }
-        });
-    }
+        }
+    });
+
+    // 주어진 속성의 ID와 일치하는 항목을 찾아 제거하고 새로운 속성 추가
     for (var i = 0; i < geoData.length; i++) {
         if (geoData[i].id === property.id) {
-            geoData.splice(i, 1)
-            draw.add(property)
+            // 해당 ID와 일치하는 도형을 제거하고 새로운 속성을 추가
+            geoData.splice(i, 1);
+            draw.add(property);
+            break; // 해당 도형을 찾았으므로 더 이상 반복할 필요가 없음
         }
     }
-    var updatedFeatures = geoData;
-    // Set the updated data
+
+    // 업데이트된 데이터를 설정하여 맵의 데이터를 업데이트
     map.getSource('data_' + fileNm).setData({
         type: 'FeatureCollection',
-        features: updatedFeatures
+        features: geoData
     });
 }
 
@@ -307,7 +315,7 @@ function changeEditMode() {
         var type = $($(".selected").find(".fa-solid")[0]).attr("class")
         loadProperty = dataArr
         if (type === 'fa-solid fa-ellipsis-vertical')  {
-
+            getLinkDetail()
         } else if (type === 'fa-solid fa-share-nodes') {
             getNodeDetail()
         } else {
@@ -315,11 +323,8 @@ function changeEditMode() {
         }
     } else if ( $('#btn-status').text() === '편집 모드') {
         $('.mapboxgl-ctrl-group').hide()
-        // var item = document.getElementsByClassName("file-info-item");
         $('#btn-status').text("보기 모드")
-        // for (i = 0; i < item.length; i++) {
-        //     item[i].classList.remove("selected");
-        // }
+
         if (draw.getAll().features.length > 0) {
             for (i = 0; i < draw.getAll().features.length; i++) {
                 map.getSource('data_' + fileNm)._options.data.features.push(draw.getAll().features[i])
@@ -440,5 +445,100 @@ function drawShpData(data) {
         drawPolyline(data).then(function () {
             createLayer(data, dataType);
         });
+    }
+}
+// 지도범위 내의 피처만 표시하게 하는 함수
+function renderDataOnMapViewport() {
+    var zoomVal = map.getZoom()
+    // 줌이 14이상일때 검사하게
+    if (zoomVal >= 14 && fileNm != undefined) {
+        var bounds = map.getBounds(); // 현재 지도의 경계 좌표를 가져옵니다.
+        var dataInView = [];
+
+        var feartureList = dataArr[fileNm].data.features
+        var datatype = checkDataType(dataArr[fileNm]);
+        // 데이터셋에서 현재 화면에 보이는 영역 내의 데이터를 필터링합니다.
+        for (var i = 0; i < feartureList.length; i++) {
+            var feature = feartureList[i];
+            if (isFeatureInView(feature, bounds, datatype)) {
+                dataInView.push(feature);
+            }
+        }
+
+        // 타입에 맞는 도형 또는 점, 선을 그리게
+        console.log(dataInView)
+        // 두가지의 함수를 써야하여 고민 중
+    }
+}
+
+// 특정 피처가 주어진 경계 내에 있는지 확인하는 함수
+function isFeatureInView(feature, bounds, type) {
+    // 피처의 경계 상자를 가져옵니다.
+    var featureBounds = getBoundingBox(feature.geometry.coordinates, type);
+
+    // 피처의 경계 상자가 지도의 경계 내에 있는지 확인합니다.
+    return bounds.contains(featureBounds);
+}
+
+// 피처의 경계 상자를 계산하는 함수
+function getBoundingBox(coordinates, type) {
+    // 특정 지오메트리 유형(점, 선, 다각형 등)의 경계 상자를 계산하는 방법은 유형에 따라 다를 수 있습니다.
+    let i;
+    // 지금은 간단히 예시를 들기 위해 선(라인)의 경우 시작점과 끝점을 이용하여 경계 상자를 계산합니다.
+    var minX = Infinity;
+    var minY = Infinity;
+    var maxX = -Infinity;
+    var maxY = -Infinity;
+
+    var targetList;
+    if (type === "Point")  {
+        targetList = coordinates
+    } else if (type === "MultiLineString") {
+        targetList = coordinates[0]
+    }
+    for (i = 0; i < targetList.length; i++) {
+        var point = targetList[i];
+        minX = Math.min(minX, point[0]);
+        minY = Math.min(minY, point[1]);
+        maxX = Math.max(maxX, point[0]);
+        maxY = Math.max(maxY, point[1]);
+    }
+
+    return [[minX, minY], [maxX, maxY]];
+}
+
+// "moveend" 이벤트와 "zoomend" 이벤트에 대한 이벤트 핸들러 등록
+// 오류있어서 보류
+// map.on('moveend', renderDataOnMapViewport);
+// map.on('zoomend', renderDataOnMapViewport);
+
+function handleFeatureSelection(e) {
+    // 편집모드 클릭과 일반클릭을 분리
+    if (isEdit()) {
+        selectedShp = e;
+        const property = findProperty(selectedShp.id);
+        if (property) {
+            $('#' + selectedShp.id).parent().addClass("selected");
+            editShp(property);
+        }
+    } else {
+        alert("보기 모드 클릭")
+    }
+}
+
+function isEdit() {
+    if ($('#btn-status').text() === '편집 모드') {
+        return true
+    } else {
+        return false
+    }
+}
+
+function checkHasSource(sourceId, layerId) {
+    if (map.getSource(sourceId)) {
+        map.removeSource(sourceId);
+    }
+    if (map.getLayer(layerId)) {
+        map.removeLayer(layerId);
     }
 }
