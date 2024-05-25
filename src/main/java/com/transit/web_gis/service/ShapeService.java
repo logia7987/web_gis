@@ -65,9 +65,6 @@ public class ShapeService {
         } finally {
             // 사용한 SimpleFeatureIterator를 닫아줌
             store.dispose();
-            // tempDir을 삭제하여 메모리 누수 방지
-//            FileUtils.deleteDirectory(tempDir);
-//            System.out.println("폴더 삭제 완료");
         }
     }
 

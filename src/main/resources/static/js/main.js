@@ -515,14 +515,26 @@ function getBoundingBox(coordinates, type) {
 function handleFeatureSelection(e) {
     // 편집모드 클릭과 일반클릭을 분리
     if (isEdit()) {
-        selectedShp = e;
+        selectedShp = e.features[0];
         const property = findProperty(selectedShp.id);
         if (property) {
             $('#' + selectedShp.id).parent().addClass("selected");
             editShp(property);
         }
     } else {
-        alert("보기 모드 클릭")
+        // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
+        const properties = e.features[0].properties;
+        let propertyHtml = '<div>';
+        for (const key in properties) {
+            propertyHtml += '<p>' + key + ': ' + properties[key] + '</p>';
+        }
+        propertyHtml += '</div>';
+
+        // 인포윈도우 열기
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(propertyHtml)
+            .addTo(map);
     }
 }
 
@@ -541,4 +553,94 @@ function checkHasSource(sourceId, layerId) {
     if (map.getLayer(layerId)) {
         map.removeLayer(layerId);
     }
+}
+
+function checkDistance() {
+    draw.changeMode('draw_line_string');
+
+    map.on('draw.create', function(e) {
+        updateMeasurement(e)
+        distanceId = e.features[0].id; // 선의 ID 저장
+    });
+    map.on('draw.update', updateMeasurement);
+}
+
+var distancePopup = null
+var distanceId = null;
+function updateMeasurement(e) {
+    var features = e.features;
+    var totalDistance = 0;
+    var lastCoord;
+
+    features.forEach(function(feature) {
+        if (feature.geometry.type === 'LineString') {
+            var coordinates = feature.geometry.coordinates;
+
+            for (var i = 0; i < coordinates.length - 1; i++) {
+                totalDistance += calculateDistance(coordinates[i], coordinates[i + 1]);
+            }
+
+            lastCoord = coordinates[coordinates.length - 1];
+        }
+    });
+
+    if (lastCoord) {
+        // 거리를 조건에 따라 km 또는 m 단위로 표시
+        var distanceText = totalDistance >= 1
+            ? totalDistance.toFixed(2) + ' km'
+            : (totalDistance * 1000).toFixed(2) + ' m';
+
+        console.log('Creating popup at', lastCoord, 'with distance', distanceText);
+
+        // 기존 팝업 제거
+        if (distancePopup) {
+            distancePopup.remove();
+        }
+
+        var popupOptions = {
+            closeOnClick: false, // 클릭 시 닫히지 않음
+            closeButton: true // 닫기 버튼 표시
+        };
+        // 새로운 팝업 생성
+        distancePopup = new mapboxgl.Popup(popupOptions)
+            .setLngLat(lastCoord)
+            .setHTML('총 거리 : ' + distanceText + '<br><button onclick="endMeasurement()">종료</button>')
+            .addTo(map);
+    }
+}
+
+function endMeasurement() {
+    if (distanceId) {
+        // 그려진 선 삭제
+        draw.delete(distanceId);
+        distanceId = null; // 저장된 선 ID 초기화
+    }
+
+    if (distancePopup) {
+        distancePopup.remove();
+    }
+    draw.changeMode('simple_select'); // 측정 모드 종료
+}
+
+function calculateDistance(coord1, coord2) {
+    var lat1 = coord1[1];
+    var lon1 = coord1[0];
+    var lat2 = coord2[1];
+    var lon2 = coord2[0];
+
+    var R = 6371; // 지구 반지름km
+    var dLat = deg2rad(lat2 - lat1);
+    var dLon = deg2rad(lon2 - lon1);
+    var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    ;
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    var d = R * c; // km 단위
+    return d;
+}
+
+function deg2rad(deg) {
+    return deg * (Math.PI / 180)
 }

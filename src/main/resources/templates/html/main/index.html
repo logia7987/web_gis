@@ -44,6 +44,12 @@
     <div class="top-nav">
         <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기"><i class="fa-solid fa-floppy-disk"></i></button>
         <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
+
+        <div style="float:right;margin-right: 10px;">
+            <button class="top-btn" onclick="checkDistance();">
+                <p id="btn-distance">거리측정</p>
+            </button>
+        </div>
     </div>
 
     <div id="map" style="width: calc(100% - 45px); height: calc(100vh - 45px)"></div>
@@ -175,7 +181,13 @@
     var tablinks = document.getElementsByClassName("tab-links");
     var propertyArr = []
     var changeProper;
-    var draw = new MapboxDraw({});
+    var draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {
+            line_string: true,
+            trash: true
+        }
+    });
 
     let hoveredPolygonId = null;
     let clickedPolygonId = null;
@@ -195,6 +207,7 @@
     const language = new MapboxLanguage();
     map.addControl(language);
     map.addControl(draw, 'bottom-left')
+
 
     // 저장된 파일 고르는 함수
     $(document).ready(function() {

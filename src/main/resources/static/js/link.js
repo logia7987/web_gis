@@ -38,7 +38,7 @@ function drawLinkLine(data) {
 
             // 링크를 클릭했을 때의 이벤트 핸들러
             map.on('click', layerId, function (e) {
-                handleLinkSelection(e.features[0]);
+                handleFeatureSelection(e);
             });
 
             resolve();

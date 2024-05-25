@@ -42,7 +42,7 @@ function drawNodePoint(data) {
 
             // 링크를 클릭했을 때의 이벤트 핸들러
             map.on('click', layerId, function (e) {
-                handleFeatureSelection(e.features[0]);
+                handleFeatureSelection(e);
             });
 
             resolve();
