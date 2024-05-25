@@ -338,7 +338,7 @@ function changeEditMode() {
         });
         dataArr[fileNm].data.features = map.getSource('data_' + fileNm)._options.data.features
         loadProperty = dataArr
-        getProperties()
+        // getProperties()
         draw.deleteAll();
         propertyArr = []
         drawArr = []
@@ -346,7 +346,7 @@ function changeEditMode() {
         drawArr = []
         propertyArr = []
         loadProperty = dataArr
-        getProperties()
+        // getProperties()
     } else {
         alert('편집된 부분이 없습니다')
     }

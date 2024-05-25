@@ -5,6 +5,9 @@ function drawPolyline(data) {
 
         checkHasSource(sourceId, layerId)
 
+        dataArr[data.fileName] = data;
+        newProperty[data.fileName] = data.data.features[0].properties;
+
         var tData = {
             type: 'geojson',
             data: {

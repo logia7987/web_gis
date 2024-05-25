@@ -3,10 +3,12 @@ function drawLinkLine(data) {
         const sourceId = "data_" + data.fileName;
         const layerId = "links_" + data.fileName;
 
-        checkHasSource(sourceId, layerId)
-
-        dataArr[data.fileName] = data;
-        newProperty[data.fileName] = data.data.features[0].properties;
+        if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
+        }
+        if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
+        }
 
         var tData = {
             type: 'geojson',
