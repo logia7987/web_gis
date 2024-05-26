@@ -1,7 +1,7 @@
 function drawPolyline(data) {
     return new Promise(function (resolve, reject) {
         const sourceId = "data_" + data.fileName;
-        const layerId = "polylines_" + data.fileName;
+        const layerId = "polygons_" + data.fileName;
 
         checkHasSource(sourceId, layerId)
 
