@@ -31,12 +31,6 @@
             </label>
         </form>
         <button type="button" class="btn btn-primary btn-send" onclick="sendFiles()">전송</button>
-        <div class="custom-select">
-            <div class="select-display">이전 파일 불러오기</div>
-            <div class="options">
-                <a href="#" th:each="shp : ${shpList}" th:text="${shp.shpName}" th:onclick="'getShpData(' + ${shp.shpId} + ')'"></a>
-            </div>
-        </div>
     </div>
 </body>
 <script th:inline="javascript">

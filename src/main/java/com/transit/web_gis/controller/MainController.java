@@ -1,10 +1,12 @@
 package com.transit.web_gis.controller;
 
+import com.transit.web_gis.service.ShpService;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,12 +22,16 @@ public class MainController {
     @Value("${mapbox.accessToken}")
     private String mapboxAccessToken;
 
+    @Autowired
+    private ShpService shpService;
+
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
 
     @GetMapping("/")
     public String mainView(Model model) {
 
         model.addAttribute("mapboxAccessToken", mapboxAccessToken);
+        model.addAttribute("shpList", shpService.selectShp());
         return "html/main/index";
     }
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTO Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.transit.web_gis.mapper.ShpMapper">
+    <select id="selectGeometry" resultType="com.transit.web_gis.vo.GeometryVo" parameterType="com.transit.web_gis.vo.GeometryVo">
+        SELECT *
+        FROM GEOMETRY_TABLE
+        WHERE FEATURE_ID = #{featureId}
+    </select>
+
+    <insert id="insertGeometry" parameterType="com.transit.web_gis.vo.GeometryVo">
+        INSERT INTO GEOMETRY_TABLE (COORDINATES, TYPE, FEATURE_ID)
+        VALUES (
+            #{coordinates},
+            #{type},
+            #{featureId}
+        )
+    </insert>
+</mapper>

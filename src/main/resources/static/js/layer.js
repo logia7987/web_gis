@@ -138,9 +138,9 @@ function createLayer(data, type) {
     html += '<div class="layer-file basic-font selected" id=\''+data.fileName+'\'>';
     html += '<input type="checkbox" id="check_'+data.fileName+'" onclick="showHideLayer(\''+data.fileName+'\')" checked >';
     if (type === "Point") {
-        html += '<i class="fa-solid fa-share-nodes"></i>'
-    } else if (type === "MultiLineString") {
         html += '<i class="fa-brands fa-hashnode"></i>'
+    } else if (type === "MultiLineString") {
+        html += '<i class="fa-solid fa-share-nodes"></i>'
     } else {
         html += '<i class="fa-solid fa-draw-polygon"></i>'
     }
@@ -150,7 +150,7 @@ function createLayer(data, type) {
     html += '<div class="dropdown"> ' +
         '<i class="fa-solid fa-ellipsis-vertical" data-bs-toggle="dropdown"></i></button> <ul class="dropdown-menu">' +
         '<li onclick="saveShp(\''+data.fileName+'\')" class="dropdown-item">저장</li>' +
-        '<li onclick="removePolygon(\''+data.fileName+'\')" class="dropdown-item">삭제</li>' +
+        '<li onclick="removeLayer(\''+data.fileName+'\')" class="dropdown-item">삭제</li>' +
         '</ul></div></div>'
 
     $(".layer-file-list").append(html);

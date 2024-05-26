@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTO Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.transit.web_gis.mapper.ShpMapper">
+    <select id="selectFeatureList" resultType="com.transit.web_gis.vo.FeatureVo" parameterType="com.transit.web_gis.vo.FeatureVo">
+        SELECT *
+        FROM FEATURE_TABLE
+        WHERE SHP_ID = #{shpId}
+    </select>
+
+    <insert id="insertFeature" parameterType="com.transit.web_gis.vo.FeatureVo" useGeneratedKeys="true" keyProperty="featureId">
+        INSERT INTO FEATURE_TABLE (SEQ, SHP_ID, PROPERTIES, TYPE)
+        VALUES (
+            #{seq},
+            #{shpId},
+            #{properties},
+            #{type}
+        )
+    </insert>
+</mapper>

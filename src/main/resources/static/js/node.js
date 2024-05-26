@@ -59,7 +59,7 @@ function drawNodePoint(data) {
 function getNodeDetail() {
     if (map.getLayer('nodes_' + fileNm) !== undefined) {
         // 현재 선택된 노드 표시
-        map.on('click', function (e) {
+        map.on('click', 'nodes_'+fileNm,function (e) {
             // 클릭한 위치에서 가장 가까운 노드 찾기
             var features = map.queryRenderedFeatures(e.point, { layers: ['nodes_' + fileNm] });
 
@@ -68,5 +68,61 @@ function getNodeDetail() {
                 handleFeatureSelection(features[0]);
             }
         });
+    }
+}
+
+function updateNodeData(features, properties, maxId) {
+    let newFeature
+    var obj = Object.keys(newProperty[fileNm])
+    for (j = 0; j < features.length; j++) {
+        if (features[j].properties[obj[0]] === undefined) {
+            draw.delete(features[j].id)
+            newFeature = {
+                id: String(maxId + 1),
+                type: 'Feature',
+                properties: properties,
+                geometry: {
+                    coordinates: features[j].geometry.coordinates,
+                    type : "Point"
+                },
+            };
+        }
+    }
+
+    if (map.getSource('data_'+fileNm) === undefined) {
+        const tData = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [
+                    newFeature
+                ]
+            }
+        }
+
+        map.addSource("data_"+fileNm, tData);
+        map.addLayer({
+            'id': 'nodes_'+fileNm,
+            'type': 'circle',
+            'source': "data_"+fileNm,
+            'paint': {
+                'circle-radius': 6,
+                'circle-color': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    '#007dd2',
+                    '#1aa3ff'
+                ],
+                'circle-opacity': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    1,
+                    1
+                ]
+            },
+            'filter': ['>', ['zoom'], 13]
+        });
+    } else {
+        updateSourceData(newFeature);
     }
 }
