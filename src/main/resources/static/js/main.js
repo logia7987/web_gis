@@ -234,8 +234,7 @@ function sendFiles() {
 }
 
 
-function removePolygon(key) {
-    fileName = dataArr[key].fileName
+function removePolygon(fileName) {
 
     if (draw.getAll().length > 0) {
         draw.deleteAll();
