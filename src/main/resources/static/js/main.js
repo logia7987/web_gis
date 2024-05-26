@@ -333,7 +333,12 @@ function changeEditMode() {
 
 function checkDataType(data) {
     // 대표로 첫번째 인덱스의 정보를 가져와서 타입 검사 실시
-    var type = data.data.features[0].geometry.type
+    var type
+    if (data.data === undefined) {
+        type = data.features[0].geometry.type
+    } else {
+        type = data.data.features[0].geometry.type
+    }
     return type
 }
 
@@ -504,18 +509,20 @@ function handleFeatureSelection(e) {
         }
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
-        const properties = e.features[0].properties;
-        let propertyHtml = '<div>';
-        for (const key in properties) {
-            propertyHtml += '<p>' + key + ': ' + properties[key] + '</p>';
-        }
-        propertyHtml += '</div>';
+        if (e.features !== undefined) {
+            const properties = e.features[0].properties;
+            let propertyHtml = '<div>';
+            for (const key in properties) {
+                propertyHtml += '<p>' + key + ': ' + properties[key] + '</p>';
+            }
+            propertyHtml += '</div>';
 
-        // 인포윈도우 열기
-        new mapboxgl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(propertyHtml)
-            .addTo(map);
+            // 인포윈도우 열기
+            new mapboxgl.Popup()
+                .setLngLat(e.lngLat)
+                .setHTML(propertyHtml)
+                .addTo(map);
+        }
     }
 }
 
@@ -659,17 +666,80 @@ function startViewerMode() {
     drawArr = []
 }
 
+
 function startEditMode() {
+    $('.mapboxgl-ctrl-group').show()
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
     // var type = $(".selected").eq(0).attr("class");
     var type = $($(".selected").find(".fa-solid")[0]).attr("class")
     loadProperty = dataArr
-    if (type === 'fa-solid fa-ellipsis-vertical')  {
+    if (type === 'fa-solid fa-share-nodes')  {
         getLinkDetail()
-    } else if (type === 'fa-solid fa-share-nodes') {
+    } else if (type === 'fa-brands fa-hashnode') {
         getNodeDetail()
     } else {
         polygonDetail()
     }
+
+    // 새 Feature 가 추가되는 걸 감지하는 부분
+    map.on('draw.create', function(e) {
+        const features = e.features;
+        if (features.length > 0 && features[0].geometry.type === 'Point' && checkDataType(dataArr[fileNm]) === 'Point') {
+            // 새 노드가 추가되었을 때
+            console.log("포인트가 추가됨")
+            $("#modal_addFeature").text("새로운 노드 생성")
+        } else if (features.length > 0 && features[0].geometry.type === 'MultiLineString' && checkDataType(dataArr[fileNm]) === 'MultiLineString') {
+            // 새 링크가 추가되었을 때
+            console.log("링크가 추가됨")
+            $("#modal_addFeature").text("새로운 링크 생성")
+        } else {
+            // 새 폴리곤이 추가되었을 때
+            console.log("새 폴리곤이 추가됨")
+            $("#modal_addFeature").text("새로운 폴리곤 생성")
+        }
+        $('#newpolygon').modal('show')
+        $('#newpolygon .modal-body table').empty()
+        var property = Object.keys(newProperty[fileNm])
+        for (var i = 0; i < property.length; i++) {
+            var html = "<tr><td><label class='polygon-label' title="+property[i]+">"+property[i]+"</label></td><td><input class='property' type='text'></td></tr>"
+            $('#newpolygon .modal-body table').append(html)
+        }
+    });
+}
+
+function addNewFeature() {
+    var features = draw.getAll().features;
+    var obj = Object.keys(newProperty[fileNm])
+    var ids = dataArr[fileNm].data.features.map(feature => feature.id);
+    var maxId = Math.max.apply(null, ids)
+    var property = $('#newpolygon .modal-body table').find('input')
+    var properties = {}
+
+    if (dataArr[fileNm].data.features.length === 0) {
+        maxId = -1
+    }
+
+    for (i = 0; i < property.length; i++) {
+        properties[obj[i]] = property[i].value
+    }
+
+    if (checkDataType(dataArr[fileNm]) === 'Point') {
+        updateNodeData(features, properties, maxId)
+    } else if (checkDataType(dataArr[fileNm]) === 'MultiLineString') {
+        updateLinkData(features, properties, maxId)
+    } else {
+        updatePolygonData(features, properties, maxId)
+    }
+}
+
+function updateSourceData(newFeature) {
+    map.getSource('data_'+fileNm)._options.data.features.push(newFeature)
+    var updatedFeatures = map.getSource('data_' + fileNm)._options.data.features;
+    map.getSource('data_' + fileNm).setData({
+        type: 'FeatureCollection',
+        features: updatedFeatures
+    });
+    // dataArr[fileNm] = map.getSource('data_' + fileNm);
+    // dataArr[fileNm].data.features.push(newFeature)
 }
