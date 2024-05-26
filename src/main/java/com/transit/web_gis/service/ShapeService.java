@@ -50,7 +50,6 @@ public class ShapeService {
             // 좌표 변환 수행
             featureCollection = transformFeatureCollection(featureCollection, sourceCRS);
         }
-        System.out.println("받고 이어서 진행");
 
         try (StringWriter writer = new StringWriter()) {
             System.out.println("쓰는중");

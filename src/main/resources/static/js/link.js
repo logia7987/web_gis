@@ -3,11 +3,11 @@ function drawLinkLine(data) {
         const sourceId = "data_" + data.fileName;
         const layerId = "links_" + data.fileName;
 
-        if (map.getSource(sourceId)) {
-            map.removeSource(sourceId);
-        }
-        if (map.getLayer(layerId)) {
-            map.removeLayer(layerId);
+        checkHasSource(sourceId, layerId)
+
+        dataArr[data.fileName] = data;
+        if (newProperty[data.fileName] == undefined) {
+            newProperty[data.fileName] = data.data.features[0].properties;
         }
 
         var tData = {
@@ -61,15 +61,4 @@ function getLinkDetail() {
             }
         });
     }
-}
-
-// 링크 속성 찾기
-function findProperty(id) {
-    const info = dataArr[fileNm].data.features;
-    for (let i = 0; i < info.length; i++) {
-        if (Number(info[i].id) === id) {
-            return info[i];
-        }
-    }
-    return null;
 }

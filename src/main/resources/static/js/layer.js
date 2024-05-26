@@ -1,16 +1,32 @@
 function showHideLayer(Nm) {
+    const dataType = checkDataType(dataArr[Nm]);
+
     if ($('#check_'+Nm).is(':checked') === true) {
         for (i = 0; i < newProperty[Nm].length; i++) {
             map.setLayoutProperty(newProperty[Nm][i], 'visibility', 'visible');
         }
-        map.setLayoutProperty('polygons_'+Nm, 'visibility', 'visible');
-        map.setLayoutProperty('outline_'+Nm, 'visibility', 'visible');
+
+        if (dataType === "Point") {
+            map.setLayoutProperty('nodes_'+Nm, 'visibility', 'visible');
+        } else if (dataType === "MultiLineString") {
+            map.setLayoutProperty('links_'+Nm, 'visibility', 'visible');
+        } else {
+            map.setLayoutProperty('polygons_'+Nm, 'visibility', 'visible');
+            map.setLayoutProperty('outline_'+Nm, 'visibility', 'visible');
+        }
     } else {
         for (i = 0; i < newProperty[Nm].length; i++) {
             map.setLayoutProperty(newProperty[Nm][i], 'visibility', 'none');
         }
-        map.setLayoutProperty('polygons_'+Nm, 'visibility', 'none');
-        map.setLayoutProperty('outline_'+Nm, 'visibility', 'none');
+
+        if (dataType === "Point") {
+            map.setLayoutProperty('nodes_'+Nm, 'visibility', 'none');
+        } else if (dataType === "MultiLineString") {
+            map.setLayoutProperty('links_'+Nm, 'visibility', 'none');
+        } else {
+            map.setLayoutProperty('polygons_'+Nm, 'visibility', 'none');
+            map.setLayoutProperty('outline_'+Nm, 'visibility', 'none');
+        }
     }
 }
 
@@ -35,70 +51,85 @@ function deleteProper() {
     $('.proper-typeli .selected').remove()
 }
 
-function plusLayers() {
-    var datatype = ""
-    var value = $('#layer-proper').val()
-    var filename = $('#layer-fileName').val()
-    var checkname = document.querySelectorAll('.layer-file')
-    for (i = 0; i < checkname.length; i++) {
-        if (filename == checkname[i].id ) {
-            alert('동일한 레이어 이름이 존재합니다')
-            return
+function addLayers() {
+    // 폼에서 값을 가져옵니다.
+    var newData = {}
+    var datatype = "";
+    var value = $('#layer-proper').val();
+    var fileNameTxt = $('#layer-fileName').val();
+    var checkname = document.querySelectorAll('.layer-file');
+
+    // 중복 레이어 이름 확인
+    for (var i = 0; i < checkname.length; i++) {
+        if (fileNameTxt === checkname[i].id) {
+            alert('동일한 레이어 이름이 존재합니다');
+            return;
         }
     }
+
+    // 입력값 검증
     if (value === 'none') {
-        alert('파일 유형을 선택해주세요')
-    } else if (filename === '') {
-        alert('파일 이름을 입력해주세요')
-    } else {
-        var data = {
-            fileName : filename,
-            datatype : value,
-            crs : "GEOGCS[GCS_WGS_1984," +
-                "  DATUM[D_WGS_1984," +
-                "  SPHEROID[WGS_1984, 6378137.0, 298.257223563]]," +
-                "  PRIMEM[Greenwich, 0.0]," +
-                "  UNIT[degree, 0.017453292519943295]," +
-                "  AXIS[Longitude, EAST]," +
-                "  AXIS[Latitude, NORTH]]",
-            data : {
-                crs : {
-                    properties : {
-                        name : "EPSG:4326",
-                    },
-                    type : "name"
+        alert('파일 유형을 선택해주세요');
+        return;
+    } else if (fileNameTxt === '') {
+        alert('파일 이름을 입력해주세요');
+        return;
+    }
+
+    // 레이어 데이터 구조 준비
+    var data = {
+        fileName: fileNameTxt,
+        datatype: value,
+        crs: {
+            type: "name",
+            properties: {
+                name: "EPSG:4326"
+            }
+        },
+        data: {
+            crs: {
+                properties: {
+                    name: "EPSG:4326",
                 },
-                features : [],
-                type : "FeatureCollection",
-            }
+                type: "name"
+            },
+            features: [],
+            type: "FeatureCollection",
         }
-        var object = {}
-        $(".proper-typeli td").each(function(index, element) {
-            if (index % 2 === 0) {
-                object[$(element).text()] = ""
-            }
-        });
+    };
 
-        newProperty[filename] = object
-
-        if ($("#layer-proper").val() === "node")  {
-            datatype = "Point"
-        } else if ($("#layer-proper").val() === "line") {
-            datatype = "MultiLineString"
-        } else {
-            datatype = "Polygon"
+    // 속성 객체 초기화
+    var object = {};
+    $(".proper-typeli td").each(function(index, element) {
+        if (index % 2 === 0) {
+            object[$(element).text()] = "";
         }
+    });
 
-        dataArr[filename] = data
+    newData["data"] = data
+    newData["fileName"] = fileNameTxt
 
-        $("#layer-proper,  #proper-type").val('none')
-        $('#layer-fileName, #proper-typenm').val('');
-        while ($('.plusproperty').length > 0) {
-            $('.plusproperty').eq(0).remove();
-        }
-        polygon(data.data.features)
-        createLayer(data, datatype)
+    newProperty[fileNameTxt] = object
 
+    // 데이터 타입 설정
+    if (value === "node") {
+        datatype = "Point";
+        drawNodePoint(newData).then(r => true);
+    } else if (value === "line") {
+        datatype = "MultiLineString";
+        drawLinkLine(newData).then(r => true);
+    } else {
+        datatype = "Polygon"
+        drawPolyline(newData).then(r => true);
+    }
+
+    createLayer(data, datatype);
+
+    // 폼 초기화
+    $("#layer-proper, #proper-type").val('none');
+    $('#layer-fileName, #proper-typenm').val('');
+    while ($('.plusproperty').length > 0) {
+        $('.plusproperty').eq(0).remove();
     }
 }
 
@@ -132,23 +163,29 @@ function createLayer(data, type) {
 
 function selectedLayer(obj) {
     var layer = document.getElementsByClassName("layer-file");
+
+    var beforeLayerId = "";
     for (i = 0; i < layer.length; i++) {
+        if (layer[i].classList.contains(obj)) {
+            beforeLayerId = $(layer[i]).find(".file-tit").text()
+        }
         layer[i].classList.remove("selected");
     }
-    if ($("#"+obj.id).length > 0) {
-        $("#"+obj.id).addClass("selected")
-    } else {
-        $("#"+obj).addClass("selected")
+
+    $("#"+obj).addClass("selected")
+
+    if (isEdit()) {
+        // 수정모드일때 타겟 data 변경
+        if (beforeLayerId !== obj) {
+            // 전에 수정하던 내용을 저장 후 보기모드로 전환
+            startViewerMode()
+            // 다시 해당 레이어 편집모드로 전환
+            startEditMode()
+        }
     }
 
     fileNm = $('.selected .file-tit').text()
     var none = "<option value=\"none\">선택해주세요</option>"
     $("#label-list").empty()
     $("#label-list").append(none)
-    var title = Object.keys(newProperty[fileNm])
-    for (i = 0; i < title.length; i++) {
-        html = "<option value="+title[i]+">"+title[i]+"</option>"
-        $("#label-list").append(html)
-    }
-    // getProperties()
 }

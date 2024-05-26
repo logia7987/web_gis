@@ -6,7 +6,9 @@ function drawPolyline(data) {
         checkHasSource(sourceId, layerId)
 
         dataArr[data.fileName] = data;
-        newProperty[data.fileName] = data.data.features[0].properties;
+        if (newProperty[data.fileName] == undefined) {
+            newProperty[data.fileName] = data.data.features[0].properties;
+        }
 
         var tData = {
             type: 'geojson',
@@ -20,11 +22,27 @@ function drawPolyline(data) {
             map.addSource(sourceId, tData);
             map.addLayer({
                 'id': layerId,
-                'type': 'line',
+                'type': 'fill',
                 'source': sourceId,
                 'paint': {
-                    'line-color': '#007dd2',
-                    'line-width': 2
+                    'fill-color': polygonColor,
+                    'fill-opacity': [
+                        'case',
+                        ['boolean', ['feature-state', 'hover'], false],
+                        1,
+                        0.5
+                    ]
+                }
+            });
+
+            map.addLayer({
+                'id': 'outline_'+data.fileName,
+                'type': 'line',
+                'source': sourceId,
+                'layout': {},
+                'paint': {
+                    'line-color': lineColor,
+                    'line-width': Number(lineWidth)
                 }
             });
 

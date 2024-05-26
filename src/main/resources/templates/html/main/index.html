@@ -181,13 +181,7 @@
     var tablinks = document.getElementsByClassName("tab-links");
     var propertyArr = []
     var changeProper;
-    var draw = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {
-            line_string: true,
-            trash: true
-        }
-    });
+    var draw = new MapboxDraw({});
 
     let hoveredPolygonId = null;
     let clickedPolygonId = null;

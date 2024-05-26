@@ -6,7 +6,9 @@ function drawNodePoint(data) {
         checkHasSource(sourceId, layerId)
 
         dataArr[data.fileName] = data;
-        newProperty[data.fileName] = data.data.features[0].properties;
+        if (newProperty[data.fileName] == undefined) {
+            newProperty[data.fileName] = data.data.features[0].properties;
+        }
 
         var tData = {
             type: 'geojson',
@@ -67,15 +69,4 @@ function getNodeDetail() {
             }
         });
     }
-}
-
-// 노드 속성 찾기
-function findProperty(id) {
-    const info = dataArr[fileNm].data.features;
-    for (let i = 0; i < info.length; i++) {
-        if (Number(info[i].id) === id) {
-            return info[i];
-        }
-    }
-    return null;
 }

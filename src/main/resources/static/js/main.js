@@ -309,39 +309,11 @@ document.addEventListener('contextmenu', function (){
 
 function changeEditMode() {
     if ( $('#btn-status').text() === '보기 모드') {
-        fileNm = $('.selected .file-tit').text()
-        $('#btn-status').text("편집 모드")
-        // var type = $(".selected").eq(0).attr("class");
-        var type = $($(".selected").find(".fa-solid")[0]).attr("class")
-        loadProperty = dataArr
-        if (type === 'fa-solid fa-ellipsis-vertical')  {
-            getLinkDetail()
-        } else if (type === 'fa-solid fa-share-nodes') {
-            getNodeDetail()
-        } else {
-            polygonDetail()
-        }
+        // 편집 모드로 전환
+        startEditMode()
     } else if ( $('#btn-status').text() === '편집 모드') {
-        $('.mapboxgl-ctrl-group').hide()
-        $('#btn-status').text("보기 모드")
-
-        if (draw.getAll().features.length > 0) {
-            for (i = 0; i < draw.getAll().features.length; i++) {
-                map.getSource('data_' + fileNm)._options.data.features.push(draw.getAll().features[i])
-            }
-        }
-        var updatedFeatures = map.getSource('data_' + fileNm)._options.data.features;
-        // Set the updated data
-        map.getSource('data_' + fileNm).setData({
-            type: 'FeatureCollection',
-            features: updatedFeatures
-        });
-        dataArr[fileNm].data.features = map.getSource('data_' + fileNm)._options.data.features
-        loadProperty = dataArr
-        // getProperties()
-        draw.deleteAll();
-        propertyArr = []
-        drawArr = []
+        // 보기 모드로 전환
+        startViewerMode()
     } else if (draw.getAll().features.length === 0 && drawArr.length > 0) {
         drawArr = []
         propertyArr = []
@@ -515,11 +487,13 @@ function getBoundingBox(coordinates, type) {
 function handleFeatureSelection(e) {
     // 편집모드 클릭과 일반클릭을 분리
     if (isEdit()) {
-        selectedShp = e.features[0];
-        const property = findProperty(selectedShp.id);
-        if (property) {
-            $('#' + selectedShp.id).parent().addClass("selected");
-            editShp(property);
+        if (e.features !== undefined) {
+            selectedShp = e.features[0];
+            const property = findProperty(selectedShp.id);
+            if (property) {
+                $('#' + selectedShp.id).parent().addClass("selected");
+                editShp(property);
+            }
         }
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
@@ -643,4 +617,52 @@ function calculateDistance(coord1, coord2) {
 
 function deg2rad(deg) {
     return deg * (Math.PI / 180)
+}
+
+function findProperty(id) {
+    const info = dataArr[fileNm].data.features;
+    for (let i = 0; i < info.length; i++) {
+        if (Number(info[i].id) === id) {
+            return info[i];
+        }
+    }
+    return null;
+}
+
+function startViewerMode() {
+    $('.mapboxgl-ctrl-group').hide()
+    $('#btn-status').text("보기 모드")
+
+    if (draw.getAll().features.length > 0) {
+        for (i = 0; i < draw.getAll().features.length; i++) {
+            map.getSource('data_' + fileNm)._options.data.features.push(draw.getAll().features[i])
+        }
+    }
+    var updatedFeatures = map.getSource('data_' + fileNm)._options.data.features;
+    // Set the updated data
+    map.getSource('data_' + fileNm).setData({
+        type: 'FeatureCollection',
+        features: updatedFeatures
+    });
+    dataArr[fileNm].data.features = map.getSource('data_' + fileNm)._options.data.features
+    loadProperty = dataArr
+    // getProperties()
+    draw.deleteAll();
+    propertyArr = []
+    drawArr = []
+}
+
+function startEditMode() {
+    fileNm = $('.selected .file-tit').text()
+    $('#btn-status').text("편집 모드")
+    // var type = $(".selected").eq(0).attr("class");
+    var type = $($(".selected").find(".fa-solid")[0]).attr("class")
+    loadProperty = dataArr
+    if (type === 'fa-solid fa-ellipsis-vertical')  {
+        getLinkDetail()
+    } else if (type === 'fa-solid fa-share-nodes') {
+        getNodeDetail()
+    } else {
+        polygonDetail()
+    }
 }
