@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Controller
 @RequestMapping("/api")
@@ -261,8 +263,12 @@ public class ApiController {
     }
 
     private static String convertToJSONString(String input) throws IOException {
-        // 키와 값을 더블 쿼트로 둘러싸기
-        return input.replaceAll("(\\w+)=([^,{}]+)", "\"$1\":\"$2\"");
+        System.out.println(input);
+        input = input.trim();
+        input = input.replaceAll("=(?=,|})", ":\"\"");
+        input = input.replaceAll("(\\w+)=([^,{}]+)", "\"$1\":\"$2\"");
+        input = input.replaceAll("(^|,\\s*)\"\":\"\"", "");
+        return input;
     }
 
     private static JsonArray convertToJsonArray(String jsonCoordinates) {

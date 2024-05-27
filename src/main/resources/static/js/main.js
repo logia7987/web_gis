@@ -134,10 +134,19 @@ function getShpData(shpId) {
             finishLoading();
         },
         success : function(data) {
-            console.log(data.data)
+            hideModal('loadFile')
+
             data.fileName = data.shpName
-            drawPolyline(data);
-            createLayer(data)
+
+            if (checkDataType(data) === 'Point') {
+                drawNodePoint(data).then(r => true);
+            } else if (checkDataType(data) === 'MultiLineString') {
+                drawLinkLine(data).then(r => true);
+            } else {
+                drawPolyline(data).then(r => true);
+            }
+
+            createLayer(data, checkDataType(data))
         },
         error: function () {
         }
@@ -337,7 +346,19 @@ function checkDataType(data) {
     if (data.data === undefined) {
         type = data.features[0].geometry.type
     } else {
-        type = data.data.features[0].geometry.type
+        if (data.data.features.length === 0) {
+            // 새로 추가된 객체는 타입이없음
+            var selectedClass = $($(".selected").find("i")[0]).attr("class")
+            if (selectedClass === 'fa-brands fa-hashnode')  {
+                type = 'Point'
+            } else if (selectedClass === 'fa-solid fa-share-nodes') {
+                type = 'MultiLineString'
+            } else {
+                type = "MultiPolygon"
+            }
+        } else {
+            type = data.data.features[0].geometry.type
+        }
     }
     return type
 }
@@ -672,7 +693,7 @@ function startEditMode() {
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
     // var type = $(".selected").eq(0).attr("class");
-    var type = $($(".selected").find(".fa-solid")[0]).attr("class")
+    var type = $($(".selected").find("i")[0]).attr("class")
     loadProperty = dataArr
     if (type === 'fa-solid fa-share-nodes')  {
         getLinkDetail()
@@ -685,17 +706,14 @@ function startEditMode() {
     // 새 Feature 가 추가되는 걸 감지하는 부분
     map.on('draw.create', function(e) {
         const features = e.features;
-        if (features.length > 0 && features[0].geometry.type === 'Point' && checkDataType(dataArr[fileNm]) === 'Point') {
+        if (features.length > 0 && features[0].geometry.type === 'Point') {
             // 새 노드가 추가되었을 때
-            console.log("포인트가 추가됨")
             $("#modal_addFeature").text("새로운 노드 생성")
-        } else if (features.length > 0 && features[0].geometry.type === 'MultiLineString' && checkDataType(dataArr[fileNm]) === 'MultiLineString') {
+        } else if (features.length > 0 && features[0].geometry.type === 'MultiLineString') {
             // 새 링크가 추가되었을 때
-            console.log("링크가 추가됨")
             $("#modal_addFeature").text("새로운 링크 생성")
         } else {
             // 새 폴리곤이 추가되었을 때
-            console.log("새 폴리곤이 추가됨")
             $("#modal_addFeature").text("새로운 폴리곤 생성")
         }
         $('#newpolygon').modal('show')
@@ -711,7 +729,11 @@ function startEditMode() {
 function addNewFeature() {
     var features = draw.getAll().features;
     var obj = Object.keys(newProperty[fileNm])
+    // 이전 아이디 존재 여부로 신규 레이어 인지 구분
+    if (dataArr[fileNm].data.features) {}
     var ids = dataArr[fileNm].data.features.map(feature => feature.id);
+
+    
     var maxId = Math.max.apply(null, ids)
     var property = $('#newpolygon .modal-body table').find('input')
     var properties = {}

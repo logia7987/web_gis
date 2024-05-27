@@ -89,7 +89,6 @@ public class ShapeService {
     }
 
     // 좌표 변환을 수행하는 메서드
-    // 좌표 변환을 수행하는 메서드
     private SimpleFeatureCollection transformFeatureCollection(SimpleFeatureCollection featureCollection, CoordinateReferenceSystem sourceCRS) {
         // 타겟 좌표계 (WGS84)
         CoordinateReferenceSystem targetCRS = DefaultGeographicCRS.WGS84;

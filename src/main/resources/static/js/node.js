@@ -52,7 +52,6 @@ function drawNodePoint(data) {
             reject(error);
         }
 
-
     });
 }
 

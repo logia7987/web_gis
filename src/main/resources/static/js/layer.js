@@ -79,13 +79,6 @@ function addLayers() {
     // 레이어 데이터 구조 준비
     var data = {
         fileName: fileNameTxt,
-        datatype: value,
-        crs: {
-            type: "name",
-            properties: {
-                name: "EPSG:4326"
-            }
-        },
         data: {
             crs: {
                 properties: {
@@ -106,21 +99,21 @@ function addLayers() {
         }
     });
 
-    newData["data"] = data
-    newData["fileName"] = fileNameTxt
+    // newData["data"] = data
+    // newData["fileName"] = fileNameTxt
 
     newProperty[fileNameTxt] = object
 
     // 데이터 타입 설정
     if (value === "node") {
         datatype = "Point";
-        drawNodePoint(newData).then(r => true);
+        drawNodePoint(data).then(r => true);
     } else if (value === "line") {
         datatype = "MultiLineString";
-        drawLinkLine(newData).then(r => true);
+        drawLinkLine(data).then(r => true);
     } else {
         datatype = "Polygon"
-        drawPolyline(newData).then(r => true);
+        drawPolyline(data).then(r => true);
     }
 
     createLayer(data, datatype);
