@@ -124,6 +124,8 @@ function addLayers() {
     while ($('.plusproperty').length > 0) {
         $('.plusproperty').eq(0).remove();
     }
+
+    toastOn("레이어가 생성되었습니다. 보기모드를 클릭하면 추가/편집할 수 있습니다.")
 }
 
 function createLayer(data, type) {

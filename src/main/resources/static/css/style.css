@@ -554,3 +554,29 @@ th, td {
 .padding-30 {
     padding: 0 20px 0 0;
 }
+
+#toast_popup {
+    position: fixed;
+    opacity: 0;
+    transform: translate(-50%, 0);
+    left: 50%;
+    bottom: -100px;
+    width: fit-content;
+    padding: 5px 40px;
+    height: 60px;;
+    background-color: #222222;
+    border-radius: 15px;
+    transition: all 0.5s;
+    vertical-align: baseline;
+}
+#toast_popup.active {
+    opacity: 100%;
+    bottom: 50px;
+}
+
+#toast_text {
+    color: #fff;
+    height: 50px;
+    line-height: 50px;
+    margin: 0;
+}

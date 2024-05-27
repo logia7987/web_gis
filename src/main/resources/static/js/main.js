@@ -87,6 +87,8 @@ function saveShp(filename) {
             var html = ""
             html = "<a href='#' onclick='getShpData("+shpId+")'>"+filename+"</a>"
             $('.options').append(html)
+
+            toastOn("레이어가 DB에 저장되었습니다.")
         },
         error : function (error){
             console.log(error)
@@ -147,6 +149,8 @@ function getShpData(shpId) {
             }
 
             createLayer(data, checkDataType(data))
+
+            toastOn("DB에 저장된 정보를 가져왔습니다.")
         },
         error: function () {
         }
@@ -272,6 +276,8 @@ function removeLayer(key) {
     if ($(".layer-file").length === 0) {
         $(".file-info-item").remove();
     }
+
+    toastOn("레이어를 삭제했습니다.")
 }
 function editShp(property) {
     // 맵에서 데이터를 가져옴
@@ -665,6 +671,7 @@ function findProperty(id) {
 }
 
 function startViewerMode() {
+    toastOn("보기 모드로 전환되었습니다.")
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
 
@@ -673,22 +680,26 @@ function startViewerMode() {
             map.getSource('data_' + fileNm)._options.data.features.push(draw.getAll().features[i])
         }
     }
-    var updatedFeatures = map.getSource('data_' + fileNm)._options.data.features;
-    // Set the updated data
-    map.getSource('data_' + fileNm).setData({
-        type: 'FeatureCollection',
-        features: updatedFeatures
-    });
-    dataArr[fileNm].data.features = map.getSource('data_' + fileNm)._options.data.features
-    loadProperty = dataArr
-    // getProperties()
-    draw.deleteAll();
-    propertyArr = []
-    drawArr = []
+
+    if (fileNm !== '') {
+        var updatedFeatures = map.getSource('data_' + fileNm)._options.data.features;
+        // Set the updated data
+        map.getSource('data_' + fileNm).setData({
+            type: 'FeatureCollection',
+            features: updatedFeatures
+        });
+        dataArr[fileNm].data.features = map.getSource('data_' + fileNm)._options.data.features
+        loadProperty = dataArr
+        // getProperties()
+        draw.deleteAll();
+        propertyArr = []
+        drawArr = []
+    }
 }
 
 
 function startEditMode() {
+    toastOn("편집모드로 전환되었습니다. 좌측하단의 툴을 이용해 지도 위에 그리기가 가능합니다.")
     $('.mapboxgl-ctrl-group').show()
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
@@ -760,4 +771,13 @@ function updateSourceData(newFeature) {
     });
     // dataArr[fileNm] = map.getSource('data_' + fileNm);
     // dataArr[fileNm].data.features.push(newFeature)
+}
+
+function toastOn(t){
+    $("#toast_popup").addClass('active');
+    $("#toast_text").text(t)
+    setTimeout(function(){
+        $("#toast_popup").removeClass('active');
+        $("#toast_text").text("")
+    },2500);
 }

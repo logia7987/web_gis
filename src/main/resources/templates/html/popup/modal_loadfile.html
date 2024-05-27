@@ -50,11 +50,12 @@
 
         if (jsonData != null) {
             parent.dataArr[jsonData.fileName] = jsonData
-            parent.hideModal('loadFile')
             parent.finishLoading();
             parent.drawShpData(jsonData)
 
             jsonData = null
+
+            toastOn("ShapeFile 을 읽어 왔습니다.")
         }
     });
 
@@ -125,6 +126,7 @@
             processData: false,  // 필수: FormData를 query string으로 변환하지 않음
             contentType: false,  // 필수: 파일 전송에는 multipart/form-data 형식이 필요
             beforeSend: function( ) {
+                parent.hideModal('loadFile');
                 parent.viewLoading()
             },
             complete: function( ) {
@@ -134,7 +136,6 @@
                 if (response.error) {
                     alert(response.error);
                 } else {
-                    // 데이터 처리 성공 시 JSON 데이터를 세션에 저장
                     location.href = "/popup/uploadPage";
                 }
             },
