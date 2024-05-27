@@ -224,13 +224,13 @@ public class ApiController {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(jsonString);
 
-            // Coordinates에 접근
-            // 더 깊게 접근하려면 반복문 사용
+            // Coordinate 에 접근
             for (JsonNode coordinatesNode : jsonNode) {
                 JSONArray coordinateOutArr = new JSONArray();
 
                 for (JsonNode node : coordinatesNode) {
                     JSONArray coordinateArr = new JSONArray();
+
                     for (JsonNode subNode : node) {
                         JSONArray aCoordinate = new JSONArray();
 
@@ -244,7 +244,7 @@ public class ApiController {
                             aCoordinate.add(longitude);
                             aCoordinate.add(latitude);
                         } else {
-                            System.out.println("data: " + subNode);
+                            aCoordinate.add(subNode);
                         }
 
                         coordinateArr.add(aCoordinate);

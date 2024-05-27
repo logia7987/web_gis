@@ -709,10 +709,10 @@ function startEditMode() {
         if (features.length > 0 && features[0].geometry.type === 'Point') {
             // 새 노드가 추가되었을 때
             $("#modal_addFeature").text("새로운 노드 생성")
-        } else if (features.length > 0 && features[0].geometry.type === 'MultiLineString') {
+        } else if (features.length > 0 && features[0].geometry.type === 'LineString') {
             // 새 링크가 추가되었을 때
             $("#modal_addFeature").text("새로운 링크 생성")
-        } else {
+        } else if (features.length > 0 && features[0].geometry.type === 'Polygon') {
             // 새 폴리곤이 추가되었을 때
             $("#modal_addFeature").text("새로운 폴리곤 생성")
         }
@@ -729,11 +729,7 @@ function startEditMode() {
 function addNewFeature() {
     var features = draw.getAll().features;
     var obj = Object.keys(newProperty[fileNm])
-    // 이전 아이디 존재 여부로 신규 레이어 인지 구분
-    if (dataArr[fileNm].data.features) {}
     var ids = dataArr[fileNm].data.features.map(feature => feature.id);
-
-    
     var maxId = Math.max.apply(null, ids)
     var property = $('#newpolygon .modal-body table').find('input')
     var properties = {}
@@ -748,9 +744,9 @@ function addNewFeature() {
 
     if (checkDataType(dataArr[fileNm]) === 'Point') {
         updateNodeData(features, properties, maxId)
-    } else if (checkDataType(dataArr[fileNm]) === 'MultiLineString') {
+    } else if (checkDataType(dataArr[fileNm]) === 'MultiLineString' || checkDataType(dataArr[fileNm]) === 'LineString') {
         updateLinkData(features, properties, maxId)
-    } else {
+    } else if (checkDataType(dataArr[fileNm]) === 'MultiPolygon' || checkDataType(dataArr[fileNm]) === 'Polygon') {
         updatePolygonData(features, properties, maxId)
     }
 }

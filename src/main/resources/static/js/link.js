@@ -74,8 +74,8 @@ function updateLinkData(features, properties, maxId) {
                 type: 'Feature',
                 properties: properties,
                 geometry: {
-                    coordinates: features[j].geometry.coordinates,
-                    type : "MultiLineString"
+                    type : "MultiLineString",
+                    coordinates: [features[j].geometry.coordinates]
                 },
             };
         }
@@ -86,7 +86,9 @@ function updateLinkData(features, properties, maxId) {
             type: 'geojson',
             data: {
                 type: 'FeatureCollection',
-                newFeature
+                features : [
+                    newFeature
+                ]
             }
         };
 
@@ -110,4 +112,3 @@ function updateLinkData(features, properties, maxId) {
         updateSourceData(newFeature);
     }
 }
-
