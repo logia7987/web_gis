@@ -4,9 +4,7 @@
     font-style: normal;
 }
 
-#map {
 
-}
 
 .dropdown-item {
     font-size : 11px
@@ -242,7 +240,7 @@
 
 .layer-file-list::-webkit-scrollbar-thumb {
     background-color: #cccccc;
-    border-radius: 10px;
+    border-radius: 15px;
 }
 
 .select-label {
@@ -462,9 +460,30 @@
     margin: 0 10px 10px 10px;
 }
 
-#line-width {
-    margin-left: 15px;
+.colors-item {
+    display: flex;
+    align-items: center;
+}
+
+.polygon-line {
+    margin-left: 10px;
+}
+
+#poly-line-width {
+    border: solid 1px #000000;
+    text-align: center;
+    border-radius: 5px;
+    margin-left: 10px;
     width: 60px;
+}
+
+.sp-replacer {
+    border: solid 1px #000000 !important;
+    border-radius: 5px;
+}
+
+.sp-preview {
+    margin: 0 5px !important;
 }
 
 .top-btn {
