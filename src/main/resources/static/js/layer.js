@@ -157,6 +157,7 @@ function createLayer(data, type) {
 
 
 function selectedLayer(obj) {
+    $(".node-style, .polygon-style, .link-style").hide()
     var layer = document.getElementsByClassName("layer-file");
 
     var beforeLayerId = "";
@@ -178,9 +179,13 @@ function selectedLayer(obj) {
             startEditMode()
         }
     }
+    var type = checkDataType(dataArr[obj]);
 
-    fileNm = $('.selected .file-tit').text()
-    var none = "<option value=\"none\">선택해주세요</option>"
-    $("#label-list").empty()
-    $("#label-list").append(none)
+    if (type === 'Point')  {
+        $(".node-style").show()
+    } else if (type === 'MultiLineString') {
+        $(".link-style").show()
+    } else {
+        $(".polygon-style").show()
+    }
 }

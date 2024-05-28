@@ -73,26 +73,3 @@ function finishProperties() {
         }
     }
 }
-
-function displayLabel() {
-    var label = $('#label-list').val()
-    var labels = $('#label-list option')
-
-    for (i = 0; i < labels.length; i++) {
-        if (map.getLayer(labels[i].value)) {
-            map.removeLayer(labels[i].value);
-        }
-    }
-
-    map.addLayer({
-        'id' : label,
-        'type' : 'symbol',
-        'source' : "data_"+fileNm,
-        'layout' : {
-            'text-field': ['get', label],
-            'text-variable-anchor': ['top', 'bottom', 'left', 'right'],
-            'text-radial-offset': 0.5,
-            'text-justify': 'auto',
-        }
-    })
-}

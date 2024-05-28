@@ -26,12 +26,7 @@ function drawNodePoint(data) {
                 'source': sourceId,
                 'paint': {
                     'circle-radius': 6,
-                    'circle-color': [
-                        'case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        '#007dd2',
-                        '#1aa3ff'
-                    ],
+                    'circle-color': nodeColor,
                     'circle-opacity': [
                         'case',
                         ['boolean', ['feature-state', 'hover'], false],
@@ -106,12 +101,7 @@ function updateNodeData(features, properties, maxId) {
             'source': "data_"+fileNm,
             'paint': {
                 'circle-radius': 6,
-                'circle-color': [
-                    'case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    '#007dd2',
-                    '#1aa3ff'
-                ],
+                'circle-color': nodeColor,
                 'circle-opacity': [
                     'case',
                     ['boolean', ['feature-state', 'hover'], false],

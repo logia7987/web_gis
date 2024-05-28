@@ -25,7 +25,7 @@ function drawLinkLine(data) {
                 'type': 'line',
                 'source': sourceId,
                 'paint': {
-                    'line-color': '#007dd2',
+                    'line-color': linkColor,
                     'line-width': [
                         'case',
                         ['boolean', ['feature-state', 'hover'], false],
@@ -97,15 +97,7 @@ function updateLinkData(features, properties, maxId) {
             'id': 'links_'+fileNm,
             'type': 'line',
             'source': "data_"+fileNm,
-            'paint': {
-                'line-color': '#007dd2',
-                'line-width': [
-                    'case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    4,
-                    2
-                ]
-            },
+            'paint': linkColor,
             'filter': ['>', ['zoom'], 13]
         });
     } else {

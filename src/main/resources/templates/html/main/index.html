@@ -58,7 +58,7 @@
     <div class="tab-menu">
         <div class="tab-links" onclick="openTab(event, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="레이어"><i class="fa-solid fa-layer-group"></i></div>
         <div class="tab-links" onclick="openTab(event, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-        <div class="tab-links" onclick="openTab(event, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성"><i class="fa-solid fa-list"></i></div>
+<!--        <div class="tab-links" onclick="openTab(event, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성"><i class="fa-solid fa-list"></i></div>-->
     </div>
 
     <div id="tab1" class="tab" style = "display: none;">
@@ -74,65 +74,51 @@
         <div class="tab-title padding-10 basic-font">
             <h5>도구</h5>
         </div>
-        <div class="map-style-change padding-10">
-            <label for="map-style" class="select-label">지도 스타일</label>
-            <select name="map-styles" id="map-style" >
-                <option value="streets-v12" class="style-option">Streets</option>
-                <option value="outdoors-v12" class="style-option">Outdoors</option>
-                <option value="light-v11" class="style-option">Light</option>
-                <option value="dark-v11" class="style-option">Dark</option>
-                <option value="satellite-v9" class="style-option">Satellite</option>
-                <option value="satellite-streets-v12" class="style-option">Satellite-streets</option>
-                <option value="navigation-day-v1" class="style-option">Navigation-day</option>
-                <option value="navigation-night-v1" class="style-option">Navigation-night</option>
-            </select>
-        </div>
-        <div class="colors-plan padding-10">
+<!--        <div class="map-style-change padding-10">-->
+<!--            <label for="map-style" class="select-label">지도 스타일</label>-->
+<!--            <select name="map-styles" id="map-style" >-->
+<!--                <option value="streets-v12" class="style-option">Streets</option>-->
+<!--                <option value="outdoors-v12" class="style-option">Outdoors</option>-->
+<!--                <option value="light-v11" class="style-option">Light</option>-->
+<!--                <option value="dark-v11" class="style-option">Dark</option>-->
+<!--                <option value="satellite-v9" class="style-option">Satellite</option>-->
+<!--                <option value="satellite-streets-v12" class="style-option">Satellite-streets</option>-->
+<!--                <option value="navigation-day-v1" class="style-option">Navigation-day</option>-->
+<!--                <option value="navigation-night-v1" class="style-option">Navigation-night</option>-->
+<!--            </select>-->
+<!--        </div>-->
+        <div class="colors-plan padding-10 polygon-style" style="display: none">
             <div class="colors-item">
-                <label class="select-label">폴리곤 색상</label>
-                <input type="text" id="polygon-color" onchange="changePolygonColor()">
+                <label class="select-label" data-bs-placement="bottom" data-bs-toggle="tooltip" title="폴리곤"><i class="fa-solid fa-draw-polygon"></i></label>
+                <div data-bs-placement="bottom" data-bs-toggle="tooltip" title="폴리곤 내부 색상">
+                    <input type="text" id="polygon-color" onchange="changePolygonColor()" >
+                </div>
+                <div class="polygon-line" data-bs-placement="bottom" data-bs-toggle="tooltip" title="폴리곤 선 색상">
+                    <input type="text" id="polylineColor" onchange="changePolyLineColor()">
+                </div>
+                <input type="number" id="poly-line-width" onchange="changePolyLineThickness()" value="2.5" data-bs-placement="bottom" data-bs-toggle="tooltip" title="선 굵기">
             </div>
         </div>
-        <div class="colors-plan padding-10">
-            <label class="select-label padding-30">폴리곤 선</label>
-            <div class="line-item" title="선 색상">
-                <input type="text" id="line-color" onchange="changeLineColor()" >
-            </div>
-            <input type="number" id="line-width" onchange="changeLineThickness()" value="2.5" title="선 굵기">
-        </div>
-        <div class="colors-plan padding-10">
+        <div class="colors-plan padding-10 node-style" style="display: none">
             <div class="colors-item">
-                <label class="select-label">라벨 표시</label>
-                <select id="label-list" onchange="displayLabel()">
-                    <option value="none">선택해주세요</option>
-                </select>
+                <label class="select-label" data-bs-placement="bottom" data-bs-toggle="tooltip" title="노드"><i class="fa-brands fa-hashnode"></i></label>
+                <div data-bs-placement="bottom" data-bs-toggle="tooltip" title="노드 색상">
+                    <input type="text" id="node-color" onchange="changeNodeColor()" >
+                </div>
+            </div>
+        </div>
+        <div class="colors-plan padding-10 link-style" style="display: none">
+            <div class="colors-item">
+                <label class="select-label" data-bs-placement="bottom" data-bs-toggle="tooltip" title="링크"><i class="fa-solid fa-share-nodes"></i></label>
+                <div data-bs-placement="bottom" data-bs-toggle="tooltip" title="링크 색상">
+                    <input type="text" id="link-color" onchange="changeLinkColor()">
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="tab3" class="tab">
-        <div class="tab-title padding-10 basic-font">
-            <h5>속성 정보</h5>
-            <i class="fa-solid fa-magnifying-glass" onclick="showSearch()"></i>
-        </div>
-        <div id="search-input" style="display: none">
-            <input type="text" ng-model="test" placeholder="검색">
-        </div>
-        <div class="padding-5">
-            <table class="file-class basic-font">
-                <thead>
-                <tr class="property-tit">
-                </tr>
-                </thead>
-            </table>
-        </div>
-            <div class="padding-5 file-class property-list">
-                <table style="table-layout: fixed;" >
-                    <tbody class="property-detail">
-                    </tbody>
-                </table>
-            </div>
-    </div>
+<!--    <div id="tab3" class="tab">-->
+<!--    </div>-->
 
     <div id="loading-window">
         <div class="loading-logo" style="color:white">loading..</div>
@@ -176,9 +162,11 @@
     var drawArr = []
     var fileNmList = [];
     var selectedShp;
-    var polygonColor = '#1aa3ff';
-    var lineColor = '#020202';
-    var lineWidth = 2.5;
+    var polygonColor = '#1aa3ff'; // 폴리곤 내부 색상
+    var polylineColor = '#020202'; // 폴리곤 선 색상
+    var nodeColor = '#007dd2'; // 노드 색상
+    var linkColor = '#007dd2'; // 링크 색상
+    var polylineWidth = 2.5;
     var tabmenu = document.getElementById("tab");
     var tabcontent = document.getElementsByClassName("tab");
     var tablinks = document.getElementsByClassName("tab-links");
@@ -229,12 +217,47 @@
                 ["#600","#783f04","#7f6000","#274e13","#0c343d","#073763","#20124d","#4c1130"]
             ]
         });
-        $("#line-color").spectrum({
+        $("#polylineColor").spectrum({
             showPaletteOnly: true,
             togglePaletteOnly: true,
             togglePaletteMoreText: '더보기',
             togglePaletteLessText: '줄이기',
-            color : lineColor,
+            color : polylineColor,
+            palette: [
+                ["#000","#444","#666","#999","#ccc","#eee","#f3f3f3","#fff"],
+                ["#f00","#f90","#ff0","#0f0","#0ff","#00f","#90f","#f0f"],
+                ["#f4cccc","#fce5cd","#fff2cc","#d9ead3","#d0e0e3","#cfe2f3","#d9d2e9","#ead1dc"],
+                ["#ea9999","#f9cb9c","#ffe599","#b6d7a8","#a2c4c9","#9fc5e8","#b4a7d6","#d5a6bd"],
+                ["#e06666","#f6b26b","#ffd966","#93c47d","#76a5af","#6fa8dc","#8e7cc3","#c27ba0"],
+                ["#c00","#e69138","#f1c232","#6aa84f","#45818e","#3d85c6","#674ea7","#a64d79"],
+                ["#900","#b45f06","#bf9000","#38761d","#134f5c","#0b5394","#351c75","#741b47"],
+                ["#600","#783f04","#7f6000","#274e13","#0c343d","#073763","#20124d","#4c1130"]
+            ]
+        });
+
+        $("#node-color").spectrum({
+            showPaletteOnly: true,
+            togglePaletteOnly: true,
+            togglePaletteMoreText: '더보기',
+            togglePaletteLessText: '줄이기',
+            color : nodeColor,
+            palette: [
+                ["#000","#444","#666","#999","#ccc","#eee","#f3f3f3","#fff"],
+                ["#f00","#f90","#ff0","#0f0","#0ff","#00f","#90f","#f0f"],
+                ["#f4cccc","#fce5cd","#fff2cc","#d9ead3","#d0e0e3","#cfe2f3","#d9d2e9","#ead1dc"],
+                ["#ea9999","#f9cb9c","#ffe599","#b6d7a8","#a2c4c9","#9fc5e8","#b4a7d6","#d5a6bd"],
+                ["#e06666","#f6b26b","#ffd966","#93c47d","#76a5af","#6fa8dc","#8e7cc3","#c27ba0"],
+                ["#c00","#e69138","#f1c232","#6aa84f","#45818e","#3d85c6","#674ea7","#a64d79"],
+                ["#900","#b45f06","#bf9000","#38761d","#134f5c","#0b5394","#351c75","#741b47"],
+                ["#600","#783f04","#7f6000","#274e13","#0c343d","#073763","#20124d","#4c1130"]
+            ]
+        });
+        $("#link-color").spectrum({
+            showPaletteOnly: true,
+            togglePaletteOnly: true,
+            togglePaletteMoreText: '더보기',
+            togglePaletteLessText: '줄이기',
+            color : linkColor,
             palette: [
                 ["#000","#444","#666","#999","#ccc","#eee","#f3f3f3","#fff"],
                 ["#f00","#f90","#ff0","#0f0","#0ff","#00f","#90f","#f0f"],

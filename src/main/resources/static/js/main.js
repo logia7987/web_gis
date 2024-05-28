@@ -20,6 +20,7 @@ function toggleWhiteMode() {
         tabmenu.style.backgroundColor = "#fff"
         for (i = 0; i < styleOption.length; i++) {
             styleOption[i].style.color = "black"
+            styleOption[i].style.color = "black"
         }
     }
 }
@@ -373,43 +374,69 @@ function changePolygonColor() {
     var polygon = $("#polygon-color").val()
     polygonColor = polygon
     for (i = 0; i < fileNmList.length; i++) {
-        if(fileNm === fileNmList[i]) {
+        if($('.selected')[0].id === fileNmList[i]) {
             map.setPaintProperty('polygons_'+fileNmList[i],'fill-color', polygonColor);
         }
     }
 }
 
-function changeLineColor() {
-    var line = $("#line-color").val()
-    lineColor = line
+function changePolyLineColor() {
+    var line = $("#polylineColor").val()
+    polylineColor = line
     for (i = 0; i < fileNmList.length; i++) {
-        if(fileNm === fileNmList[i]) {
-            map.setPaintProperty('outline_'+fileNmList[i],'line-color', lineColor);
+        if($('.selected')[0].id === fileNmList[i]) {
+            map.setPaintProperty('outline_'+fileNmList[i],'line-color', polylineColor);
         }
     }
 }
 
-function  changeLineThickness() {
-    var line = $("#line-width").val()
-    lineWidth = line
+function  changePolyLineThickness() {
+    var line = $("#poly-line-width").val()
+    polylineWidth = line
+    if (line < 0) {
+        $("#poly-line-width").val('0.1')
+        line = $("#poly-line-width").val()
+        polylineWidth = line
+        alert("0 미만 지원하지 않습니다")
+    }
     for (i = 0; i < fileNmList.length; i++) {
-        if(fileNm === fileNmList[i]) {
-            map.setPaintProperty('outline_'+fileNmList[i],'line-width', Number(lineWidth));
+        if($('.selected')[0].id === fileNmList[i]) {
+            map.setPaintProperty('outline_'+fileNmList[i],'line-width', Number(polylineWidth));
+        }
+    }
+}
+
+function changeNodeColor() {
+    var Node = $("#node-color").val()
+    nodeColor = Node
+    for (i = 0; i < fileNmList.length; i++) {
+        if($('.selected')[0].id === fileNmList[i]) {
+            map.setPaintProperty('nodes_'+fileNmList[i],'circle-color', nodeColor);
+        }
+    }
+}
+
+function changeLinkColor() {
+    var Link = $("#link-color").val()
+    linkColor = Link
+    for (i = 0; i < fileNmList.length; i++) {
+        if($('.selected')[0].id === fileNmList[i]) {
+            map.setPaintProperty('links_'+fileNmList[i],'line-color', linkColor);
         }
     }
 }
 
 // 지도 스타일 변경하는 함수
-mapSelect.onchange = (change) => {
-    const changeId = change.target.value;
-    map.setStyle('mapbox://styles/mapbox/' + changeId);
-    // map.on('style.load', () => {
-    //     for (i = 0; i < document.querySelectorAll('.file-tit').length; i++) {
-    //         var Name = document.querySelectorAll('.file-tit')[i].textContent
-    //         drawPolyline(dataArr[Name])
-    //     }
-    // });
-}
+// mapSelect.onchange = (change) => {
+//     const changeId = change.target.value;
+//     map.setStyle('mapbox://styles/mapbox/' + changeId);
+//     map.on('style.load', () => {
+//         for (i = 0; i < document.querySelectorAll('.file-tit').length; i++) {
+//             var Name = document.querySelectorAll('.file-tit')[i].textContent
+//             drawPolyline(dataArr[Name])
+//         }
+//     });
+// }
 
 function handleDragOver(e) {
     e.preventDefault();
