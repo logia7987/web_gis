@@ -224,35 +224,49 @@ public class ApiController {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode jsonNode = objectMapper.readTree(jsonString);
 
-            // Coordinate 에 접근
-            for (JsonNode coordinatesNode : jsonNode) {
-                JSONArray coordinateOutArr = new JSONArray();
+            if (jsonNode.isArray() && jsonNode.size() == 2) {
+                // 단일 좌표쌍 처리
+                JsonNode longitudeNode = jsonNode.get(0);
+                JsonNode latitudeNode = jsonNode.get(1);
 
-                for (JsonNode node : coordinatesNode) {
-                    JSONArray coordinateArr = new JSONArray();
+                if (longitudeNode != null && latitudeNode != null && longitudeNode.isNumber() && latitudeNode.isNumber()) {
+                    double longitude = longitudeNode.asDouble();
+                    double latitude = latitudeNode.asDouble();
 
-                    for (JsonNode subNode : node) {
-                        JSONArray aCoordinate = new JSONArray();
+                    coordinateInArr.add(longitude);
+                    coordinateInArr.add(latitude);
+                }
+            } else {
+                // Coordinate 에 접근
+                for (JsonNode coordinatesNode : jsonNode) {
+                    JSONArray coordinateOutArr = new JSONArray();
 
-                        JsonNode longitudeNode = subNode.get(0);
-                        JsonNode latitudeNode = subNode.get(1);
+                    for (JsonNode node : coordinatesNode) {
+                        JSONArray coordinateArr = new JSONArray();
 
-                        if (longitudeNode != null && latitudeNode != null && longitudeNode.isNumber() && latitudeNode.isNumber()) {
-                            double longitude = longitudeNode.asDouble();
-                            double latitude = latitudeNode.asDouble();
+                        for (JsonNode subNode : node) {
+                            JSONArray aCoordinate = new JSONArray();
 
-                            aCoordinate.add(longitude);
-                            aCoordinate.add(latitude);
-                        } else {
-                            aCoordinate.add(subNode);
+                            JsonNode longitudeNode = subNode.get(0);
+                            JsonNode latitudeNode = subNode.get(1);
+
+                            if (longitudeNode != null && latitudeNode != null && longitudeNode.isNumber() && latitudeNode.isNumber()) {
+                                double longitude = longitudeNode.asDouble();
+                                double latitude = latitudeNode.asDouble();
+
+                                aCoordinate.add(longitude);
+                                aCoordinate.add(latitude);
+                            } else {
+                                aCoordinate.add(subNode);
+                            }
+
+                            coordinateArr.add(aCoordinate);
                         }
 
-                        coordinateArr.add(aCoordinate);
+                        coordinateOutArr.add(coordinateArr);
                     }
-
-                    coordinateOutArr.add(coordinateArr);
+                    coordinateInArr.add(coordinateOutArr);
                 }
-                coordinateInArr.add(coordinateOutArr);
             }
 
             return coordinateInArr;

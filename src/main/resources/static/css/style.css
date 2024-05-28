@@ -4,8 +4,6 @@
     font-style: normal;
 }
 
-
-
 .dropdown-item {
     font-size : 11px
 }
@@ -123,7 +121,7 @@
     position: fixed;
     height: 96%;
     top: 45px;
-    right: 45px;
+    right: 46px;
     background-color: white;
     border-right: #e6e6e6;
 }
@@ -136,6 +134,7 @@
     border: none;
     overflow: hidden;
     font-size: 0;
+    border-left: 1px solid #e6e6e6;
 }
 
 
@@ -275,12 +274,11 @@
     background-color : #cccccc;
 }
  .top-nav {
-     width: 100%;
-     height: 45px;
-     vertical-align: middle;
-     display: inline-block;
-     border-bottom: #e6e6e6;
-     padding: 5px 0;
+     display: flex;
+     justify-content: flex-start;
+     align-items: center;
+     gap: 10px;
+     padding: 5px;
 }
 /* 셀렉트 박스 스타일 */
 .custom-select {
@@ -487,24 +485,32 @@
 }
 
 .top-btn {
-    padding: 0px 10px;
-    margin-left: 10px;
-    font-size: 20px;
+    padding: 0 10px;
     background-color: unset;
     color: #909CAA;
     border: 1px solid #ebebeb;
     height: 35px;
+    font-size: 14px;
+    font-family: "Noto Sans KR", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.mapbox-ctrl-btn {
+
 }
 
 #btn-status {
     display: inline-block;
-    margin-left: 10px;
-    font-size: 15px;
-    line-height: 30px;
-    margin-bottom: 0;
+    font-size: 14px;
     font-family: "Noto Sans KR", sans-serif;
     font-weight: 400;
     font-style: normal;
+    margin: 0;
 }
 
 #frmLayer table {
