@@ -478,7 +478,7 @@
 }
 
 #btn-status {
-    float: right;
+    display: inline-block;
     margin-left: 10px;
     font-size: 15px;
     line-height: 30px;
@@ -503,7 +503,7 @@
 }
 
 .plusfield table {
-    border: 1px solid #ddd;
+    /*border: 1px solid #ddd;*/
 }
 
 th, td {
@@ -579,4 +579,13 @@ th, td {
     height: 50px;
     line-height: 50px;
     margin: 0;
+}
+
+.proper-typeli {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.proper-typeli td {
+    padding: 5px;
 }

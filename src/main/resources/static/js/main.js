@@ -700,7 +700,7 @@ function startViewerMode() {
 
 function startEditMode() {
     toastOn("편집모드로 전환되었습니다. 좌측하단의 툴을 이용해 지도 위에 그리기가 가능합니다.")
-    $('.mapboxgl-ctrl-group').show()
+
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
     // var type = $(".selected").eq(0).attr("class");
@@ -708,11 +708,16 @@ function startEditMode() {
     loadProperty = dataArr
     if (type === 'fa-solid fa-share-nodes')  {
         getLinkDetail()
+        $('.mapbox-gl-draw_point, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
     } else if (type === 'fa-brands fa-hashnode') {
         getNodeDetail()
-    } else {
+        $('.mapbox-gl-draw_line, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
+    } else if (type === 'fa-solid fa-draw-polygon') {
         polygonDetail()
+        $('.mapbox-gl-draw_line, .mapbox-gl-draw_point, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
     }
+
+    $('.mapboxgl-ctrl-group').show()
 
     // 새 Feature 가 추가되는 걸 감지하는 부분
     map.on('draw.create', function(e) {
@@ -731,7 +736,14 @@ function startEditMode() {
         $('#newpolygon .modal-body table').empty()
         var property = Object.keys(newProperty[fileNm])
         for (var i = 0; i < property.length; i++) {
-            var html = "<tr><td><label class='polygon-label' title="+property[i]+">"+property[i]+"</label></td><td><input class='property' type='text'></td></tr>"
+            var html = "<tr>" +
+                "<td>" +
+                "<label class='polygon-label' title="+property[i]+">"+property[i]+"</label>" +
+                "</td>" +
+                "<td>" +
+                "<input class='form-control property' type='text'>" +
+                "</td>" +
+                "</tr>"
             $('#newpolygon .modal-body table').append(html)
         }
     });
@@ -760,6 +772,8 @@ function addNewFeature() {
     } else if (checkDataType(dataArr[fileNm]) === 'MultiPolygon' || checkDataType(dataArr[fileNm]) === 'Polygon') {
         updatePolygonData(features, properties, maxId)
     }
+
+    toastOn("정상적으로 추가되었습니다.")
 }
 
 function updateSourceData(newFeature) {

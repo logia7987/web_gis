@@ -44,12 +44,12 @@
     <div class="top-nav">
         <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기"><i class="fa-solid fa-floppy-disk"></i></button>
         <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
+        <button class="top-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i><p id="btn-status">거리측정</p></button>
 
-        <div style="float:right;margin-right: 10px;">
-            <button class="top-btn" onclick="checkDistance();">
-                <p id="btn-distance">거리측정</p>
-            </button>
-        </div>
+        <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_line top-btn" title="LineString tool (l)"></button>
+        <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_polygon top-btn" title="Polygon tool (p)"></button>
+        <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_point top-btn" title="Marker tool (m)"></button>
+        <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_trash top-btn" title="Delete"></button>
     </div>
 
     <div id="map" style="width: calc(100% - 45px); height: calc(100vh - 45px)"></div>

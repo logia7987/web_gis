@@ -79,7 +79,6 @@ function drawPolyline(data) {
     });
 }
 function polygonDetail() {
-    // $('.mapboxgl-gl-draw_line,.mapboxgl-gl-draw_point,.mapboxgl-gl-draw_combine,.mapboxgl-gl-draw_uncombine').hide()
     if (map.getLayer('polygons_'+fileNm) !== undefined) {
         $(".colors-item .sp-preview-inner").css("background-color", map.getPaintProperty('polygons_'+fileNm,'fill-color'))
         $(".line-item .sp-preview-inner ").css("background-color", map.getPaintProperty('outline_'+fileNm,'line-color'))
@@ -128,7 +127,9 @@ function updatePolygonData(features, properties, maxId) {
                 type: 'Feature',
                 properties: properties,
                 geometry: {
-                    coordinates: features[j].geometry.coordinates,
+                    coordinates: [
+                        features[j].geometry.coordinates
+                    ],
                     type : "MultiPolygon"
                 },
             };
