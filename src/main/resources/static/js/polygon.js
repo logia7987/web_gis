@@ -128,7 +128,7 @@ function updatePolygonData(features, properties, maxId) {
                 type: 'Feature',
                 properties: properties,
                 geometry: {
-                    coordinates: features[j].geometry.coordinates,
+                    coordinates: [features[j].geometry.coordinates],
                     type : "MultiPolygon"
                 },
             };
