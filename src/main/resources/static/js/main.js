@@ -331,19 +331,23 @@ document.addEventListener('contextmenu', function (){
 });
 
 function changeEditMode() {
-    if ( $('#btn-status').text() === '보기 모드') {
-        // 편집 모드로 전환
-        startEditMode()
-    } else if ( $('#btn-status').text() === '편집 모드') {
-        // 보기 모드로 전환
-        startViewerMode()
-    } else if (draw.getAll().features.length === 0 && drawArr.length > 0) {
-        drawArr = []
-        propertyArr = []
-        loadProperty = dataArr
-        // getProperties()
+    if ($('.layer-file').length === 0) {
+        alert('레이어가 없습니다 레이어를 생성해주세요')
     } else {
-        alert('편집된 부분이 없습니다')
+        if ( $('#btn-status').text() === '보기 모드') {
+            // 편집 모드로 전환
+            startEditMode()
+        } else if ( $('#btn-status').text() === '편집 모드') {
+            // 보기 모드로 전환
+            startViewerMode()
+        } else if (draw.getAll().features.length === 0 && drawArr.length > 0) {
+            drawArr = []
+            propertyArr = []
+            loadProperty = dataArr
+            // getProperties()
+        } else {
+            alert('편집된 부분이 없습니다')
+        }
     }
 }
 
@@ -736,12 +740,15 @@ function startEditMode() {
     if (type === 'fa-solid fa-share-nodes')  {
         getLinkDetail()
         $('.mapbox-gl-draw_point, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
+        $('.mapbox-gl-draw_line').show()
     } else if (type === 'fa-brands fa-hashnode') {
         getNodeDetail()
         $('.mapbox-gl-draw_line, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
+        $('.mapbox-gl-draw_point').show()
     } else if (type === 'fa-solid fa-draw-polygon') {
         polygonDetail()
         $('.mapbox-gl-draw_line, .mapbox-gl-draw_point, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
+        $('.mapbox-gl-draw_polygon').show()
     }
 
     $('.mapboxgl-ctrl-group').show()
@@ -783,24 +790,46 @@ function addNewFeature() {
     var maxId = Math.max.apply(null, ids)
     var property = $('#newpolygon .modal-body table').find('input')
     var properties = {}
+    var proper = $('.property')
+    var isProperty = true
 
-    if (dataArr[fileNm].data.features.length === 0) {
-        maxId = -1
+    for (i = 0; i < proper.length; i++) {
+        if (proper[i].value === '') {
+            toastOn("빈칸을 채워주세요.")
+            isProperty = false;
+            break;
+        }
     }
 
-    for (i = 0; i < property.length; i++) {
-        properties[obj[i]] = property[i].value
-    }
+    if (isProperty) {
+        if (dataArr[fileNm].data.features.length === 0) {
+            maxId = -1
+        }
 
-    if (checkDataType(dataArr[fileNm]) === 'Point') {
-        updateNodeData(features, properties, maxId)
-    } else if (checkDataType(dataArr[fileNm]) === 'MultiLineString' || checkDataType(dataArr[fileNm]) === 'LineString') {
-        updateLinkData(features, properties, maxId)
-    } else if (checkDataType(dataArr[fileNm]) === 'MultiPolygon' || checkDataType(dataArr[fileNm]) === 'Polygon') {
-        updatePolygonData(features, properties, maxId)
-    }
+        for (i = 0; i < property.length; i++) {
+            properties[obj[i]] = property[i].value
+        }
 
-    toastOn("정상적으로 추가되었습니다.")
+        if (checkDataType(dataArr[fileNm]) === 'Point') {
+            updateNodeData(features, properties, maxId)
+        } else if (checkDataType(dataArr[fileNm]) === 'MultiLineString' || checkDataType(dataArr[fileNm]) === 'LineString') {
+            updateLinkData(features, properties, maxId)
+        } else if (checkDataType(dataArr[fileNm]) === 'MultiPolygon' || checkDataType(dataArr[fileNm]) === 'Polygon') {
+            updatePolygonData(features, properties, maxId)
+        }
+        $('#newpolygon').modal('hide')
+        toastOn("정상적으로 추가되었습니다.")
+    }
+}
+
+function cancelAdd() {
+    var checkData= draw.getAll().features
+    for (i = 0; i < checkData.length; i++) {
+        if (Object.keys(checkData[i].properties).length === 0) {
+            draw.delete(checkData[i].id)
+        }
+    }
+    $('#newpolygon').modal('hide')
 }
 
 function updateSourceData(newFeature) {
