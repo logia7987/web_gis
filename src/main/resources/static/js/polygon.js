@@ -26,12 +26,7 @@ function drawPolyline(data) {
                 'source': sourceId,
                 'paint': {
                     'fill-color': polygonColor,
-                    'fill-opacity': [
-                        'case',
-                        ['boolean', ['feature-state', 'hover'], false],
-                        1,
-                        0.5
-                    ]
+                    'fill-opacity': 0.5
                 }
             });
 
@@ -95,9 +90,6 @@ function polygonDetail() {
             map.setPaintProperty('polygons_'+fileNmList[i],'fill-opacity', 0.5);
         }
 
-        var opacity = ['case', ['boolean', ['feature-state', 'hover'], false], 1, 0.5]
-        map.setPaintProperty('polygons_'+fileNm,'fill-opacity', opacity);
-
         map.on('click', 'polygons_'+fileNm, function (e) {
             if (e.features[0].layer.id === 'polygons_'+fileNm) {
                 if (isEdit()) {
@@ -155,12 +147,7 @@ function updatePolygonData(features, properties, maxId) {
             'layout': {},
             'paint': {
                 'fill-color': polygonColor,
-                'fill-opacity': [
-                    'case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    1,
-                    0.5
-                ]
+                'fill-opacity': 0.5
             }
         });
         map.addLayer({

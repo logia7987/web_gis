@@ -9,23 +9,25 @@
 }
 
 #frmFile {
-    border-radius: 2.5rem;
-    border: 3px dashed #4d4d4d;
+    overflow: auto;
+    border: 1px dashed #4d4d4d;
     height: 200px;
     margin: auto;
-    box-shadow: 0 0.625rem 1.25rem #0000001a;
+    /*box-shadow: 0 0.625rem 1.25rem #0000001a;*/
 }
 
-#file_intro h4:hover, #file_intro comment:hover {
+#lbShpData:hover h4 {
     color: #2699E6;
 }
 
 #lbShpData {
     width: 100%;
     height: 100%;
+    display: block;
 }
 
 #lbShpData > #file_intro {
+    padding: 0 10px;
     width: 100%;
     height: 100%;
     line-height: 100%;
@@ -282,6 +284,7 @@
 }
 /* 셀렉트 박스 스타일 */
 .custom-select {
+    margin-top: -10px;
     border: 2px solid #4d4d4d;
     display: inline-block;
     width: 100%;
@@ -614,4 +617,33 @@ th, td {
 
 .proper-typeli td {
     padding: 5px;
+}
+
+.dropfile {
+    align-items: center;
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.dropfile p{
+    margin: 0;
+}
+
+.fa-times {
+    margin-right: 10px;
+}
+
+.drag-over {
+    background-color: rgba(77, 77, 77, 0.5);
+}
+
+.drag-data {
+    padding: 10px;
+    overflow: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 200px;
+    display: none;
 }
