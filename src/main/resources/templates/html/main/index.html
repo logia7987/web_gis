@@ -58,18 +58,26 @@
 
 <!--    <div id="mode-change-btn" onclick="toggleWhiteMode()"><i class="fas fa-solid fa-moon" id="mdicon"></i></div>-->
     <div class="tab-menu">
-        <div class="tab-links" onclick="openTab(event, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="레이어"><i class="fa-solid fa-layer-group"></i></div>
+        <div class="tab-links active" onclick="openTab(event, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="레이어"><i class="fa-solid fa-layer-group"></i></div>
         <div class="tab-links" onclick="openTab(event, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구"><i class="fa-solid fa-screwdriver-wrench"></i></div>
 <!--        <div class="tab-links" onclick="openTab(event, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성"><i class="fa-solid fa-list"></i></div>-->
     </div>
 
-    <div id="tab1" class="tab" style = "display: none;">
+    <div id="tab1" class="tab" style="display: block;">
         <div class="tab-title padding-10 basic-font">
             <h5>레이어</h5>
             <i class="fa-solid fa-file-pen"  data-bs-toggle='modal' data-bs-target='#pluslayer'></i>
         </div>
 
-        <div class="layer-file-list basic-font"></div>
+        <div class="layer-file-list basic-font">
+            <span class="empty-layer">
+                레이어가 비어있습니다.
+                <br><br>
+                레이어 생성 버튼 <i class="fa-solid fa-file-pen" data-bs-toggle="modal" data-bs-target="#pluslayer" aria-hidden="true"></i> 을 클릭해서
+                <br><br>
+                레이어를 추가해주세요.
+            </span>
+        </div>
     </div>
 
     <div id="tab2" class="tab">

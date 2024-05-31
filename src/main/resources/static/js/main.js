@@ -291,6 +291,8 @@ function removeLayer(key) {
         $(".file-info-item").remove();
     }
 
+    isEmptyLayerList()
+
     toastOn("레이어를 삭제했습니다.")
 }
 function editShp(property) {
@@ -875,4 +877,14 @@ function toastOn(t){
         $("#toast_popup").removeClass('active');
         $("#toast_text").text("")
     },2500);
+}
+
+function isEmptyLayerList() {
+    var layerLength = $(".layer-file").length
+
+    if (layerLength === 0) {
+        $(".empty-layer").show();
+    } else {
+        $(".empty-layer").hide();
+    }
 }

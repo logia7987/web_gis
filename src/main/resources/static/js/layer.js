@@ -125,6 +125,8 @@ function addLayers() {
         $('.plusproperty').eq(0).remove();
     }
 
+    isEmptyLayerList()
+
     toastOn("레이어가 생성되었습니다. 보기모드를 클릭하면 추가/편집할 수 있습니다.")
 }
 
