@@ -138,8 +138,21 @@ function getShpData(shpId) {
         },
         success : function(data) {
             hideModal('loadFile')
-
-            data.fileName = data.shpName
+            if (fileNmList.length > 0) {
+                var idx = 0
+                for (i = 0; i < fileNmList.length; i++) {
+                    if (fileNmList[i].indexOf(data.shpName) >  -1) {
+                        idx += 1
+                    }
+                }
+                if (idx !== 0) {
+                    data.fileName = data.shpName + '_' + idx
+                } else {
+                    data.fileName = data.shpName
+                }
+            } else {
+                data.fileName = data.shpName
+            }
 
             if (checkDataType(data) === 'Point') {
                 drawNodePoint(data).then(r => true);
@@ -473,6 +486,18 @@ function handleDrop(e) {
 
 function drawShpData(data) {
     const dataType = checkDataType(data);
+
+    if (fileNmList.length > 0) {
+        var idx = 0
+        for (i = 0; i < fileNmList.length; i++) {
+            if (fileNmList[i].indexOf(data.fileName) >  -1) {
+                idx += 1
+            }
+        }
+        if (idx !== 0) {
+            data.fileName += '_' + idx
+        }
+    }
     
     // 메모리 누수 방지를 위해 확실히 종료된 후에 createLayer 를 실행
     if (dataType === "Point") {
