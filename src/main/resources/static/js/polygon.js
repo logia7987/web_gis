@@ -100,17 +100,19 @@ function polygonDetail() {
 
         map.on('click', 'polygons_'+fileNm, function (e) {
             if (e.features[0].layer.id === 'polygons_'+fileNm) {
-                var property = "";
-                var id = e.features[0].id
-                var info = dataArr[fileNm].data.features
-                for (i = 0; i < info.length; i++) {
-                    if (info[i].id == id) {
-                        property = info[i]
+                if (isEdit()) {
+                    var property = "";
+                    var id = e.features[0].id
+                    var info = dataArr[fileNm].data.features
+                    for (i = 0; i < info.length; i++) {
+                        if (info[i].id == id) {
+                            property = info[i]
+                        }
                     }
-                }
-                $('#'+ id).parent().addClass("selected")
+                    $('#'+ id).parent().addClass("selected")
 
-                editShp(property)
+                    editShp(property)
+                }
             }
         });
 

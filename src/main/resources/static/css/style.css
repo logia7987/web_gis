@@ -593,6 +593,7 @@ th, td {
     border-radius: 15px;
     transition: all 0.5s;
     vertical-align: baseline;
+    z-index: 99999;
 }
 #toast_popup.active {
     opacity: 100%;
