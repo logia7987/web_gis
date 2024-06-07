@@ -79,15 +79,17 @@
         $('.comment').hide()
         $('#file_intro').css('align-items', 'flex-start')
 
-        if (files.length > 0) { // 드래그 앤 드랍 시 html 생성
-            for (i = 0; i < files.length ; i++) {
-                fileName = files[i].name
-                var html = ""
-                html = "<div class='dropfile basic-font'><i class=\"fas fa-times\" onclick='deleteFileList(this)'></i><p>"+fileName+"</p></div>"
-                $(".drag-data").append(html)
-                $("#shpData").prop("files", e.dataTransfer.files)
+        if (checkFile(files)) {
+            if (files.length > 0) { // 드래그 앤 드랍 시 html 생성
+                for (i = 0; i < files.length ; i++) {
+                    fileName = files[i].name
+                    var html = ""
+                    html = "<div class='dropfile basic-font'><i class=\"fas fa-times\" onclick='deleteFileList(this)'></i><p>"+fileName+"</p></div>"
+                    $(".drag-data").append(html)
+                    $("#shpData").prop("files", e.dataTransfer.files)
+                }
+                $('.drag-data').css('display', 'block')
             }
-            $('.drag-data').css('display', 'block')
         }
     }
 
@@ -104,45 +106,23 @@
         var hasShp = false
         var hasShx = false
         var hasDdf = false
-        var hasShpIdx = 0; // shp 파일 개수 검사
-        var hasShxIdx = 0; // shx 파일 개수 검사
-        var hasDdfIdx = 0; // ddf 파일 개수 검사
 
-        if (files.length > 8) {
-            alert('파일 개수 7개로 제한되어 있습니다. 다시 올려주세요')
-            resetFrmFile()
-        } else {
+        for (var i = 0; i < files.length; i++) {
+            if (files[i].name.indexOf('.shp') > -1) { // .shp 파일 여부 검사
+                hasShp = true
+            } else if (files[i].name.indexOf('.shx') > -1) { // .shx 파일 여부 검사
+                hasShx = true
+            } else if (files[i].name.indexOf('.dbf') > -1) { // .dbf 파일 여부 검사
+                hasDdf = true
+            }
+        }
+
+        if (hasShp === true && hasShx === true && hasDdf === true) {
             for (var i = 0; i < files.length; i++) {
-                if (files[i].name.indexOf('.shp') > -1) {
-                    hasShp = true
-                    hasShpIdx += 1;
-                } else if (files[i].name.indexOf('.shx') > -1) {
-                    hasShx = true
-                    hasShxIdx += 1;
-                } else if (files[i].name.indexOf('.dbf') > -1) {
-                    hasDdf = true
-                    hasDdfIdx += 1;
-                }
+                formData.append('shpData', files[i]);
             }
-
-            if (hasShpIdx > 1) {
-                alert('.shp 파일 두개 이상 올라갔습니다. 파일을 다시 올려주세요')
-                resetFrmFile()
-            } else if (hasShxIdx > 1) {
-                alert('Shx 파일 두개 이상 올라갔습니다. 파일을 다시 올려주세요')
-                resetFrmFile()
-            } else if (hasDdfIdx > 1) {
-                alert('Ddf 파일 두개 이상 올라갔습니다. 파일을 다시 올려주세요')
-                resetFrmFile()
-            } else {
-                if (hasShp === true && hasShx === true && hasDdf === true) {
-                    for (var i = 0; i < files.length; i++) {
-                        formData.append('shpData', files[i]);
-                    }
-                } else {
-                    alert ("필수 파일을 확인해주세요.")
-                }
-            }
+        } else {
+            alert ("필수 파일을 확인해주세요.")
         }
 
         $.ajax({
@@ -220,13 +200,15 @@
         $('.comment').hide()
         $('#file_intro').css('align-items', 'flex-start')
 
-        if (files.length > 0) { // 드래그 앤 드랍 시 html 생성
-            for (i = 0; i < files.length ; i++) {
-                fileName = files[i].name
-                var html = ""
-                html = "<div class='dropfile basic-font'><i class=\"fas fa-times\" onclick='deleteFileList(this)'></i><p>"+fileName+"</p></div>"
-                $("#file_intro").append(html)
-                $("#shpData").prop("files", files)
+        if (checkFile(files)) {
+            if (files.length > 0) { // 드래그 앤 드랍 시 html 생성
+                for (i = 0; i < files.length ; i++) {
+                    fileName = files[i].name
+                    var html = ""
+                    html = "<div class='dropfile basic-font'><i class=\"fas fa-times\" onclick='deleteFileList(this)'></i><p>"+fileName+"</p></div>"
+                    $("#file_intro").append(html)
+                    $("#shpData").prop("files", files)
+                }
             }
         }
     });
@@ -239,6 +221,43 @@
         $('.drag-data').css('display', 'none')
         $('#file_intro').css('align-items', 'center')
         $('.dropfile').remove()
+    }
+
+    function checkFile(files) {
+        var hasShpIdx = 0; // shp 파일 개수 검사
+        var hasShxIdx = 0; // shx 파일 개수 검사
+        var hasDdfIdx = 0; // ddf 파일 개수 검사
+
+        if (files.length > 8) {
+            alert('파일 개수 7개로 제한되어 있습니다. 다시 올려주세요')
+            resetFrmFile()
+        } else {
+            for (var i = 0; i < files.length; i++) {
+                if (files[i].name.indexOf('.shp') > -1) { // .shp 개수 여부 검사
+                    hasShpIdx += 1;
+                } else if (files[i].name.indexOf('.shx') > -1) { // .shx 개수 여부 검사
+                    hasShxIdx += 1;
+                } else if (files[i].name.indexOf('.dbf') > -1) { // .dbf 개수 여부 검사
+                    hasDdfIdx += 1;
+                }
+            }
+
+            if (hasShpIdx > 1) {
+                alert('.shp 파일 두개 이상 올라갔습니다. 파일을 다시 올려주세요')
+                resetFrmFile()
+                return false;
+            } else if (hasShxIdx > 1) {
+                alert('Shx 파일 두개 이상 올라갔습니다. 파일을 다시 올려주세요')
+                resetFrmFile()
+                return false;
+            } else if (hasDdfIdx > 1) {
+                alert('Ddf 파일 두개 이상 올라갔습니다. 파일을 다시 올려주세요')
+                resetFrmFile()
+                return false;
+            }
+            return true;
+        }
+
     }
 
 </script>

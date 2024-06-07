@@ -387,7 +387,7 @@ function checkDataType(data) {
     return type
 }
 
-function changePolygonColor() {
+function changePolygonColor() { // 폴리곤 색 변경
     var polygon = $("#polygon-color").val()
     polygonColor = polygon
     for (i = 0; i < fileNmList.length; i++) {
@@ -397,7 +397,7 @@ function changePolygonColor() {
     }
 }
 
-function changePolyLineColor() {
+function changePolyLineColor() { // 폴리곤 선 색 변경
     var line = $("#polylineColor").val()
     polylineColor = line
     for (i = 0; i < fileNmList.length; i++) {
@@ -407,7 +407,7 @@ function changePolyLineColor() {
     }
 }
 
-function  changePolyLineThickness() {
+function  changePolyLineThickness() { // 폴리곤 선 굵기 변경
     var line = $("#poly-line-width").val()
     polylineWidth = line
     if (line < 0) {
@@ -487,7 +487,7 @@ function handleDrop(e) {
 function drawShpData(data) {
     const dataType = checkDataType(data);
 
-    if (fileNmList.length > 0) {
+    if (fileNmList.length > 0) { // 파일 이름 중복 여부 체크 후 동일하게 존재 시 _숫자 붙도록
         var idx = 0
         for (i = 0; i < fileNmList.length; i++) {
             if (fileNmList[i].indexOf(data.fileName) >  -1) {
@@ -593,20 +593,30 @@ function handleFeatureSelection(e) {
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
         if (e.features !== undefined) {
+            $('.property-window').css('left', '10px'); // 속성 창 띄우기
+            $('.property-list').empty() // 속성 리스트 비우기
+
             const properties = e.features[0].properties;
             let propertyHtml = '<div>';
             for (const key in properties) {
-                propertyHtml += '<p>' + key + ': ' + properties[key] + '</p>';
+                propertyHtml += '<tr><tb class="property-item">' + key + ': ' +'</tb><tb>'+ properties[key] + '</tb></tb>';
             }
             propertyHtml += '</div>';
 
+            $('.property-list').append(propertyHtml);
+
+
             // 인포윈도우 열기
-            new mapboxgl.Popup()
-                .setLngLat(e.lngLat)
-                .setHTML(propertyHtml)
-                .addTo(map);
+            // new mapboxgl.Popup()
+            //     .setLngLat(e.lngLat)
+            //     .setHTML(propertyHtml)
+            //     .addTo(map);
         }
     }
+}
+
+function closePropertyWindow() {
+    $('.property-window').css('left', '-500px')
 }
 
 function isEdit() {
@@ -731,13 +741,13 @@ function startViewerMode() {
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
 
-    if (draw.getAll().features.length > 0) {
+    if (draw.getAll().features.length > 0) { // 편집 모드에서 편집하던 draw 전부 반영되도록
         for (i = 0; i < draw.getAll().features.length; i++) {
             map.getSource('data_' + fileNm)._options.data.features.push(draw.getAll().features[i])
         }
     }
 
-    if (fileNm !== '') {
+    if (fileNm !== '') { 
         var updatedFeatures = map.getSource('data_' + fileNm)._options.data.features;
         // Set the updated data
         map.getSource('data_' + fileNm).setData({
@@ -764,15 +774,15 @@ function startEditMode() {
     loadProperty = dataArr
     if (type === 'fa-solid fa-share-nodes')  {
         getLinkDetail()
-        $('.mapbox-gl-draw_point, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
+        $('.mapbox-gl-draw_point, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide() // 노드 추가 제외하고 다 숨김 처리
         $('.mapbox-gl-draw_line').show()
     } else if (type === 'fa-brands fa-hashnode') {
         getNodeDetail()
-        $('.mapbox-gl-draw_line, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
+        $('.mapbox-gl-draw_line, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide() // 링크 추가 제외하고 다 숨김 처리
         $('.mapbox-gl-draw_point').show()
     } else if (type === 'fa-solid fa-draw-polygon') {
         polygonDetail()
-        $('.mapbox-gl-draw_line, .mapbox-gl-draw_point, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide()
+        $('.mapbox-gl-draw_line, .mapbox-gl-draw_point, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide() // 폴리곤 추가 제외하고 다 숨김 처리
         $('.mapbox-gl-draw_polygon').show()
     }
 
@@ -808,7 +818,7 @@ function startEditMode() {
     });
 }
 
-function addNewFeature() {
+function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
     var features = draw.getAll().features;
     var obj = Object.keys(newProperty[fileNm])
     var ids = dataArr[fileNm].data.features.map(feature => feature.id);
@@ -818,7 +828,7 @@ function addNewFeature() {
     var proper = $('.property')
     var isProperty = true
 
-    for (i = 0; i < proper.length; i++) {
+    for (i = 0; i < proper.length; i++) { // 빈칸 여부 체크
         if (proper[i].value === '') {
             toastOn("빈칸을 채워주세요.")
             isProperty = false;
@@ -835,7 +845,7 @@ function addNewFeature() {
             properties[obj[i]] = property[i].value
         }
 
-        if (checkDataType(dataArr[fileNm]) === 'Point') {
+        if (checkDataType(dataArr[fileNm]) === 'Point') { // 폴리곤, 노드, 링크 구분 작업
             updateNodeData(features, properties, maxId)
         } else if (checkDataType(dataArr[fileNm]) === 'MultiLineString' || checkDataType(dataArr[fileNm]) === 'LineString') {
             updateLinkData(features, properties, maxId)
@@ -847,7 +857,7 @@ function addNewFeature() {
     }
 }
 
-function cancelAdd() {
+function cancelAdd() { // 취소 버튼 눌렀을 때 그렸던 draw 내용 제거
     var checkData= draw.getAll().features
     for (i = 0; i < checkData.length; i++) {
         if (Object.keys(checkData[i].properties).length === 0) {

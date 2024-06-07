@@ -41,30 +41,8 @@ function drawPolyline(data) {
                 }
             });
 
-            map.on('mousemove', layerId, function(e) {
-                if (e.features.length > 0) {
-                    if (hoveredPolygonId !== null) {
-                        map.setFeatureState(
-                            { source: sourceId, id: hoveredPolygonId },
-                            { hover: false }
-                        );
-                    }
-                    hoveredPolygonId = e.features[0].id;
-                    map.setFeatureState(
-                        { source: sourceId, id: hoveredPolygonId },
-                        { hover: true }
-                    );
-                }
-            });
-
-            map.on('mouseleave', layerId, function() {
-                if (hoveredPolygonId !== null) {
-                    map.setFeatureState(
-                        { source: sourceId, id: hoveredPolygonId },
-                        { hover: false }
-                    );
-                }
-                hoveredPolygonId = null;
+            map.on('click', layerId, function (e) {
+                handleFeatureSelection(e);
             });
 
             resolve();
@@ -90,23 +68,10 @@ function polygonDetail() {
             map.setPaintProperty('polygons_'+fileNmList[i],'fill-opacity', 0.5);
         }
 
-        map.on('click', 'polygons_'+fileNm, function (e) {
-            if (e.features[0].layer.id === 'polygons_'+fileNm) {
-                if (isEdit()) {
-                    var property = "";
-                    var id = e.features[0].id
-                    var info = dataArr[fileNm].data.features
-                    for (i = 0; i < info.length; i++) {
-                        if (info[i].id == id) {
-                            property = info[i]
-                        }
-                    }
-                    $('#'+ id).parent().addClass("selected")
-
-                    editShp(property)
-                }
-            }
-        });
+        if (features.length > 0) {
+            // 가장 가까운 링크에 대한 작업 수행
+            handleFeatureSelection(features[0]);
+        }
 
     }
 }
