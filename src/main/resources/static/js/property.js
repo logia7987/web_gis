@@ -52,7 +52,7 @@ function changeProperties() {
         $('.change-btn').text('완료')
         $('.property-list table tr').each(function() {
             var cell = $(this).find('.property-info'); // tr 안에 .property-info 찾는다
-            var val = valueCell.text(); // .property-info의 텍스트 가지고 온다
+            var val = cell.text(); // .property-info의 텍스트 가지고 온다
             cell.html('<input style="width: 120px" type="text" value="' + val + '" />'); // value 값으로 텍스트 필드 생성
         });
     } else {

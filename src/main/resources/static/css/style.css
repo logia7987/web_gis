@@ -348,7 +348,7 @@
 
 .property-list {
     overflow-x: hidden;
-    height: 90%;
+    height: 85%;
     font-size: 14px;
 }
 
@@ -402,22 +402,6 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-}
-
-.info-id {
-    width: 50px;
-}
-
-.info-gcode {
-    width: 70px;
-}
-
-.info-name {
-    width: 110px;
-}
-
-.info-fname {
-    width: 60px;
 }
 
 .file-info-item {
@@ -565,7 +549,7 @@ th, td {
 }
 
 .property-list table {
-    width: 280px;
+    width: 250px;
 }
 
 .property-list table tr td:first-child {
