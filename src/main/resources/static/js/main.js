@@ -594,23 +594,17 @@ function handleFeatureSelection(e) {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
         if (e.features !== undefined) {
             $('.property-window').css('left', '10px'); // 속성 창 띄우기
-            $('.property-list').empty() // 속성 리스트 비우기
+            $('.property-list table').empty() // 속성 리스트 비우기
 
             const properties = e.features[0].properties;
-            let propertyHtml = '<div>';
+            let propertyHtml = '<tbody>';
             for (const key in properties) {
-                propertyHtml += '<tr><tb class="property-item">' + key + ': ' +'</tb><tb>'+ properties[key] + '</tb></tb>';
+                propertyHtml += '<tr><td id='+e.features[0].id+'>' + key +'</td><td class="property-info">'+ properties[key] + '</td></tr>'; // 속성 정보
             }
-            propertyHtml += '</div>';
 
-            $('.property-list').append(propertyHtml);
+            propertyHtml += '</tbody>';
 
-
-            // 인포윈도우 열기
-            // new mapboxgl.Popup()
-            //     .setLngLat(e.lngLat)
-            //     .setHTML(propertyHtml)
-            //     .addTo(map);
+            $('.property-list table').append(propertyHtml);
         }
     }
 }

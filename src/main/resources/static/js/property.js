@@ -22,7 +22,7 @@ function getProperties() {
         detail = "<tr>"
         for (k = 0; k < titArr.length; k++) {
             html2 = titArr[k].toString()
-            proprty = "<td title="+dataArr[fileNm].data.features[j].properties[html2]+">" +dataArr[fileNm].data.features[j].properties[html2] + "</td>";
+            proprty = "<tr><td title="+dataArr[fileNm].data.features[j].properties[html2]+">" +dataArr[fileNm].data.features[j].properties[html2] + "</td></tr>";
             detail += proprty;
         }
         detail += "</tr>"
@@ -47,29 +47,24 @@ function selectedProperty(obj) {
     }
 }
 
-function changeProperties(id) {
-    changeProper = id
-    $(".modal-body form").remove()
-    var html =
-        "<form method='POST'><label> ID  </label><input id ='proper-dist1id' type='text' value= "+$("#"+id+" .info-id").text()+"><br>"+
-        "<label> 지역 코드 </label><input id ='proper-gcode' type='text' value= "+$("#"+id+" .info-gcode").text()+"><br>"+
-        "<label> 시군구 </label><input id ='proper-name' type='text' value= "+$("#"+id+" .info-name").text()+"><br>"+
-        "<label> 지역명 </label><input id ='proper-fname' type='text' value= "+$("#"+id+" .info-fname").text()+"></div></form>"
-    $(".modal-body").append(html)
-}
+function changeProperties() {
+    if ($('.change-btn').text() === '수정') {
+        $('.change-btn').text('완료')
+        $('.property-list table tr').each(function() {
+            var cell = $(this).find('.property-info'); // tr 안에 .property-info 찾는다
+            var val = valueCell.text(); // .property-info의 텍스트 가지고 온다
+            cell.html('<input style="width: 120px" type="text" value="' + val + '" />'); // value 값으로 텍스트 필드 생성
+        });
+    } else {
+        $('.change-btn').text('수정')
+        var changedProperty = $('.property-info input').val()
+        $('.property-info').empty()
+        $('.property-info').text(changedProperty)
+        var geoData = map.getSource('data_DISTRICT1_Project')._options.data.features
 
-function finishProperties() {
-    var data = dataArr[fileNm].data.features
-    for (i = 0; i < data.length; i++) {
-        if (data[i].id == changeProper) {
-            data[i].properties["DIST1_ID"] = $('#proper-dist1id').val()
-            data[i].properties["GCODE"] = $('#proper-gcode').val()
-            data[i].properties["F_NAME"] = $('#proper-name').val()
-            data[i].properties["NAME"] = $('#proper-fname').val()
-            $("#"+changeProper+" .info-id").text($('#proper-dist1id').val())
-            $("#"+changeProper+" .info-gcode").text($('#proper-gcode').val())
-            $("#"+changeProper+" .info-name").text($('#proper-name').val())
-            $("#"+changeProper+" .info-fname").text($('#proper-fname').val())
+        for (i = 0; i < geoData.length; i++) {
+
         }
     }
 }
+

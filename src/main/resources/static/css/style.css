@@ -349,6 +349,7 @@
 .property-list {
     overflow-x: hidden;
     height: 90%;
+    font-size: 14px;
 }
 
 .margin-top-10 {
@@ -553,18 +554,26 @@ th, td {
     white-space: nowrap;
 }
 
-.property-list table {
-    width: 320px;
-}
-
 .property-list::-webkit-scrollbar-thumb {
-    background-color: #F7F8FA;
+    background-color: #ccc;
 }
 
 .property-list::-webkit-scrollbar {
     width: 8px;
-    background-color: #ccc;
+    background-color: #F7F8FA;
     border-radius: 10px;
+}
+
+.property-list table {
+    width: 280px;
+}
+
+.property-list table tr td:first-child {
+    width: 120px;
+}
+
+.property-list table tr td:last-child {
+    width: 160px;
 }
 
 .padding-5 {
@@ -661,4 +670,15 @@ th, td {
 
 .margin-0 {
     margin: 0;
+}
+
+.change-btn {
+    font-size: 14px;
+    border: 0;
+    float: right;
+    border-radius: 8px;
+}
+
+.change-btn:hover {
+    font-weight: bold;
 }
