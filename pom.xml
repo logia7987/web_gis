@@ -11,7 +11,7 @@
 	<groupId>com.transit</groupId>
 	<artifactId>web_gis</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<name>web_gis</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>

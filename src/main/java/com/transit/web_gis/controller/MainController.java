@@ -63,7 +63,6 @@ public class MainController {
             session.removeAttribute("fileName");
             FileUtils.deleteDirectory(tempDir);
         }
-        //        model.addAttribute("shpList", shpService.selectShp());
         return "html/popup/modal_loadfile";
     }
 

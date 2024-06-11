@@ -197,6 +197,7 @@
     height: 100%;
     width: 100%;
     overflow: auto;
+    position: relative;
 }
 
 .layer-file {
@@ -284,7 +285,6 @@
 }
 /* 셀렉트 박스 스타일 */
 .custom-select {
-    margin-top: -10px;
     border: 2px solid #4d4d4d;
     display: inline-block;
     width: 100%;
@@ -612,6 +612,15 @@ th, td {
     padding: 5px;
 }
 
+.empty-layer {
+    position: absolute;
+    top: 25%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    text-align: center;
+    line-height: 100%;
+}
 .dropfile {
     align-items: center;
     display: flex;
