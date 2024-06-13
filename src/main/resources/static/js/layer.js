@@ -155,6 +155,8 @@ function createLayer(data, type) {
     fileNmList.push(data.fileName)
 
     selectedLayer(data.fileName)
+
+    isEmptyLayerList()
 }
 
 

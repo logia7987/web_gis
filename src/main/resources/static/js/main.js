@@ -884,7 +884,7 @@ function toastOn(t){
 }
 
 function isEmptyLayerList() {
-    var layerLength = $(".layer-file").length
+    var layerLength = $(".layer-file-list").length
 
     if (layerLength === 0) {
         $(".empty-layer").show();
