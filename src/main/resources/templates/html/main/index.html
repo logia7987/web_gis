@@ -25,7 +25,6 @@
     <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js'></script>
     <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-language/v1.0.0/mapbox-gl-language.js'></script>
 
-
     <!-- jQuery -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
@@ -41,6 +40,7 @@
 
 </head>
 <body>
+    <input type="hidden" name="_csrf" th:value="${csrf}" />
     <header style="height: 45px;border-bottom: 1px solid #e6e6e6;">
         <div class="top-nav">
             <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기"><i class="fa-solid fa-floppy-disk"></i>불러오기</button>
@@ -306,4 +306,5 @@
 <script src="/js/polygon.js"></script>
 <script src="/js/node.js"></script>
 <script src="/js/link.js"></script>
+<script src="/js/bms.js"></script>
 </html>

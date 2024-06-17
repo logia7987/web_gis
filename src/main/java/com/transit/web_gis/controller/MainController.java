@@ -6,6 +6,9 @@ import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -29,6 +32,27 @@ public class MainController {
 
     @GetMapping("/")
     public String mainView(Model model) {
+        String csrfToke;
+        try {
+            String url = "http://115.88.124.254:9090/"; // 상대방 페이지 URL
+            Document doc = Jsoup.connect(url).get();
+
+            // CSRF 토큰을 가진 input 요소를 찾습니다 (아이디가 "csrf"인 예시)
+            Element csrfInput = doc.select("input#csrf").first();
+
+            if (csrfInput != null) {
+                String csrfToken = csrfInput.attr("value");
+
+                System.out.println("추출된 CSRF 토큰 값: " + csrfToken);
+
+                model.addAttribute("csrf", csrfToken);
+            } else {
+                System.out.println("CSRF 토큰을 찾을 수 없습니다.");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         model.addAttribute("mapboxAccessToken", mapboxAccessToken);
         model.addAttribute("shpList", shpService.selectShp());

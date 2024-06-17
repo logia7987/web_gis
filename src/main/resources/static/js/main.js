@@ -1,3 +1,8 @@
+const DEFAULT_ZOOMLVL = 14;
+let stationShowFlag = true;
+let nodeShowFlag = true;
+let linkShowFlag = true;
+
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
     var icon = document.getElementById("mdicon");
@@ -577,8 +582,14 @@ function getBoundingBox(coordinates, type) {
 }
 
 // "moveend" 이벤트와 "zoomend" 이벤트에 대한 이벤트 핸들러 등록
-// 오류있어서 보류
-// map.on('moveend', renderDataOnMapViewport);
+map.on('moveend', ()=>{
+    if(map.getZoom() >= 14){
+        setLinkNodeStationFeature2();
+    }else{
+        linkNodeStationFeatures.features = [];
+        map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+    }
+});
 // map.on('zoomend', renderDataOnMapViewport);
 
 function handleFeatureSelection(e) {
@@ -891,4 +902,65 @@ function isEmptyLayerList() {
     } else {
         $(".empty-layer").hide();
     }
+}
+
+function getMapZoom(){
+    return Math.floor(map.getZoom());
+}
+
+function getSession() {
+    //
+    $.ajax({
+        url : "http://115.88.124.254:9090/checkSession.bms",
+        data: {
+            isForced: false,
+            userId: "qc100",
+            pwd: "a!1234567"
+        },
+        dataType: "json",
+        contentType: 'application/json',
+        type: 'POST',
+        beforeSend : function (xmlHttpRequest){
+            // $("body").mLoading('show');
+            xmlHttpRequest.setRequestHeader("AJAX", "true");
+            xmlHttpRequest.setRequestHeader('X-CSRF-TOKEN', $('#csrf').val());
+        },
+        success : function(data) {
+            console.log("세션 획득");
+        },
+        error : function(request, status, error) {
+            alert("오류가 발생했습니다!" + "\n");
+        },
+    });
+}
+
+
+function requestAjax(targetUrl, params, callback, asyncFlag) {
+    if(asyncFlag === undefined){
+        asyncFlag = false;
+    }
+
+    $.ajax({
+        url : "http://115.88.124.254:9090" + targetUrl,
+        data: JSON.stringify(params),
+        dataType: "json",
+        contentType: 'application/json',
+        async : asyncFlag,
+        type: 'POST',
+        beforeSend : function (xmlHttpRequest){
+            // $("body").mLoading('show');
+            xmlHttpRequest.setRequestHeader("AJAX", "true");
+            xmlHttpRequest.setRequestHeader('X-CSRF-TOKEN', $('#csrf').val());
+        },
+        success : function(data) {
+            if(data.success) {
+                if(callback) callback(data);
+            } else {
+                alert(data.msg);
+            }
+        },
+        error : function(request, status, error) {
+            alert("오류가 발생했습니다!" + "\n");
+        },
+    });
 }
