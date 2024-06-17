@@ -187,6 +187,13 @@ public class ApiController {
         return params;
     }
 
+    @RequestMapping(value="/getData.do", method=RequestMethod.POST)
+    @ResponseBody
+    public Map<String, Object> getData(){
+
+        return null;
+    }
+
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
         JSONObject result = new JSONObject();
         result.put("type", "FeatureCollection");

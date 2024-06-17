@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTO Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.transit.web_gis.mapper.BmsMapper">
+    <select id="getStation" parameterType="map" resultType="com.transit.web_gis.vo.BmsVo">
+        SELECT
+        STATION_ID,
+        NVL(STATION_NM, ' ') STATION_NM,
+        LINK_ID,
+        STATION_USE_CD,
+        CASE
+        WHEN STATION_USE_CD = '0000' THEN '미지정'
+        WHEN STATION_USE_CD = '0001' THEN '공항'
+        WHEN STATION_USE_CD = '0010' THEN '시외'
+        WHEN STATION_USE_CD = '0011' THEN '시외-공항'
+        WHEN STATION_USE_CD = '0100' THEN '마을' --
+        WHEN STATION_USE_CD = '0101' THEN '마을-공항'
+        WHEN STATION_USE_CD = '0110' THEN '마을-시외'
+        WHEN STATION_USE_CD = '0111' THEN '마을-시외-공항'
+        WHEN STATION_USE_CD = '1000' THEN '시내' --
+        WHEN STATION_USE_CD = '1001' THEN '시내-공항' --
+        WHEN STATION_USE_CD = '1010' THEN '시내-시외'
+        WHEN STATION_USE_CD = '1011' THEN '시내-시외-공항'
+        WHEN STATION_USE_CD = '1100' THEN '시내-마을'
+        WHEN STATION_USE_CD = '1101' THEN '시내-마을-공항'
+        WHEN STATION_USE_CD = '1110' THEN '시내-마을-시외'
+        WHEN STATION_USE_CD = '1111' THEN '시내-마을-시외-공항'
+        WHEN STATION_USE_CD = '2000' THEN '가상'
+        ELSE '미지정'
+        END STATION_USE_NM,
+        CASE
+        WHEN TRSF_STATION_YN = 'C' THEN '환승'
+        WHEN TRSF_STATION_YN = 'N' THEN '일반'
+        ELSE '미지정'
+        END TRSF_STATION_NM,
+        TRSF_STATION_YN,
+        CTRD_YN,
+        CASE
+        WHEN CTRD_YN = 'Y' THEN '중앙차로'
+        WHEN CTRD_YN = 'N' THEN '노변'
+        ELSE '미지정'
+        END CTRD_NM,
+        STATION_NM_ENG,
+        NVL(ARS_ID, ' ') ARS_ID,
+        ORG_CD,
+        NVL(GIS_YN, ' ') GIS_YN,
+        NVL(RGTR_ID, ' ') RGTR_ID,
+        TO_CHAR(REG_DT, 'YYYY-MM-DD hh24:mm:ss') REG_DT,
+        NVL(MDFR_ID, ' ') MDFR_ID,
+        TO_CHAR(MDFCN_DT, 'YYYY-MM-DD hh24:mm:ss') MDFCN_DT,
+        NVL(NOTE, ' ') NOTE,
+        SBRD_TYPE_CD,
+        CASE
+        WHEN SBRD_TYPE_CD = '0' THEN '표지판 없음'
+        WHEN SBRD_TYPE_CD = '1' THEN '표지판 있음'
+        WHEN SBRD_TYPE_CD = '2' THEN '쉘터'
+        ELSE '미지정'
+        END SBRD_TYPE_NM,
+        STDG_CD,
+        AREA_CD,
+        USE_YN,
+        STATION_NM_CHN,
+        STATION_NM_JAP,
+        STATION_NM_VNM,
+        DRT_YN,
+        LAT,
+        LNG,
+        BIT_INSTL_YN,
+        BIT_PR_YN,
+        STATION_TYPE_CD,
+        F_GET_CD_NM ('45', STATION_TYPE_CD) AS STATION_TYPE_CD_NM,
+        --             BIT_TYPE_CD,
+        --             F_GET_CD_NM ('44', BIT_TYPE_CD) AS BIT_TYPE_CD_NM,
+        BIT_TYPE_CD_01,
+        BIT_TYPE_CD_02,
+        BIT_TYPE_CD_03,
+        BIT_TYPE_CD_04,
+        BIT_TYPE_CD_05,
+        BIT_TYPE_CD_06,
+        LOT_NUM_ADDR
+        <if test='(sc_STATION_NM == null or sc_STATION_NM == "") and (sc_ARS_ID == null or sc_ARS_ID == "")'>
+            ,(SELECT SUM(D.RIDE_CNT + D.TNS_CNT) FROM GBMS.TO_ROUTE_CARD_DW D WHERE A.STATION_ID = D.STATION_ID AND RIDE_DATE = TRUNC(SYSDATE) - 4) RIDE_TNS_CNT,
+            (SELECT SUM(D.ALIGHT_CNT) FROM GBMS.TO_ROUTE_CARD_DW D WHERE A.STATION_ID = D.STATION_ID AND RIDE_DATE = TRUNC(SYSDATE) - 4) ALIGHT_CNT
+        </if>
+        FROM
+        GBMS.TB_STATION A
+        <where>
+            <if test='sc_STATION_ID != null and sc_STATION_ID != ""'>
+                AND STATION_ID = #{sc_STATION_ID}
+            </if>
+            <if test='sc_STATION_NM != null and sc_STATION_NM != ""'>
+                AND STATION_NM LIKE '%' || #{sc_STATION_NM} || '%'
+            </if>
+            <if test='sc_ARS_ID != null and sc_ARS_ID != ""'>
+                AND ARS_ID = #{sc_ARS_ID}
+            </if>
+            <if test='sc_USE_YN != null and sc_USE_YN != ""'>
+                AND USE_YN = #{sc_USE_YN}
+            </if>
+            <if test='sc_LINK_ID != null and sc_LINK_ID != ""'>
+                AND LINK_ID = #{sc_LINK_ID}
+            </if>
+            <if test='sc_NE_LNG != null and sc_NE_LNG != ""'>
+                AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
+            </if>
+            <if test='sc_NE_LAT != null and sc_NE_LAT != ""'>
+                AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
+            </if>
+            <if test='sc_SW_LNG != null and sc_SW_LNG != ""'>
+                AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
+            </if>
+            <if test='sc_SW_LAT != null and sc_SW_LAT != ""'>
+                AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
+            </if>
+            <if test='sc_DRT_YN != null and sc_DRT_YN != ""'>
+                AND DRT_YN = #{sc_DRT_YN}
+            </if>
+        </where>
+    </select>
+
+    <select id="getLink" parameterType="map" resultType="com.transit.web_gis.vo.BmsVo">
+        SELECT
+        A.*,
+        B.END_LAT,
+        B.END_LNG
+        FROM
+        (SELECT
+        AA.LINK_ID,
+        AA.LINK_DIST,
+        AA.BGNG_NODE_ID,
+        AA.END_NODE_ID,
+        NVL(AA.ROAD_NM, ' ') ROAD_NM,
+        BB.LAT BEGIN_LAT,
+        BB.LNG BEGIN_LNG
+        FROM
+        GBMS.TB_LINK AA
+        LEFT OUTER JOIN GBMS.TB_NODE BB ON AA.BGNG_NODE_ID = BB.NODE_ID
+        ) A,
+        (SELECT
+        AA.LINK_ID,
+        BB.LAT END_LAT,
+        BB.LNG END_LNG
+        FROM
+        GBMS.TB_LINK AA
+        LEFT OUTER JOIN GBMS.TB_NODE BB ON AA.END_NODE_ID = BB.NODE_ID
+        ) B
+        <if test='sc_NE_LNG != null and sc_NE_LNG != ""'>
+            ,(SELECT
+            DISTINCT LINK_ID
+            FROM
+            GBMS.TEST_TB_LINK_POINT
+            WHERE
+            (LNG <![CDATA[<=]]> #{sc_NE_LNG}
+            AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
+            AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
+            AND LAT <![CDATA[>=]]> #{sc_SW_LAT})
+            ) C
+        </if>
+        <where>
+            AND A.LINK_ID = B.LINK_ID
+            <if test='sc_LINK_ID != null and sc_LINK_ID != ""'>
+                AND A.LINK_ID = #{sc_LINK_ID}
+            </if>
+            <if test='sc_ROAD_NM != null and sc_ROAD_NM != ""'>
+                AND A.ROAD_NM LIKE '%' || #{sc_ROAD_NM} || '%'
+            </if>
+            <if test='sc_NE_LNG != null and sc_NE_LNG != ""'>
+                AND B.LINK_ID = C.LINK_ID
+            </if>
+            <if test='sc_BGNG_NODE_ID != null and sc_BGNG_NODE_ID != ""'>
+                AND BGNG_NODE_ID = #{sc_BGNG_NODE_ID}
+            </if>
+            <if test='sc_END_NODE_ID != null and sc_END_NODE_ID != ""'>
+                AND END_NODE_ID = #{sc_END_NODE_ID}
+            </if>
+        </where>
+    </select>
+
+    <select id="getNode" parameterType="map" resultType="com.transit.web_gis.vo.BmsVo">
+        SELECT
+        NODE_ID,
+        NVL(CROSSROAD_NM, ' ') CROSSROAD_NM,
+        AREA_CD,
+        LAT,
+        LNG
+        FROM
+        GBMS.TB_NODE
+        <where>
+            <if test='sc_NODE_ID != null and sc_NODE_ID != ""'>
+                AND NODE_ID = #{sc_NODE_ID}
+            </if>
+            <if test='sc_CROSSROAD_NM != null and sc_CROSSROAD_NM != ""'>
+                AND CROSSROAD_NM LIKE '%' || #{sc_CROSSROAD_NM} || '%'
+            </if>
+            <if test='sc_NE_LNG != null and sc_NE_LNG != ""'>
+                AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
+            </if>
+            <if test='sc_NE_LAT != null and sc_NE_LAT != ""'>
+                AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
+            </if>
+            <if test='sc_SW_LNG != null and sc_SW_LNG != ""'>
+                AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
+            </if>
+            <if test='sc_SW_LAT != null and sc_SW_LAT != ""'>
+                AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
+            </if>
+        </where>
+    </select>
+</mapper>

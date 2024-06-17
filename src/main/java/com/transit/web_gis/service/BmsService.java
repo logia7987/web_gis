@@ -1,0 +1,30 @@
+package com.transit.web_gis.service;
+
+import com.transit.web_gis.mapper.BmsMapper;
+import com.transit.web_gis.vo.BmsVo;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+
+@Service
+public class BmsService {
+    private BmsMapper bmsMapper;
+
+    public BmsService(BmsMapper bmsMapper) {
+        this.bmsMapper = bmsMapper;
+    }
+
+    public List<BmsVo> getStation(HashMap<String, Object> map) {
+        return bmsMapper.getStation(map);
+    }
+
+    public List<BmsVo> getLink(HashMap<String, Object> map) {
+        return bmsMapper.getLink(map);
+    }
+
+    public List<BmsVo> getNode(HashMap<String, Object> map) {
+        return bmsMapper.getNode(map);
+    }
+}
