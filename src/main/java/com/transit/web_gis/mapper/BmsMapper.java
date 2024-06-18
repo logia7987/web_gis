@@ -11,4 +11,5 @@ public interface BmsMapper {
     List<BmsVo> getStation(HashMap<String, Object> map);
     List<BmsVo> getLink(HashMap<String, Object> map);
     List<BmsVo> getNode(HashMap<String, Object> map);
+    List<BmsVo> getLinkPointByLinkId(HashMap<String, Object> map);
 }

@@ -67,7 +67,7 @@
         BIT_INSTL_YN,
         BIT_PR_YN,
         STATION_TYPE_CD,
-        F_GET_CD_NM ('45', STATION_TYPE_CD) AS STATION_TYPE_CD_NM,
+        GBMS.F_GET_CD_NM ('45', STATION_TYPE_CD) AS STATION_TYPE_CD_NM,
         --             BIT_TYPE_CD,
         --             F_GET_CD_NM ('44', BIT_TYPE_CD) AS BIT_TYPE_CD_NM,
         BIT_TYPE_CD_01,
@@ -204,5 +204,15 @@
                 AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
             </if>
         </where>
+    </select>
+
+    <select id="getLinkPointByLinkId" parameterType="map" resultType="com.transit.web_gis.vo.BmsVo">
+        SELECT
+            *
+        FROM
+            TEST_TB_LINK_POINT
+        WHERE
+            LINK_ID = #{sc_LINK_ID}
+        ORDER BY LINK_SEQ
     </select>
 </mapper>

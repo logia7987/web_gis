@@ -10,7 +10,7 @@ import java.util.List;
 
 @Service
 public class BmsService {
-    private BmsMapper bmsMapper;
+    private final BmsMapper bmsMapper;
 
     public BmsService(BmsMapper bmsMapper) {
         this.bmsMapper = bmsMapper;
@@ -26,5 +26,9 @@ public class BmsService {
 
     public List<BmsVo> getNode(HashMap<String, Object> map) {
         return bmsMapper.getNode(map);
+    }
+
+    public List<BmsVo> getLinkPointByLinkId(HashMap<String, Object> map) {
+        return bmsMapper.getLinkPointByLinkId(map);
     }
 }

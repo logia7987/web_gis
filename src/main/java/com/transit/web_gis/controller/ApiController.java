@@ -2,13 +2,12 @@ package com.transit.web_gis.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.transit.web_gis.service.FeatureService;
-import com.transit.web_gis.service.GeometryService;
-import com.transit.web_gis.service.ShapeService;
-import com.transit.web_gis.service.ShpService;
+import com.transit.web_gis.service.*;
 import com.transit.web_gis.vo.FeatureVo;
 import com.transit.web_gis.vo.GeometryVo;
 import com.transit.web_gis.vo.ShpVo;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.json.simple.JSONArray;
@@ -39,6 +38,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.transit.web_gis.util.GeoJsonUtil.*;
+
 @Controller
 @RequestMapping("/api")
 public class ApiController {
@@ -54,6 +55,9 @@ public class ApiController {
 
     @Autowired
     private ShapeService shapeService;
+
+    @Autowired
+    private BmsService bmsService;
 
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
 
@@ -187,11 +191,40 @@ public class ApiController {
         return params;
     }
 
-    @RequestMapping(value="/getData.do", method=RequestMethod.POST)
     @ResponseBody
-    public Map<String, Object> getData(){
+    @RequestMapping(value="/getData.do", method=RequestMethod.POST)
+    public HashMap<String, Object> getData(@RequestBody Map<String, Object> params) throws Exception {
+        HashMap<String, Object> resultMap = new HashMap<>();
+        HashMap<String, Object> commandMap = new HashMap<>();
 
-        return null;
+        double sc_NE_LNG = (double) params.get("sc_NE_LNG");
+        double sc_NE_LAT = (double) params.get("sc_NE_LAT");
+        double sc_SW_LNG = (double) params.get("sc_SW_LNG");
+        double sc_SW_LAT = (double) params.get("sc_SW_LAT");
+        String sc_MODE = (String) params.get("sc_MODE");
+
+        System.out.println(sc_NE_LNG + " : " + sc_NE_LAT + " : " + sc_SW_LNG + " : "+sc_SW_LAT + " : "+ sc_MODE);
+        commandMap.put("sc_NE_LNG", sc_NE_LNG);
+        commandMap.put("sc_NE_LAT", sc_NE_LAT);
+        commandMap.put("sc_SW_LNG", sc_SW_LNG);
+        commandMap.put("sc_SW_LAT", sc_SW_LAT);
+        commandMap.put("sc_MODE", sc_MODE);
+
+        if (sc_MODE.equals("S")) {
+            // 정류소 정보 호출
+            resultMap.put("success", true);
+            resultMap.put("data", getGeoJsonStation(bmsService.getStation(commandMap)));
+        } else if (sc_MODE.equals("N")) {
+            // 노드 정보 호출
+            resultMap.put("success", true);
+            resultMap.put("data", getGeoJsonNode(bmsService.getNode(commandMap)));
+        } else if (sc_MODE.equals("L")) {
+            // 링크 정보 호출
+            resultMap.put("success", true);
+            resultMap.put("data", getGeoJsonLink(bmsService.getLink(commandMap)));
+        }
+
+        return resultMap;
     }
 
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
