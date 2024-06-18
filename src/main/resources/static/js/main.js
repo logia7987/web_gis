@@ -579,14 +579,7 @@ function getBoundingBox(coordinates, type) {
 }
 
 // "moveend" 이벤트와 "zoomend" 이벤트에 대한 이벤트 핸들러 등록
-map.on('moveend', ()=>{
-    if(map.getZoom() >= 14){
-        setLinkNodeStationFeature();
-    }else{
-        linkNodeStationFeatures.features = [];
-        map.getSource('link-node-station-source').setData(linkNodeStationFeatures);
-    }
-});
+
 // map.on('zoomend', renderDataOnMapViewport);
 
 function handleFeatureSelection(e) {
@@ -1013,6 +1006,43 @@ function setLinkNodeStationFeature(){
         });
     }
 
+    //Node 처리
+    if(nodeShowFlag === true){
+        params["sc_MODE"] = "N";
+        requestAjax(params, function(result){
+            let geoJson = JSON.parse(result.data);
+            for(let feature of geoJson.features){
+                if(nodeShowLabel != undefined){
+                    feature.properties.label = feature.properties[nodeShowLabel];
+                }
+
+                if(selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId){
+                    feature.properties.iconColor = feature.properties.selectedIconColor;
+                    feature.properties.iconSize = feature.properties.selectedIconSize;
+                    feature.properties.textColor = feature.properties.selectedTextColor;
+                    feature.properties.textSize = feature.properties.selectedTextSize;
+                }
+
+                linkNodeStationFeatures.features.push(feature);
+            }
+        });
+    }
+
+    //Link 처리
+    if(linkShowFlag === true){
+        params["sc_MODE"] = "L";
+        requestAjax(params, function(result){
+            let geoJson = JSON.parse(result.data);
+            for(let feature of geoJson.features){
+                if(linkShowLabel != undefined){
+                    feature.properties.label = feature.properties[linkShowLabel];
+                }
+
+                linkNodeStationFeatures.features.push(feature);
+            }
+        });
+    }
+
     map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
 }
 
@@ -1023,14 +1053,14 @@ function setSource(sourceId, features){
     });
 }
 
-function setLayerTypeIconAndLabel(layerId, sourceId){
+function setLayerTypeIconAndLabel(layerId, sourceId, featureId, popupFlag){
     map.addLayer({
         'id' : layerId,
         'type' : 'circle',
         'source' : sourceId,
         'paint': {
             'circle-radius': 6,
-            'circle-color': nodeColor,
+            'circle-color': '#ce0248',
             'circle-opacity': [
                 'case',
                 ['boolean', ['feature-state', 'hover'], false],
@@ -1038,5 +1068,21 @@ function setLayerTypeIconAndLabel(layerId, sourceId){
                 1
             ]
         }
+        // ,
+        // 'filter' : ['==', 'featureId', featureId]
+    });
+}
+
+function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
+    map.addLayer({
+        'id' : layerId,
+        'type' : 'line',
+        'source' : sourceId,
+        'paint': {
+            'line-color': '#000',
+            'line-width': 2
+        }
+        // ,
+        // 'filter' : ['==', 'featureId', featureId]
     });
 }

@@ -77,28 +77,9 @@
         BIT_TYPE_CD_05,
         BIT_TYPE_CD_06,
         LOT_NUM_ADDR
-        <if test='(sc_STATION_NM == null or sc_STATION_NM == "") and (sc_ARS_ID == null or sc_ARS_ID == "")'>
-            ,(SELECT SUM(D.RIDE_CNT + D.TNS_CNT) FROM GBMS.TO_ROUTE_CARD_DW D WHERE A.STATION_ID = D.STATION_ID AND RIDE_DATE = TRUNC(SYSDATE) - 4) RIDE_TNS_CNT,
-            (SELECT SUM(D.ALIGHT_CNT) FROM GBMS.TO_ROUTE_CARD_DW D WHERE A.STATION_ID = D.STATION_ID AND RIDE_DATE = TRUNC(SYSDATE) - 4) ALIGHT_CNT
-        </if>
         FROM
         GBMS.TB_STATION A
         <where>
-            <if test='sc_STATION_ID != null and sc_STATION_ID != ""'>
-                AND STATION_ID = #{sc_STATION_ID}
-            </if>
-            <if test='sc_STATION_NM != null and sc_STATION_NM != ""'>
-                AND STATION_NM LIKE '%' || #{sc_STATION_NM} || '%'
-            </if>
-            <if test='sc_ARS_ID != null and sc_ARS_ID != ""'>
-                AND ARS_ID = #{sc_ARS_ID}
-            </if>
-            <if test='sc_USE_YN != null and sc_USE_YN != ""'>
-                AND USE_YN = #{sc_USE_YN}
-            </if>
-            <if test='sc_LINK_ID != null and sc_LINK_ID != ""'>
-                AND LINK_ID = #{sc_LINK_ID}
-            </if>
             <if test='sc_NE_LNG != null and sc_NE_LNG != ""'>
                 AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
             </if>
@@ -111,9 +92,6 @@
             <if test='sc_SW_LAT != null and sc_SW_LAT != ""'>
                 AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
             </if>
-            <if test='sc_DRT_YN != null and sc_DRT_YN != ""'>
-                AND DRT_YN = #{sc_DRT_YN}
-            </if>
         </where>
     </select>
 
@@ -123,7 +101,8 @@
         B.END_LAT,
         B.END_LNG
         FROM
-        (SELECT
+        (
+        SELECT
         AA.LINK_ID,
         AA.LINK_DIST,
         AA.BGNG_NODE_ID,
@@ -134,45 +113,27 @@
         FROM
         GBMS.TB_LINK AA
         LEFT OUTER JOIN GBMS.TB_NODE BB ON AA.BGNG_NODE_ID = BB.NODE_ID
-        ) A,
-        (SELECT
+        ) A
+        JOIN
+        (
+        SELECT
         AA.LINK_ID,
         BB.LAT END_LAT,
         BB.LNG END_LNG
         FROM
         GBMS.TB_LINK AA
         LEFT OUTER JOIN GBMS.TB_NODE BB ON AA.END_NODE_ID = BB.NODE_ID
-        ) B
-        <if test='sc_NE_LNG != null and sc_NE_LNG != ""'>
-            ,(SELECT
-            DISTINCT LINK_ID
-            FROM
-            GBMS.TEST_TB_LINK_POINT
-            WHERE
-            (LNG <![CDATA[<=]]> #{sc_NE_LNG}
-            AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
-            AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
-            AND LAT <![CDATA[>=]]> #{sc_SW_LAT})
-            ) C
-        </if>
-        <where>
-            AND A.LINK_ID = B.LINK_ID
-            <if test='sc_LINK_ID != null and sc_LINK_ID != ""'>
-                AND A.LINK_ID = #{sc_LINK_ID}
-            </if>
-            <if test='sc_ROAD_NM != null and sc_ROAD_NM != ""'>
-                AND A.ROAD_NM LIKE '%' || #{sc_ROAD_NM} || '%'
-            </if>
-            <if test='sc_NE_LNG != null and sc_NE_LNG != ""'>
-                AND B.LINK_ID = C.LINK_ID
-            </if>
-            <if test='sc_BGNG_NODE_ID != null and sc_BGNG_NODE_ID != ""'>
-                AND BGNG_NODE_ID = #{sc_BGNG_NODE_ID}
-            </if>
-            <if test='sc_END_NODE_ID != null and sc_END_NODE_ID != ""'>
-                AND END_NODE_ID = #{sc_END_NODE_ID}
-            </if>
-        </where>
+        ) B ON A.LINK_ID = B.LINK_ID
+        WHERE
+        EXISTS (
+        SELECT 1
+        FROM GBMS.TEST_TB_LINK_POINT C
+        WHERE A.LINK_ID = C.LINK_ID
+        AND C.LNG <![CDATA[<=]]> #{sc_NE_LNG}
+        AND C.LAT <![CDATA[<=]]> #{sc_NE_LAT}
+        AND C.LNG <![CDATA[>=]]> #{sc_SW_LNG}
+        AND C.LAT <![CDATA[>=]]> #{sc_SW_LAT}
+        )
     </select>
 
     <select id="getNode" parameterType="map" resultType="com.transit.web_gis.vo.BmsVo">
@@ -210,7 +171,7 @@
         SELECT
             *
         FROM
-            TEST_TB_LINK_POINT
+            GBMS.TEST_TB_LINK_POINT
         WHERE
             LINK_ID = #{sc_LINK_ID}
         ORDER BY LINK_SEQ

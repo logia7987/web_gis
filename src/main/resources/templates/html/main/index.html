@@ -182,6 +182,16 @@
     const STATION_LAYER_ID = 'station-layer';
     const LINK_NODE_STATION_SOURCE_ID = 'link-node-station-source';
 
+    //링크
+    const LINK_FEATURE_ID = 'link-feature';
+    const LINK_LAYER_ID = 'link-layer';
+    const LINK_LABEL_LAYER_ID = 'link-label-layer';
+
+    //노드
+    const NODE_ICON_ID = 'node-icon';
+    const NODE_FEATURE_ID = 'node-feature';
+    const NODE_LAYER_ID = 'node-layer';
+
     var fileNm;
     var dataArr = [];
     var newProperty = [];
@@ -201,7 +211,7 @@
     var tablinks = document.getElementsByClassName("tab-links");
     var propertyArr = []
     var changeProper;
-    var draw = new MapboxDraw({});
+    let draw
 
     let hoveredPolygonId = null;
     let clickedPolygonId = null;
@@ -210,29 +220,45 @@
 
     // const uploadContainer = document.getElementById('frmFile');
     const fileInput = document.getElementById('fileInput');
-
-    // 맵박스 초기화
-    const map = new mapboxgl.Map({
-        container: "map",
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [126.88271541564299, 37.48151056694073],
-        zoom: 11,
-    });
-    const language = new MapboxLanguage();
-    map.addControl(language);
-    map.addControl(draw, 'bottom-left')
-
-    map.on('load', function () {
-        setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
-
-        setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, true, ['bottom'], true, true);
-    })
+    let map;
 
     // 저장된 파일 고르는 함수
     $(document).ready(function() {
-        // uploadContainer.addEventListener('dragover', handleDragOver);
-        // uploadContainer.addEventListener('dragleave', handleDragLeave);
-        // uploadContainer.addEventListener('drop', handleDrop);
+        // 맵박스 초기화
+        map = new mapboxgl.Map({
+            container: "map",
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [126.88271541564299, 37.48151056694073],
+            zoom: 11,
+        });
+
+        const language = new MapboxLanguage();
+
+        draw = new MapboxDraw({});
+
+        map.addControl(language);
+        map.addControl(draw, 'bottom-left')
+
+        map.on('load', function () {
+
+            setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
+
+            //링크
+            setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
+            //정류소
+            setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, true, ['bottom'], true, true);
+            //노드
+            setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, true, ['bottom'], true, true);
+
+            map.on('moveend', ()=>{
+                if(map.getZoom() >= 14){
+                    setLinkNodeStationFeature();
+                }else{
+                    linkNodeStationFeatures.features = [];
+                    map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+                }
+            });
+        })
 
         $("#polygon-color").spectrum({
             showPaletteOnly: true,

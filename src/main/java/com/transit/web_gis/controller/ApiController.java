@@ -3,11 +3,10 @@ package com.transit.web_gis.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.transit.web_gis.service.*;
+import com.transit.web_gis.vo.BmsVo;
 import com.transit.web_gis.vo.FeatureVo;
 import com.transit.web_gis.vo.GeometryVo;
 import com.transit.web_gis.vo.ShpVo;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.json.simple.JSONArray;
@@ -30,19 +29,46 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import static com.transit.web_gis.util.GeoJsonUtil.*;
 
 @Controller
 @RequestMapping("/api")
 public class ApiController {
+    private static final String LINK_FEATURE_ID = "link-feature";
+    private static final String STATION_ICON_ID = "station-icon";
+    private static final String STATION_FEATURE_ID = "station-feature";
+
+    private static final String STATION_ICON_COLOR_UNDEFINED = "#828282";
+    private static final String STATION_LABEL_COLOR_UNDEFINED = "#646464";
+    //시내버스
+    private static final String STATION_ICON_COLOR_CITY = "#5050FF";
+    private static final String STATION_LABEL_COLOR_CITY = "#0000FF";
+    //마을버스
+    private static final String STATION_ICON_COLOR_VILLAGE = "#228B22";
+    private static final String STATION_LABEL_COLOR_VILLAGE = "#2E8B57";
+    //시외버스
+    private static final String STATION_ICON_COLOR_INTERCITY = "#EB4646";
+    private static final String STATION_LABEL_COLOR_INTERCITY = "#EB0000";
+    //공항버스
+    private static final String STATION_ICON_COLOR_AIRPORT = "#A0522D";
+    private static final String STATION_LABEL_COLOR_AIRPORT = "#8B4513";
+    //가상정류소
+    private static final String STATION_ICON_COLOR_VIRTUAL = "#941494";
+    private static final String STATION_LABEL_COLOR_VIRTUAL = "#800080";
+    //2개 이상 혼합
+    private static final String STATION_ICON_COLOR_MIX = "#FF9614";
+    private static final String STATION_LABEL_COLOR_MIX = "#FF8200";
+    //라벨 크기 및 위치
+    private static final Integer STATION_ICON_SIZE = 1;
+    private static final Integer STATION_LABEL_SIZE = 12;
+    private static final Integer STATION_LABEL_OPACITY = 1;
+    private static final List<Integer> STATION_LABEL_OFFSET = new ArrayList<>(Arrays.asList(0, 1));
+
+    private static final String NODE_ICON_ID = "node-icon";
+    private static final String NODE_FEATURE_ID = "node-feature";
+
 
     @Autowired
     private ShpService shpService;
@@ -203,7 +229,6 @@ public class ApiController {
         double sc_SW_LAT = (double) params.get("sc_SW_LAT");
         String sc_MODE = (String) params.get("sc_MODE");
 
-        System.out.println(sc_NE_LNG + " : " + sc_NE_LAT + " : " + sc_SW_LNG + " : "+sc_SW_LAT + " : "+ sc_MODE);
         commandMap.put("sc_NE_LNG", sc_NE_LNG);
         commandMap.put("sc_NE_LAT", sc_NE_LAT);
         commandMap.put("sc_SW_LNG", sc_SW_LNG);
@@ -335,5 +360,186 @@ public class ApiController {
 
         // 완성된 JsonArray 반환
         return jsonArrayBuilder.build();
+    }
+
+    public String getGeoJsonLink(List<BmsVo> datas) throws Exception{
+        JSONObject geojson = new JSONObject();
+        JSONArray features = new JSONArray();
+
+        geojson.put("type", "FeatureCollection");
+        geojson.put("features", features);
+
+        for(BmsVo data : datas){
+            JSONObject feature = new JSONObject();
+            JSONObject properties = new JSONObject();
+            JSONObject geometry = new JSONObject();
+            JSONArray coordinates = new JSONArray();
+
+            //feature 틀 생성
+            feature.put("type", "Feature");
+            feature.put("properties", properties);
+            feature.put("geometry", geometry);
+            geometry.put("type", "LineString");
+            geometry.put("coordinates", coordinates);
+
+            //properties 정류소 CSS 정보 데이터 삽입
+            properties.put("featureId", LINK_FEATURE_ID);
+            properties.put("label", "");
+            properties.put("emptyLabel", "");
+
+            //properties 정류소 속성 정보 데이터 삽입
+            properties.put("linkId", data.getLink_id());
+            properties.put("rgtrId", data.getRgtr_id());
+            properties.put("regDt", data.getReg_dt());
+            properties.put("linkDist", data.getLink_dist());
+            properties.put("roadNm", data.getRoad_nm());
+            properties.put("bgngNodeId", data.getBgng_node_id());
+            properties.put("endNodeId", data.getEnd_node_id());
+            properties.put("beginLat", data.getBegin_lat());
+            properties.put("beginLng", data.getBegin_lng());
+            properties.put("endLat", data.getEnd_lat());
+            properties.put("endLng", data.getEnd_lng());
+
+            //링크 lineString 좌표값 받아오기
+            HashMap<String, Object> paramMap = new HashMap<>();
+            paramMap.put("sc_LINK_ID", data.getLink_id());
+
+            List<BmsVo> coords = bmsService.getLinkPointByLinkId(paramMap);
+
+            for(BmsVo coord : coords){
+                List<Double> tmpCoord = new ArrayList<>(Arrays.asList(Double.parseDouble(coord.getLng()), Double.parseDouble(coord.getLat())));
+                coordinates.add(tmpCoord);
+            }
+
+            features.add(feature);
+        }
+
+        return geojson.toJSONString();
+    }
+
+    public String getGeoJsonStation(List<BmsVo> datas) {
+        JSONObject geojson = new JSONObject();
+        JSONArray features = new JSONArray();
+
+        geojson.put("type", "FeatureCollection");
+        geojson.put("features", features);
+
+        for(BmsVo data : datas){
+            JSONObject feature = new JSONObject();
+            JSONObject properties = new JSONObject();
+            JSONObject geometry = new JSONObject();
+            JSONArray coordinates = new JSONArray();
+
+            //feature 틀 생성
+            feature.put("type", "Feature");
+            feature.put("properties", properties);
+            feature.put("geometry", geometry);
+            geometry.put("type", "Point");
+            geometry.put("coordinates", coordinates);
+
+            //properties 정류소 CSS 정보 데이터 삽입
+            properties.put("featureId", STATION_FEATURE_ID);
+            properties.put("iconId", STATION_ICON_ID);
+            properties.put("label", "");
+            properties.put("emptyLabel", "");
+            properties.put("iconSize", STATION_ICON_SIZE);
+            properties.put("textSize", STATION_LABEL_SIZE);
+            properties.put("textOffset", STATION_LABEL_OFFSET);
+            properties.put("textOpacity", STATION_LABEL_OPACITY);
+
+            //properties 정류소 속성 정보 데이터 삽입
+            properties.put("stationId", data.getStation_id());
+            properties.put("stationNm", data.getStation_nm());
+            properties.put("linkId", data.getLink_id());
+            properties.put("stationUseCd", data.getStation_use_cd());
+            properties.put("StationUseNm", data.getStation_use_nm());
+            properties.put("trsfStationYn", data.getTrsf_station_yn());
+            properties.put("trsfStationNm", data.getTrsf_station_nm());
+            properties.put("ctrdYn", data.getCtrd_yn());
+            properties.put("ctrdNm", data.getCtrd_nm());
+            properties.put("stationNmEng", data.getStation_nm_eng());
+            properties.put("arsId", data.getArs_id());
+            properties.put("orgCd", data.getOrg_cd());
+            properties.put("gisYn", data.getGis_yn());
+            properties.put("rgtrId", data.getRgtr_id());
+            properties.put("regDt", data.getReg_dt());
+            properties.put("mdfrId", data.getMdfr_id());
+            properties.put("mdfcnDt", data.getMdfcn_dt());
+            properties.put("note", data.getNote());
+            properties.put("stdgCd", data.getStdg_cd());
+            properties.put("areaCd", data.getArea_cd());
+            properties.put("useYn", data.getUse_yn());
+            properties.put("stationNmChn", data.getStation_nm_chn());
+            properties.put("stationNmJap", data.getStation_nm_jap());
+            properties.put("stationNmVnm", data.getStation_nm_vnm());
+            properties.put("lat", data.getLat());
+            properties.put("lng", data.getLng());
+
+            properties.put("bitInstlYn", data.getBit_instl_yn());
+            properties.put("bitPrYn", data.getBit_pr_yn());
+            properties.put("stationTypeCd", data.getStation_type_cd());
+            properties.put("bitTypeCd01", data.getBit_type_cd_01());
+            properties.put("bitTypeCd02", data.getBit_type_cd_02());
+            properties.put("bitTypeCd03", data.getBit_type_cd_03());
+            properties.put("bitTypeCd04", data.getBit_type_cd_04());
+            properties.put("bitTypeCd05", data.getBit_type_cd_05());
+            properties.put("bitTypeCd06", data.getBit_type_cd_06());
+
+            properties.put("lotNumAddr", data.getLot_num_addr());
+            properties.put("rideTnsCnt", data.getRide_tns_cnt());
+            properties.put("alightCnt", data.getAlight_cnt());
+
+            //geometry 데이터 삽입
+            coordinates.add(data.getLng());
+            coordinates.add(data.getLat());
+
+            features.add(feature);
+        }
+
+        return geojson.toJSONString();
+    }
+
+    public String getGeoJsonNode(List<BmsVo> datas){
+        JSONObject geojson = new JSONObject();
+        JSONArray features = new JSONArray();
+
+        geojson.put("type", "FeatureCollection");
+        geojson.put("features", features);
+
+        for(BmsVo data : datas){
+            JSONObject feature = new JSONObject();
+            JSONObject properties = new JSONObject();
+            JSONObject geometry = new JSONObject();
+            JSONArray coordinates = new JSONArray();
+
+            //feature 틀 생성
+            feature.put("type", "Feature");
+            feature.put("properties", properties);
+            feature.put("geometry", geometry);
+            geometry.put("type", "Point");
+            geometry.put("coordinates", coordinates);
+
+            //properties 정류소 CSS 정보 데이터 삽입
+            properties.put("featureId", NODE_FEATURE_ID);
+            properties.put("iconId", NODE_ICON_ID);
+            properties.put("label", "");
+            properties.put("emptyLabel", "");
+
+            //properties 정류소 속성 정보 데이터 삽입
+            properties.put("nodeId", data.getNode_id());
+            properties.put("crossroadNm", data.getCrossroad_nm());
+            properties.put("areaCd", data.getArea_cd());
+            properties.put("lat", data.getLat());
+            properties.put("lng", data.getLng());
+
+
+            //geometry 데이터 삽입
+            coordinates.add(data.getLng());
+            coordinates.add(data.getLat());
+
+            features.add(feature);
+        }
+
+        return geojson.toJSONString();
     }
 }
