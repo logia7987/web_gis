@@ -240,19 +240,12 @@
         map.addControl(draw, 'bottom-left')
 
         map.on('load', function () {
-
             setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
-
-            //링크
-            setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
-            //정류소
-            setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, true, ['bottom'], true, true);
-            //노드
-            setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, true, ['bottom'], true, true);
 
             map.on('moveend', ()=>{
                 if(map.getZoom() >= 14){
                     setLinkNodeStationFeature();
+                    // map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
                 }else{
                     linkNodeStationFeatures.features = [];
                     map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
