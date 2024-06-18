@@ -29,6 +29,8 @@ let editLinkSelectIds = [];
 let dblClickIndexStation = '';
 let dblClickLinkId = '';
 
+const ICON_STATION_SRC = '/image/icon_station.png';
+
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
     var icon = document.getElementById("mdicon");
@@ -1066,9 +1068,9 @@ function setLinkNodeStationFeature() {
                 // 링크 레이어 추가
                 setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
                 // 정류소 레이어 추가
-                setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, true, ['bottom'], true, true);
+                setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
                 // 노드 레이어 추가
-                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, true, ['bottom'], true, true);
+                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
             }
             resolve();
         }).catch(function(error) {
@@ -1084,22 +1086,46 @@ function setSource(sourceId, features){
     });
 }
 
-function setLayerTypeIconAndLabel(layerId, sourceId, featureId, popupFlag){
-    map.addLayer({
-        'id' : layerId,
-        'type' : 'circle',
-        'source' : sourceId,
-        'paint': {
-            'circle-radius': 6,
-            'circle-color': '#ce0248',
-            'circle-opacity': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                1,
-                1
-            ]
-        },
-        'filter' : ['==', 'featureId', featureId]
+function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
+    if (symbolImage === "") {
+        map.addLayer({
+            'id' : layerId,
+            'type' : 'circle',
+            'source' : sourceId,
+            'paint': {
+                'circle-radius': 6,
+                'circle-color': '#001ab0',
+                'circle-opacity': [
+                    'case',
+                    ['boolean', ['feature-state', 'hover'], false],
+                    1,
+                    1
+                ]
+            },
+            'filter' : ['==', 'featureId', featureId]
+        });
+    } else {
+        map.loadImage(symbolImage, function (error, image) {
+            if (error) throw error;
+            map.addImage('custom-icon', image);
+
+            map.addLayer({
+                'id': layerId,
+                'type': 'symbol',
+                'source': sourceId,
+                'layout': {
+                    'icon-image': 'custom-icon',
+                    'icon-size': 0.5,
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
+                },
+                'filter': ['==', 'featureId', featureId]
+            });
+        });
+    }
+
+    map.on('click', layerId, function (e) {
+        handleFeatureSelection(e);
     });
 }
 
@@ -1113,5 +1139,8 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
             'line-width': 2
         },
         'filter' : ['==', 'featureId', featureId]
+    });
+    map.on('click', layerId, function (e) {
+        handleFeatureSelection(e);
     });
 }
