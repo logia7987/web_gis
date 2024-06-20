@@ -1006,52 +1006,52 @@ function setLinkNodeStationFeature() {
         };
 
         // Station 처리
-        let stationPromise = new Promise(function(resolveStation, rejectStation) {
-            if (stationShowFlag === true) {
-                params["sc_MODE"] = "S";
-                requestAjax(params, function(result) {
-                    let geoJson = JSON.parse(result.data);
-                    for (let feature of geoJson.features) {
-                        // 현재 적용된 라벨 설정
-                        if (stationShowLabel != undefined && stationShowLabel !== "arsId" && stationShowLabel !== "emptyLabel") {
-                            feature.properties.label = feature.properties["arsId"] + "\n" + feature.properties[stationShowLabel];
-                        } else {
-                            feature.properties.label = feature.properties[stationShowLabel];
-                        }
-                        // 링크, 노드, 정류소 공통 features 저장
-                        linkNodeStationFeatures.features.push(feature);
-                    }
-                    resolveStation();
-                });
-            } else {
-                resolveStation(); // Station 처리가 필요 없는 경우 resolve
-            }
-        });
+        // let stationPromise = new Promise(function(resolveStation, rejectStation) {
+        //     if (stationShowFlag === true) {
+        //         params["sc_MODE"] = "S";
+        //         requestAjax(params, function(result) {
+        //             let geoJson = JSON.parse(result.data);
+        //             for (let feature of geoJson.features) {
+        //                 // 현재 적용된 라벨 설정
+        //                 if (stationShowLabel != undefined && stationShowLabel !== "arsId" && stationShowLabel !== "emptyLabel") {
+        //                     feature.properties.label = feature.properties["arsId"] + "\n" + feature.properties[stationShowLabel];
+        //                 } else {
+        //                     feature.properties.label = feature.properties[stationShowLabel];
+        //                 }
+        //                 // 링크, 노드, 정류소 공통 features 저장
+        //                 linkNodeStationFeatures.features.push(feature);
+        //             }
+        //             resolveStation();
+        //         });
+        //     } else {
+        //         resolveStation(); // Station 처리가 필요 없는 경우 resolve
+        //     }
+        // });
 
         // Node 처리
-        let nodePromise = new Promise(function(resolveNode, rejectNode) {
-            if (nodeShowFlag === true) {
-                params["sc_MODE"] = "N";
-                requestAjax(params, function(result) {
-                    let geoJson = JSON.parse(result.data);
-                    for (let feature of geoJson.features) {
-                        if (nodeShowLabel != undefined) {
-                            feature.properties.label = feature.properties[nodeShowLabel];
-                        }
-                        if (selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId) {
-                            feature.properties.iconColor = feature.properties.selectedIconColor;
-                            feature.properties.iconSize = feature.properties.selectedIconSize;
-                            feature.properties.textColor = feature.properties.selectedTextColor;
-                            feature.properties.textSize = feature.properties.selectedTextSize;
-                        }
-                        linkNodeStationFeatures.features.push(feature);
-                    }
-                    resolveNode();
-                });
-            } else {
-                resolveNode(); // Node 처리가 필요 없는 경우 resolve
-            }
-        });
+        // let nodePromise = new Promise(function(resolveNode, rejectNode) {
+        //     if (nodeShowFlag === true) {
+        //         params["sc_MODE"] = "N";
+        //         requestAjax(params, function(result) {
+        //             let geoJson = JSON.parse(result.data);
+        //             for (let feature of geoJson.features) {
+        //                 if (nodeShowLabel != undefined) {
+        //                     feature.properties.label = feature.properties[nodeShowLabel];
+        //                 }
+        //                 if (selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId) {
+        //                     feature.properties.iconColor = feature.properties.selectedIconColor;
+        //                     feature.properties.iconSize = feature.properties.selectedIconSize;
+        //                     feature.properties.textColor = feature.properties.selectedTextColor;
+        //                     feature.properties.textSize = feature.properties.selectedTextSize;
+        //                 }
+        //                 linkNodeStationFeatures.features.push(feature);
+        //             }
+        //             resolveNode();
+        //         });
+        //     } else {
+        //         resolveNode(); // Node 처리가 필요 없는 경우 resolve
+        //     }
+        // });
 
         // Link 처리
         let linkPromise = new Promise(function(resolveLink, rejectLink) {
@@ -1073,20 +1073,22 @@ function setLinkNodeStationFeature() {
         });
 
         // 모든 Promise가 완료된 후에 레이어 추가
-        Promise.all([stationPromise, nodePromise, linkPromise]).then(function() {
+        // Promise.all([stationPromise, nodePromise, linkPromise]).then(function() {
+        Promise.all([linkPromise]).then(function() {
             // 데이터 소스에 features 업데이트
             map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
 
             // 레이어가 없을 때만 추가
-            if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(STATION_LAYER_ID) && !map.getLayer(NODE_LAYER_ID)) {
+            // if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(STATION_LAYER_ID) && !map.getLayer(NODE_LAYER_ID)) {
+            if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(METER_DOT_LAYER_ID)) {
                 // 링크 레이어 추가
                 setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
-                // 정류소 레이어 추가
-                setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
-                // 노드 레이어 추가
-                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
                 // 링크 거리별 포인트 레이어 추가
                 setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
+                // 정류소 레이어 추가
+                // setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
+                // // 노드 레이어 추가
+                // setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
             }
             resolve();
         }).catch(function(error) {
@@ -1182,7 +1184,7 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
 function setLayerLinkDot(layerId, sourceId) {
     map.addLayer({
         'id' : layerId,
-        'type' : 'line',
+        'type' : 'circle',
         'source' : sourceId,
         'paint': {
             'circle-radius': 6,
@@ -1204,27 +1206,53 @@ function generatePoints(segmentLength) {
     let endLat = parseFloat(selectedBasicLink["endLat"]);
     let endLng = parseFloat(selectedBasicLink["endLng"]);
 
-    const latDiff = endLat - beginLat;
-    const lngDiff = endLng - beginLng
-    let totalDistance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+    const R = 6371000; // 지구의 반지름(미터 단위)
+
+    // 두 지점 사이의 거리 계산 (해버사인 공식 사용)
+    const φ1 = beginLat * Math.PI / 180; // 시작점 위도를 라디안으로 변환
+    const φ2 = endLat * Math.PI / 180; // 끝점 위도를 라디안으로 변환
+    const Δφ = (endLat - beginLat) * Math.PI / 180; // 위도 차이
+    const Δλ = (endLng - beginLng) * Math.PI / 180; // 경도 차이
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const totalDistance = R * c; // 두 지점 사이의 거리(미터 단위)
 
     const points = [];
-    const numPoints = Math.floor(totalDistance / segmentLength);
-    const latStep = (endLat - beginLat) / numPoints;
-    const lngStep = (endLng - beginLng) / numPoints;
 
-    for (let i = 0; i <= numPoints; i++) {
-        const lat = beginLat + i * latStep;
-        const lng = beginLng + i * lngStep;
+    if (totalDistance >= segmentLength) {
+        const numPoints = Math.max(Math.floor(totalDistance / segmentLength), 1);
+        const latStep = (endLat - beginLat) / numPoints;
+        const lngStep = (endLng - beginLng) / numPoints;
+
+        for (let i = 0; i <= numPoints; i++) {
+            const lat = beginLat + i * latStep;
+            const lng = beginLng + i * lngStep;
+            points.push({
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [lng, lat]
+                },
+                properties: {
+                    name: 'Point ' + i,
+                    meter: i * segmentLength
+                }
+            });
+        }
+    } else {
         points.push({
             type: 'Feature',
             geometry: {
                 type: 'Point',
-                coordinates: [lng, lat] // GeoJSON에서는 경도, 위도 순서로 되어 있음
+                coordinates: [beginLng, beginLat]
             },
             properties: {
-                name: 'Point ' + i,
-                meter: segmentLength  // 미터 정보 추가
+                name: 'Point 0',
+                meter: totalDistance
             }
         });
     }
