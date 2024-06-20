@@ -554,10 +554,12 @@ th, td {
 
 .property-list table tr td:first-child {
     width: 120px;
+    border-right: 1px solid #e4e4e4;
 }
 
 .property-list table tr td:last-child {
     width: 160px;
+    padding-left: 10px;
 }
 
 .padding-5 {
@@ -650,6 +652,7 @@ th, td {
     display: none;
 }
 
+.layer-option-window,
 .property-window {
     border-radius: 15px;
     background-color: #fff;
@@ -674,4 +677,8 @@ th, td {
 
 .change-btn:hover {
     font-weight: bold;
+}
+
+#property-tools {
+    margin: 5px 0;
 }

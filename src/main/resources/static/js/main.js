@@ -3,6 +3,10 @@ let linkNodeStationFeatures = {
     type : "FeatureCollection",
     features : []
 };
+let meterDotFeatures = {
+    type : "FeatureCollection",
+    features : []
+};
 const COORD_ROUND = 6;
 
 let selectedStationId = "";
@@ -28,6 +32,8 @@ let editLinkIds = [];
 let editLinkSelectIds = [];
 let dblClickIndexStation = '';
 let dblClickLinkId = '';
+
+let selectedBasicLink;
 
 const ICON_STATION_SRC = '/image/icon_station.png';
 
@@ -647,6 +653,14 @@ function closePropertyWindow() {
     $('.property-window').css('left', '-500px')
 }
 
+function closeLayerOptionWindow() {
+    $('.layer-option-window').css('left', '-500px')
+}
+
+function openLayerOptionWindow() {
+    $('.layer-option-window').css('left', '10px')
+}
+
 function isEdit() {
     if ($('#btn-status').text() === '편집 모드') {
         return true
@@ -1071,6 +1085,8 @@ function setLinkNodeStationFeature() {
                 setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
                 // 노드 레이어 추가
                 setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
+                // 링크 거리별 포인트 레이어 추가
+                setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
             }
             resolve();
         }).catch(function(error) {
@@ -1127,6 +1143,14 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e);
     });
+
+    map.on('mouseenter', layerId, () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', layerId, () => {
+        map.getCanvas().style.cursor = '';
+    });
 }
 
 function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
@@ -1142,5 +1166,70 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
     });
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e);
+
+        selectedBasicLink = e.features[0].properties;
     });
+
+    map.on('mouseenter', layerId, () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', layerId, () => {
+        map.getCanvas().style.cursor = '';
+    });
+}
+
+function setLayerLinkDot(layerId, sourceId) {
+    map.addLayer({
+        'id' : layerId,
+        'type' : 'line',
+        'source' : sourceId,
+        'paint': {
+            'circle-radius': 6,
+            'circle-color': nodeColor,
+            'circle-opacity': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                1,
+                1
+            ]
+        }
+    });
+}
+
+// 시작점과 끝점 사이에 5미터 간격으로 점 생성
+function generatePoints(segmentLength) {
+    let beginLat = parseFloat(selectedBasicLink["beginLat"]);
+    let beginLng = parseFloat(selectedBasicLink["beginLng"]);
+    let endLat = parseFloat(selectedBasicLink["endLat"]);
+    let endLng = parseFloat(selectedBasicLink["endLng"]);
+
+    const latDiff = endLat - beginLat;
+    const lngDiff = endLng - beginLng
+    let totalDistance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+
+    const points = [];
+    const numPoints = Math.floor(totalDistance / segmentLength);
+    const latStep = (endLat - beginLat) / numPoints;
+    const lngStep = (endLng - beginLng) / numPoints;
+
+    for (let i = 0; i <= numPoints; i++) {
+        const lat = beginLat + i * latStep;
+        const lng = beginLng + i * lngStep;
+        points.push({
+            type: 'Feature',
+            geometry: {
+                type: 'Point',
+                coordinates: [lng, lat] // GeoJSON에서는 경도, 위도 순서로 되어 있음
+            },
+            properties: {
+                name: 'Point ' + i,
+                meter: segmentLength  // 미터 정보 추가
+            }
+        });
+    }
+
+    meterDotFeatures.features = points
+
+    map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
 }

@@ -37,6 +37,7 @@
     <!--Spectrum-->
     <script src="https://bgrins.github.io/spectrum/spectrum.js"></script>
     <link rel='stylesheet' href='/css/spectrum.css'/>
+    <script src="../../../static/js/main.js"></script>
 
 </head>
 <body>
@@ -45,6 +46,7 @@
             <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기"><i class="fa-solid fa-floppy-disk"></i>불러오기</button>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <button class="top-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i>거리측정</button>
+            <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>기본 레이어 설정</button>
 
 <!--            <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_line top-btn mapbox-ctrl-btn" title="LineString tool (l)"></button>-->
 <!--            <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_polygon top-btn mapbox-ctrl-btn" title="Polygon tool (p)"></button>-->
@@ -83,6 +85,7 @@
         <div class="tab-title padding-10 basic-font">
             <h5>도구</h5>
         </div>
+
 <!--        <div class="map-style-change padding-10">-->
 <!--            <label for="map-style" class="select-label">지도 스타일</label>-->
 <!--            <select name="map-styles" id="map-style" >-->
@@ -133,14 +136,46 @@
             <h5>속성</h5>
             <i class="fas fa-times margin-0" onclick='closePropertyWindow()'></i>
         </div>
-        <div class="padding-10" onclick="changeProperties()">
-            <button class="change-btn">수정</button>
+<!--        <div class="padding-10" onclick="changeProperties()">-->
+<!--            <button class="change-btn">수정</button>-->
+<!--        </div>-->
+        <div id="property-tools" style="display: flex;padding: 0 5px;">
+            <button class="top-btn" onclick="generatePoints(5);"
+                    data-bs-placement="top"
+                    data-bs-toggle="tooltip"
+                    aria-label="5M"
+                    data-bs-original-title="5M 간격 점생성">5M</button>
+            <button class="top-btn" onclick="generatePoints(10);"
+                    data-bs-placement="top"
+                    data-bs-toggle="tooltip"
+                    aria-label="10M"
+                    data-bs-original-title="10M 간격 점생성">10M</button>
         </div>
+
         <div class="property-list padding-10">
             <table>
             </table>
         </div>
 <!--        <div class="property-info-list"></div>-->
+    </div>
+
+    <div class="layer-option-window" style="left: -500px"> <!--레이어 옵션 창-->
+        <div class="tab-title padding-10 basic-font">
+            <h5>기본정보 레이어 설정</h5>
+            <i class="fas fa-times margin-0" onclick='closeLayerOptionWindow()'></i>
+        </div>
+        <!--        <div class="padding-10" onclick="changeProperties()">-->
+        <!--            <button class="change-btn">수정</button>-->
+        <!--        </div>-->
+        <div class="property-list padding-10">
+            <table>
+                <tr>
+                    <th></th>
+                    <td></td>
+                </tr>
+            </table>
+        </div>
+        <!--        <div class="property-info-list"></div>-->
     </div>
 
     <div id="loading-window">
@@ -192,6 +227,11 @@
     const NODE_FEATURE_ID = 'node-feature';
     const NODE_LAYER_ID = 'node-layer';
 
+    // 링크 미터당 점 레이어
+    const METER_DOT_LAYER_ID = 'link-meter';
+    const METER_DOT_SOURCE_ID = 'link-source';
+    const METER_DOT_FEATURE_ID = 'link-feature';
+
     var fileNm;
     var dataArr = [];
     var newProperty = [];
@@ -241,6 +281,7 @@
 
         map.on('load', function () {
             setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
+            setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
 
             map.on('moveend', ()=>{
                 if(map.getZoom() >= 14){
