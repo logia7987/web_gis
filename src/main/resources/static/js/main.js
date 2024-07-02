@@ -1029,29 +1029,29 @@ function setLinkNodeStationFeature() {
         // });
 
         // Node 처리
-        // let nodePromise = new Promise(function(resolveNode, rejectNode) {
-        //     if (nodeShowFlag === true) {
-        //         params["sc_MODE"] = "N";
-        //         requestAjax(params, function(result) {
-        //             let geoJson = JSON.parse(result.data);
-        //             for (let feature of geoJson.features) {
-        //                 if (nodeShowLabel != undefined) {
-        //                     feature.properties.label = feature.properties[nodeShowLabel];
-        //                 }
-        //                 if (selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId) {
-        //                     feature.properties.iconColor = feature.properties.selectedIconColor;
-        //                     feature.properties.iconSize = feature.properties.selectedIconSize;
-        //                     feature.properties.textColor = feature.properties.selectedTextColor;
-        //                     feature.properties.textSize = feature.properties.selectedTextSize;
-        //                 }
-        //                 linkNodeStationFeatures.features.push(feature);
-        //             }
-        //             resolveNode();
-        //         });
-        //     } else {
-        //         resolveNode(); // Node 처리가 필요 없는 경우 resolve
-        //     }
-        // });
+        let nodePromise = new Promise(function(resolveNode, rejectNode) {
+            if (nodeShowFlag === true) {
+                params["sc_MODE"] = "N";
+                requestAjax(params, function(result) {
+                    let geoJson = JSON.parse(result.data);
+                    for (let feature of geoJson.features) {
+                        if (nodeShowLabel != undefined) {
+                            feature.properties.label = feature.properties[nodeShowLabel];
+                        }
+                        if (selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId) {
+                            feature.properties.iconColor = feature.properties.selectedIconColor;
+                            feature.properties.iconSize = feature.properties.selectedIconSize;
+                            feature.properties.textColor = feature.properties.selectedTextColor;
+                            feature.properties.textSize = feature.properties.selectedTextSize;
+                        }
+                        linkNodeStationFeatures.features.push(feature);
+                    }
+                    resolveNode();
+                });
+            } else {
+                resolveNode(); // Node 처리가 필요 없는 경우 resolve
+            }
+        });
 
         // Link 처리
         let linkPromise = new Promise(function(resolveLink, rejectLink) {
@@ -1077,7 +1077,7 @@ function setLinkNodeStationFeature() {
         Promise.all([linkPromise]).then(function() {
             // 데이터 소스에 features 업데이트
             map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-
+            addAttrList()
             // 레이어가 없을 때만 추가
             // if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(STATION_LAYER_ID) && !map.getLayer(NODE_LAYER_ID)) {
             if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(METER_DOT_LAYER_ID)) {
@@ -1087,8 +1087,8 @@ function setLinkNodeStationFeature() {
                 setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
                 // 정류소 레이어 추가
                 // setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
-                // // 노드 레이어 추가
-                // setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
+                // 노드 레이어 추가
+                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
             }
             resolve();
         }).catch(function(error) {
@@ -1260,4 +1260,41 @@ function generatePoints(segmentLength) {
     meterDotFeatures.features = points
 
     map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
+}
+
+// 지도에 표출된 정보만을 속성리스트에 제공
+function addAttrList() {
+    const listTarget = $("#attr_list");
+    const featureList = linkNodeStationFeatures.features;
+
+    // 속성리스트 초기화
+    listTarget.find("div.layer-file").remove()
+    // 리스트 재생성
+    let html = "";
+    for (let i = 0; i < featureList.length; i++ ) {
+        let aData = featureList[i];
+        const type = aData.geometry.type
+
+        // 타입별 데이터 표출 분류
+        if (type === 'LineString') {
+            // 링크 처리
+            html += '<div class="layer-file basic-font">'
+            html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
+            html += '<div class="file-info">'
+            html += '<div class="file-tit">' + aData.properties.linkId + '</div>'
+            html += '</div>'
+            html += '</div>'
+        } else {
+            // 노드 처리
+            html += '<div class="layer-file basic-font">'
+            html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
+            html += '<div class="file-info">'
+            html += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
+            html += '</div>'
+            html += '</div>'
+        }
+
+    }
+
+    listTarget.append(html);
 }
