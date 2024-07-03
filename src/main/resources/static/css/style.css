@@ -683,6 +683,43 @@ th, td {
     margin: 5px 0;
 }
 #attr_list {
-    overflow-y: scroll;
+    overflow-y: auto;
     height: calc(100% - 50px);
+}
+
+.attr-tab {
+
+}
+
+.attr_tab_bar {
+    padding: 0;
+    margin: 10px 0 0;
+    font-size: 0;
+}
+
+.attr_tab_bar li {
+    display: inline-block;
+    width: 50%;
+    font-size: 14px;
+    font-weight: 400;
+    color: #020202;
+    text-align: center;
+    border-radius: 15px 15px 0 0;
+    padding: 10px;
+    border: 1px solid #e4e4e4;
+    font-family: 'Noto Sans KR', serif;
+}
+
+.attr_tab_bar li.active {
+    background-color: #e4e4e4;
+}
+
+.attr_tab_bar li:hover {
+    cursor: pointer;
+    background-color: #e4e4e4;
+}
+
+.attr-list {
+    overflow-y: auto;
+    height: calc(100% - 100px);
 }

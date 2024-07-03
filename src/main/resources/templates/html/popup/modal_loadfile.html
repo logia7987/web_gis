@@ -45,15 +45,14 @@
         uploadContainer.addEventListener('dragleave', handleDragLeave);
         uploadContainer.addEventListener('drop', handleDrop);
 
-        $('.custom-select').click( function() {
+        $('.custom-select').click(function() {
             $('.options').fadeToggle();
         })
 
         if (jsonData != null) {
             parent.dataArr[jsonData.fileName] = jsonData
             parent.finishLoading();
-            parent.drawShpData(jsonData)
-
+            parent.readProperties(jsonData)
             jsonData = null
 
             parent.toastOn("ShapeFile 을 읽어 왔습니다.")
@@ -145,24 +144,6 @@
                     location.href = "/popup/uploadPage";
                 }
             },
-            // success: function (data) {
-            //     parent.finishLoading();
-            //     console.log(data)
-            //     /* geojson 형식
-            //     * Point: [longitude, latitude]
-            //     * LineString: [[longitude1, latitude1], [longitude2, latitude2], ...]
-            //     * Polygon: [[[longitude1, latitude1], [longitude2, latitude2], ...], ...]
-            //     */
-            //     // const dataType = checkDataType(data);
-            //     // if (dataType === "Point")  {
-            //     //     drawNodePoint(data);
-            //     // } else if (dataType === "MultiLineString") {
-            //     //     drawLinkLine(data)
-            //     // } else {
-            //     //     drawPolyline(data);
-            //     // }
-            //     // createLayer(data, dataType);
-            // },
             error: function (error) {
                 console.error('Error uploading file:', error);
                 parent.finishLoading();

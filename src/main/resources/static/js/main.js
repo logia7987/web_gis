@@ -10,6 +10,10 @@ let meterDotFeatures = {
     type : "FeatureCollection",
     features : []
 };
+// let shpLoadFeatures = {
+//     type : "FeatureCollection",
+//     features : []
+// };
 const COORD_ROUND = 6;
 
 let selectedStationId = "";
@@ -79,14 +83,12 @@ function checkTab() {
 }
 
 // 해당 탭을 여는 함수
-function openTab(event, tab) {
-    if (event.currentTarget.className === "tab-links") {
-        checkTab()
-        document.getElementById(tab).style.display = "block"
-        event.currentTarget.className += " active";
-    } else {
-        checkTab()
-    }
+function openTab(obj, param) {
+    $(".tab-links").removeClass("active");
+    $(obj).addClass("active");
+
+    $(".tab").hide();
+    $("#"+param).show();
 }
 
 // 로딩 화면
@@ -276,15 +278,18 @@ function sendFiles() {
             viewLoading()
         },
         complete: function( ) {
-            // finishLoading();
+            finishLoading();
         },
         success: function (data) {
-            finishLoading();
             /* geojson 형식
             * Point: [longitude, latitude]
             * LineString: [[longitude1, latitude1], [longitude2, latitude2], ...]
             * Polygon: [[[longitude1, latitude1], [longitude2, latitude2], ...], ...]
             */
+            console.log(data.data)
+            // shpLoadFeatures.features = data.data.features
+            // readProperties(data.data.features[0].properties)
+            // addShpList(data.data)
             // const dataType = checkDataType(data);
             // if (dataType === "Point")  {
             //     drawNodePoint(data);
@@ -919,8 +924,6 @@ function updateSourceData(newFeature) {
         type: 'FeatureCollection',
         features: updatedFeatures
     });
-    // dataArr[fileNm] = map.getSource('data_' + fileNm);
-    // dataArr[fileNm].data.features.push(newFeature)
 }
 
 function toastOn(t){
@@ -945,33 +948,6 @@ function isEmptyLayerList() {
 function getMapZoom(){
     return Math.floor(map.getZoom());
 }
-
-function getSession() {
-    //
-    $.ajax({
-        url : "http://115.88.124.254:9090/checkSession.bms",
-        data: {
-            isForced: false,
-            userId: "qc100",
-            pwd: "a!1234567"
-        },
-        dataType: "json",
-        contentType: 'application/json',
-        type: 'POST',
-        beforeSend : function (xmlHttpRequest){
-            // $("body").mLoading('show');
-            xmlHttpRequest.setRequestHeader("AJAX", "true");
-            xmlHttpRequest.setRequestHeader('X-CSRF-TOKEN', $('#csrf').val());
-        },
-        success : function(data) {
-            console.log("세션 획득");
-        },
-        error : function(request, status, error) {
-            alert("오류가 발생했습니다!" + "\n");
-        },
-    });
-}
-
 
 function requestAjax(params, callback, asyncFlag) {
     $.ajax({
@@ -1403,10 +1379,10 @@ function getVworldTilesSet(){
 }
 
 function setMapEvent() {
-    draw = new MapboxDraw({});
-
-    map.addControl(language);
-    map.addControl(draw, 'bottom-left')
+    // draw = new MapboxDraw({});
+    //
+    // map.addControl(language);
+    // map.addControl(draw, 'bottom-left')
 
     map.on('load', function () {
         setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
@@ -1426,42 +1402,116 @@ function setMapEvent() {
             //우선 정류소, 노드 클릭상황에서는 당연히 광범위한 링크 선택처리를 막는다.
             //링크 자체를 클릭해버리면 중복되므로 광범위한 링크 선택또한 막는다.
             // [STATION_LAYER_ID, LINK_LAYER_ID, NODE_LAYER_ID]
-            let features = map.queryRenderedFeatures(e.point, {
-                layers : [LINK_LAYER_ID]
-            });
+            if (map.getLayer(LINK_LAYER_ID) !== undefined) {
+                let features = map.queryRenderedFeatures(e.point, {
+                    layers : [LINK_LAYER_ID, NODE_LAYER_ID]
+                });
 
-            if(features.length > 0) {
-                return;
+                if(features.length > 0) {
+                    return;
+                }
+
+                let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
+
+                if(!pointPos){
+                    return;
+                }
+
+                map.fire('click', {
+                    lngLat : pointPos,
+                    point : map.project(pointPos)
+                })
             }
+        });
 
-            let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
+        map.on('mousemove', (e) => {
+            if (map.getLayer(LINK_LAYER_ID) !== undefined) {
+                //광범위한 링크 선택 근처 도달 시 마우스 모양 포인터로 처리
+                let features = map.queryRenderedFeatures(e.point, {
+                    layers : [LINK_LAYER_ID, NODE_LAYER_ID]
+                });
 
-            if(!pointPos){
-                return;
+                if(features.length > 0) {
+                    return;
+                }
+
+                //위의 어떤 레이어가 포함되지 않은 상태에서
+                let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat), true);
+
+                if(!pointPos){
+                    map.getCanvas().style.cursor = '';
+                }else{
+                    map.getCanvas().style.cursor = 'pointer';
+                }
             }
-
-            map.fire('click', {
-                lngLat : pointPos,
-                point : map.project(pointPos)
-            })
         });
     })
 }
 // 지도에 표출된 정보만을 속성리스트에 제공
 function addAttrList() {
-    const listTarget = $("#attr_list");
+    let nodeList = $("#node_list");
+    let linkList = $("#link_list");
+    // 속성리스트 초기화
+    nodeList.find("div.layer-file").remove()
+    linkList.find("div.layer-file").remove()
+
     const featureList = linkNodeStationFeatures.features;
 
-    // 속성리스트 초기화
-    listTarget.find("div.layer-file").remove()
     // 리스트 재생성
-    let html = "";
+    let nodeHtml = "";
+    let linkHtml = "";
     for (let i = 0; i < featureList.length; i++ ) {
         let aData = featureList[i];
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
         if (type === 'LineString') {
+            // 링크 처리
+            // 링크선 가운데 값 추출
+            let lng = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][0]
+            let lat = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][1]
+            linkHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\'' + lng + ',' + lat + '\')">'
+            linkHtml += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
+            linkHtml += '<div class="file-info">'
+            linkHtml += '<div class="file-tit">' + aData.properties.linkId + '</div>'
+            linkHtml += '</div>'
+            linkHtml += '</div>'
+        } else {
+            // 노드 처리
+            nodeHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
+            nodeHtml += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
+            nodeHtml += '<div class="file-info">'
+            if (aData.properties.crossroadNm.trim() === "") {
+                nodeHtml += '<div class="file-tit">링크명 없음</div>'
+            } else {
+                nodeHtml += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
+            }
+            nodeHtml += '</div>'
+            nodeHtml += '</div>'
+        }
+
+    }
+
+    nodeList.append(nodeHtml);
+    linkList.append(linkHtml);
+}
+
+function addShpList(data) {
+    let target = $(".layer-file-list");
+    // let linkList = $("#link_list");
+    // 속성리스트 초기화
+    target.find("div.layer-file").remove()
+    target.find(".empty-layer").hide()
+
+    // 리스트 재생성
+    let html = "";
+    // let linkHtml = "";
+    for (let i = 0; i < data.length; i++ ) {
+        let aData = data[i];
+        const type = aData.geometry.type
+
+        // 타입별 데이터 표출 분류
+        if (type.indexOf('LineString') > -1) {
             // 링크 처리
             html += '<div class="layer-file basic-font">'
             html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
@@ -1474,12 +1524,53 @@ function addAttrList() {
             html += '<div class="layer-file basic-font">'
             html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            html += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
+            if (aData.properties.crossroadNm.trim() === "") {
+                html += '<div class="file-tit">링크명 없음</div>'
+            } else {
+                html += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
+            }
             html += '</div>'
             html += '</div>'
         }
-
     }
 
-    listTarget.append(html);
+    target.append(html);
+    // linkList.append(linkHtml);
+}
+
+function moveThenClick(geo) {
+    geo = geo.split(",");
+    let pointPos = {lng : geo[0], lat : geo[1]};
+
+    map.flyTo({
+        center: [geo[0], geo[1]],
+        zoom: map.getZoom()
+    });
+
+    map.fire('click', {
+        lngLat : pointPos,
+        point : map.project(pointPos)
+    })
+}
+
+function openAttrTab(obj, param) {
+    $(".attr_tab_bar li").removeClass("active");
+
+    $(obj).addClass("active");
+
+    $(".attr-list").hide()
+    $("#"+param).show()
+}
+
+function readProperties(data) {
+    for (const key in data.data.features[0].properties) {
+        console.log("key : " + key + " : " + "value : "+ data.data.features[0].properties[key])
+    }
+
+
+    // addShpList(data)
+}
+
+function choiceFeatureName() {
+
 }
