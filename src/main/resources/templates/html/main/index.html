@@ -43,7 +43,12 @@
 <body>
     <header style="height: 45px;border-bottom: 1px solid #e6e6e6;">
         <div class="top-nav">
-            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기"><i class="fa-solid fa-floppy-disk"></i>불러오기</button>
+<!--            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기">-->
+<!--                <i class="fa-solid fa-floppy-disk"></i>불러오기-->
+<!--            </button>-->
+            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="SHP 업로드">
+                <i class="fa-solid fa-floppy-disk"></i>SHP 업로드
+            </button>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <button class="top-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i>거리측정</button>
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>기본 레이어 설정</button>
@@ -59,25 +64,25 @@
 
 <!--    <div id="mode-change-btn" onclick="toggleWhiteMode()"><i class="fas fa-solid fa-moon" id="mdicon"></i></div>-->
     <div class="tab-menu">
-        <div class="tab-links active" onclick="openTab(event, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="레이어"><i class="fa-solid fa-layer-group"></i></div>
-        <div class="tab-links" onclick="openTab(event, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-<!--        <div class="tab-links" onclick="openTab(event, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성"><i class="fa-solid fa-list"></i></div>-->
+        <div class="tab-links" onclick="openTab(event, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성">
+            <i class="fa-solid fa-list"></i>
+        </div>
+        <div class="tab-links" onclick="openTab(event, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+        </div>
+        <div class="tab-links active" onclick="openTab(event, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="SHP">
+            <i class="fa-solid fa-layer-group"></i>
+        </div>
     </div>
 
     <div id="tab1" class="tab" style="display: block;">
         <div class="tab-title padding-10 basic-font">
-            <h5>레이어</h5>
-            <i class="fa-solid fa-file-pen"  data-bs-toggle='modal' data-bs-target='#pluslayer'></i>
+            <h5>속성</h5>
         </div>
 
-        <div class="layer-file-list basic-font">
-            <span class="empty-layer">
-                레이어가 비어있습니다.
-                <br><br>
-                레이어 생성 버튼 <i class="fa-solid fa-file-pen" data-bs-toggle="modal" data-bs-target="#pluslayer" aria-hidden="true"></i> 을 클릭해서
-                <br><br>
-                레이어를 추가해주세요.
-            </span>
+        <!-- 속성 탭 나누기 -->
+        <div class="attr-list basic-font" id="attr_list">
+            <div></div>
         </div>
     </div>
 
@@ -129,9 +134,25 @@
         </div>
     </div>
 
-<!--    <div id="tab3" class="tab">-->
-<!--    </div>-->
-    <div class="property-window" style="left: -500px"> <!--속성 창-->
+    <div id="tab3" class="tab">
+        <div class="tab-title padding-10 basic-font">
+            <h5>SHP</h5>
+            <i class="fa-solid fa-file-pen"  data-bs-toggle='modal' data-bs-target='#pluslayer'></i>
+        </div>
+
+        <div class="layer-file-list basic-font">
+            <span class="empty-layer">
+                불러온 SHP 파일이 없습니다.
+                <br><br>
+                좌측 상단의 SHP 업로드를
+                <br><br>
+                진행해주세요.
+            </span>
+        </div>
+    </div>
+
+    <!--속성 창-->
+    <div class="property-window" style="left: -500px">
         <div class="tab-title padding-10 basic-font">
             <h5>속성</h5>
             <i class="fas fa-times margin-0" onclick='closePropertyWindow()'></i>
@@ -150,7 +171,6 @@
                     data-bs-toggle="tooltip"
                     aria-label="10M"
                     data-bs-original-title="10M 간격 점생성">10M</button>
-            <button class="top-btn" onclick="removePoints();">점 지우기</button>
         </div>
 
         <div class="property-list padding-10">

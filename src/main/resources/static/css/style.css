@@ -682,3 +682,7 @@ th, td {
 #property-tools {
     margin: 5px 0;
 }
+#attr_list {
+    overflow-y: scroll;
+    height: calc(100% - 50px);
+}
