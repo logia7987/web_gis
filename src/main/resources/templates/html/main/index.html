@@ -150,6 +150,7 @@
                     data-bs-toggle="tooltip"
                     aria-label="10M"
                     data-bs-original-title="10M 간격 점생성">10M</button>
+            <button class="top-btn" onclick="removePoints();">점 지우기</button>
         </div>
 
         <div class="property-list padding-10">
@@ -251,7 +252,7 @@
     var tablinks = document.getElementsByClassName("tab-links");
     var propertyArr = []
     var changeProper;
-    let draw
+    let draw= new MapboxDraw({});
 
     let hoveredPolygonId = null;
     let clickedPolygonId = null;
@@ -265,34 +266,59 @@
     // 저장된 파일 고르는 함수
     $(document).ready(function() {
         // 맵박스 초기화
-        map = new mapboxgl.Map({
-            container: "map",
-            style: 'mapbox://styles/mapbox/streets-v12',
-            center: [126.88271541564299, 37.48151056694073],
-            zoom: 11,
-        });
-
-        const language = new MapboxLanguage();
-
-        draw = new MapboxDraw({});
-
-        map.addControl(language);
-        map.addControl(draw, 'bottom-left')
-
-        map.on('load', function () {
-            setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
-            setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
-
-            map.on('moveend', ()=>{
-                if(map.getZoom() >= 14){
-                    setLinkNodeStationFeature();
-                    // map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-                }else{
-                    linkNodeStationFeatures.features = [];
-                    map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-                }
-            });
-        })
+        initBasicTileSet();
+        // map = new mapboxgl.Map({
+        //     container: "map",
+        //     style: 'mapbox://styles/mapbox/streets-v12',
+        //     center: [126.88271541564299, 37.48151056694073],
+        //     zoom: 11,
+        // });
+        //
+        // const language = new MapboxLanguage();
+        //
+        // draw = new MapboxDraw({});
+        //
+        // map.addControl(language);
+        // map.addControl(draw, 'bottom-left')
+        //
+        // map.on('load', function () {
+        //     setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
+        //     setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
+        //
+        //     map.on('moveend', ()=>{
+        //         if(map.getZoom() >= 14){
+        //             setLinkNodeStationFeature();
+        //             // map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+        //         }else{
+        //             linkNodeStationFeatures.features = [];
+        //             map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+        //         }
+        //     });
+        //
+        //     map.on('click', (e) => {
+        //         //우선 정류소, 노드 클릭상황에서는 당연히 광범위한 링크 선택처리를 막는다.
+        //         //링크 자체를 클릭해버리면 중복되므로 광범위한 링크 선택또한 막는다.
+        //         // [STATION_LAYER_ID, LINK_LAYER_ID, NODE_LAYER_ID]
+        //         let features = map.queryRenderedFeatures(e.point, {
+        //             layers : [LINK_LAYER_ID]
+        //         });
+        //
+        //         if(features.length > 0) {
+        //             return;
+        //         }
+        //
+        //         let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
+        //
+        //         if(!pointPos){
+        //             return;
+        //         }
+        //
+        //         map.fire('click', {
+        //             lngLat : pointPos,
+        //             point : map.project(pointPos)
+        //         })
+        //     });
+        // })
 
         $("#polygon-color").spectrum({
             showPaletteOnly: true,

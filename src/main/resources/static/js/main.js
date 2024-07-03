@@ -1,3 +1,6 @@
+const VWORLD_KEY = '826BBF47-98D0-3A2F-A444-A413695AB7F8'
+const language = new MapboxLanguage();
+
 const DEFAULT_ZOOMLVL = 14;
 let linkNodeStationFeatures = {
     type : "FeatureCollection",
@@ -1156,6 +1159,18 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
 }
 
 function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
+    function findFeaturesAlongLine(coordinates, layerId) {
+        var featuresAlongLine = [];
+
+        // 각 점에 대해 클릭된 피처 찾기
+        coordinates.forEach(function(coord) {
+            var features = map.queryRenderedFeatures(map.project(coord), { layers: [layerId] });
+            featuresAlongLine.push(...features); // 해당 점의 피처들을 배열에 추가
+        });
+
+        return featuresAlongLine;
+    }
+
     map.addLayer({
         'id' : layerId,
         'type' : 'line',
@@ -1169,7 +1184,14 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e);
 
-        selectedBasicLink = e.features[0].properties;
+        var clickedFeature = e.features[0];
+        if (clickedFeature) {
+            linkNodeStationFeatures.features.forEach(function (feature) {
+                if (feature.geometry.type === 'LineString' && feature.properties.linkId === clickedFeature.properties.linkId) {
+                    selectedBasicLink = feature.geometry.coordinates;
+                }
+            });
+        }
     });
 
     map.on('mouseenter', layerId, () => {
@@ -1199,65 +1221,229 @@ function setLayerLinkDot(layerId, sourceId) {
     });
 }
 
-// 시작점과 끝점 사이에 5미터 간격으로 점 생성
+// 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
 function generatePoints(segmentLength) {
-    let beginLat = parseFloat(selectedBasicLink["beginLat"]);
-    let beginLng = parseFloat(selectedBasicLink["beginLng"]);
-    let endLat = parseFloat(selectedBasicLink["endLat"]);
-    let endLng = parseFloat(selectedBasicLink["endLng"]);
-
-    const R = 6371000; // 지구의 반지름(미터 단위)
-
-    // 두 지점 사이의 거리 계산 (해버사인 공식 사용)
-    const φ1 = beginLat * Math.PI / 180; // 시작점 위도를 라디안으로 변환
-    const φ2 = endLat * Math.PI / 180; // 끝점 위도를 라디안으로 변환
-    const Δφ = (endLat - beginLat) * Math.PI / 180; // 위도 차이
-    const Δλ = (endLng - beginLng) * Math.PI / 180; // 경도 차이
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) *
-        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const totalDistance = R * c; // 두 지점 사이의 거리(미터 단위)
+    let coordinates = selectedBasicLink;
 
     const points = [];
+    const R = 6371000; // 지구의 반지름(미터 단위)
 
-    if (totalDistance >= segmentLength) {
-        const numPoints = Math.max(Math.floor(totalDistance / segmentLength), 1);
-        const latStep = (endLat - beginLat) / numPoints;
-        const lngStep = (endLng - beginLng) / numPoints;
+    // 도와 관련된 함수들
+    function toRadians(degrees) {
+        return degrees * Math.PI / 180;
+    }
 
-        for (let i = 0; i <= numPoints; i++) {
-            const lat = beginLat + i * latStep;
-            const lng = beginLng + i * lngStep;
+    function haversineDistance(coord1, coord2) {
+        const lat1 = toRadians(coord1[1]);
+        const lat2 = toRadians(coord2[1]);
+        const dLat = lat2 - lat1;
+        const dLng = toRadians(coord2[0] - coord1[0]);
+
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
+    function interpolatePoint(coord1, coord2, factor) {
+        return [
+            coord1[0] + (coord2[0] - coord1[0]) * factor,
+            coord1[1] + (coord2[1] - coord1[1]) * factor
+        ];
+    }
+
+    let currentPoint = coordinates[0];
+    let remainingDistance = segmentLength;
+    let accumulatedDistance = 0;
+    points.push({
+        type: 'Feature',
+        geometry: {
+            type: 'Point',
+            coordinates: currentPoint
+        },
+        properties: {
+            name: 'Point 0',
+            meter: accumulatedDistance
+        }
+    });
+
+    for (let i = 1; i < coordinates.length; i++) {
+        const nextPoint = coordinates[i];
+        let segmentDistance = haversineDistance(currentPoint, nextPoint);
+
+        while (segmentDistance >= remainingDistance) {
+            const factor = remainingDistance / segmentDistance;
+            currentPoint = interpolatePoint(currentPoint, nextPoint, factor);
+            accumulatedDistance += remainingDistance;
             points.push({
                 type: 'Feature',
                 geometry: {
                     type: 'Point',
-                    coordinates: [lng, lat]
+                    coordinates: currentPoint
                 },
                 properties: {
-                    name: 'Point ' + i,
-                    meter: i * segmentLength
+                    name: `Point ${points.length}`,
+                    meter: accumulatedDistance
                 }
             });
+            segmentDistance -= remainingDistance;
+            remainingDistance = segmentLength;
         }
-    } else {
-        points.push({
-            type: 'Feature',
-            geometry: {
-                type: 'Point',
-                coordinates: [beginLng, beginLat]
-            },
-            properties: {
-                name: 'Point 0',
-                meter: totalDistance
-            }
-        });
+
+        accumulatedDistance += segmentDistance;
+        remainingDistance -= segmentDistance;
+        currentPoint = nextPoint;
     }
 
     meterDotFeatures.features = points
 
     map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
+}
+
+function removePoints() {
+    meterDotFeatures.features = []
+
+    map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
+}
+
+function getClosestLinkId(pointPos){
+    //점과 선의 거리 중에서 가장가까운 link Id 찾기
+    let closestId;
+    let closestDist;
+    let closestPointFeature;
+    let clickPointFeature = turf.point(pointPos);
+
+    for(let linkFeature of linkNodeStationFeatures.features){
+        if(linkFeature.properties.featureId === LINK_FEATURE_ID){
+            let tmpDist = turf.pointToLineDistance(clickPointFeature, linkFeature);
+
+            if(!closestDist || closestDist > tmpDist){
+                closestDist = tmpDist;
+                closestId = linkFeature.properties.linkId;
+                closestPointFeature = turf.nearestPointOnLine(linkFeature, clickPointFeature);
+            }
+        }
+    }
+
+    let selectMeter;
+
+    //줌 레벨별로 광범위 수준 정도 확대
+    if(getMapZoom() <= 14){
+        selectMeter = 20;
+    }else if(getMapZoom() <= 15){
+        selectMeter = 15;
+    }else{
+        selectMeter = 10;
+    }
+
+    if(closestDist * 1000 > selectMeter || !closestPointFeature){
+        return "";
+    }else{
+        let coord = closestPointFeature.geometry.coordinates;
+        let pointPos = {lng : coord[0], lat : coord[1]};
+        return pointPos;
+    }
+
+    return closestId;
+}
+
+function initBasicTileSet() {
+    // 맵박스 초기화
+    map = new mapboxgl.Map({
+        container: "map",
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [126.88271541564299, 37.48151056694073],
+        zoom: 11,
+    });
+
+    // draw = new MapboxDraw({});
+
+    map.addControl(language);
+    map.addControl(draw, 'bottom-left')
+
+    setMapEvent();
+}
+
+function getVworldTilesSet(){
+    map = new mapboxgl.Map({
+        container: "map",
+        style : {
+            'version': 8,
+            'sources': {
+                'vworld-raster-tiles-source': {
+                    'type': 'raster',
+                    'tiles': ['https://api.vworld.kr/req/wmts/1.0.0/' + VWORLD_KEY + '/Base/{z}/{y}/{x}.png'],
+                    'tileSize': 256,
+                    'attribution': 'VWORLD'
+                }
+            },
+            'layers': [
+                {
+                    'id': 'vworld-raster-tiles-layers',
+                    'type': 'raster',
+                    'source': 'vworld-raster-tiles-source',
+                    'maxzoom': 19,
+                    'minzoom': 6
+                }
+            ],
+            "glyphs": "mapbox://fonts/mapbox/{fontstack}/{range}.pbf"
+        },
+        center: [126.88271541564299, 37.48151056694073],
+        zoom: 11,
+        //vworld 규정 지도 레벨 최대값 및 최소값으로 설정
+        maxZoom: 18,
+        minZoom: 6,
+        dragRotate: false,
+        preserveDrawingBuffer: true,
+    });
+
+    setMapEvent();
+}
+
+function setMapEvent() {
+    draw = new MapboxDraw({});
+
+    map.addControl(language);
+    map.addControl(draw, 'bottom-left')
+
+    map.on('load', function () {
+        setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
+        setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
+
+        map.on('moveend', ()=>{
+            if(map.getZoom() >= 14){
+                setLinkNodeStationFeature();
+                // map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+            }else{
+                linkNodeStationFeatures.features = [];
+                map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+            }
+        });
+
+        map.on('click', (e) => {
+            //우선 정류소, 노드 클릭상황에서는 당연히 광범위한 링크 선택처리를 막는다.
+            //링크 자체를 클릭해버리면 중복되므로 광범위한 링크 선택또한 막는다.
+            // [STATION_LAYER_ID, LINK_LAYER_ID, NODE_LAYER_ID]
+            let features = map.queryRenderedFeatures(e.point, {
+                layers : [LINK_LAYER_ID]
+            });
+
+            if(features.length > 0) {
+                return;
+            }
+
+            let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
+
+            if(!pointPos){
+                return;
+            }
+
+            map.fire('click', {
+                lngLat : pointPos,
+                point : map.project(pointPos)
+            })
+        });
+    })
 }
