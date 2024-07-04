@@ -195,7 +195,7 @@
 }
 
 .layer-file-list {
-    height: 100%;
+    height: calc(100% - 100px);
     width: 100%;
     overflow: auto;
     position: relative;
@@ -287,19 +287,20 @@
 }
 /* 셀렉트 박스 스타일 */
 .custom-select {
-    border: 2px solid #4d4d4d;
     display: inline-block;
-    width: 100%;
+    width: 200px;
     background-color: #fff;
-    border-radius: 4px;
     position: relative;
+    border: 1px solid #ebebeb;
 }
 
 /* 셀렉트 박스 표시 영역 */
 .custom-select .select-display {
-    padding: 10px;
     cursor: pointer;
     font-size: 14px;
+    line-height: 35px;
+    font-family: "Noto Sans KR", sans-serif;
+    padding: 0 5px;
 }
 
 /* 드롭다운 옵션 목록 */
@@ -693,7 +694,15 @@ th, td {
 }
 
 #property-tools {
-    margin: 5px 0;
+    /*margin: 5px 0;*/
+}
+#link-tools,
+#point-tools{
+    display: none;
+}
+
+#link-tools button {
+    display: inline-block;
 }
 #attr_list {
     overflow-y: auto;
@@ -765,4 +774,37 @@ th, td {
     font-size: 12px;
     text-align: center;
     padding: 10px;
+}
+
+.attr-frm {
+    display: none;
+}
+
+.paging-controls {
+    margin: 5px;
+    position: relative;
+    height: 40px;
+}
+
+.prev-page {
+    position: absolute;
+    left: 5px;
+    top: 5px;
+}
+.paging-controls span {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    text-align: center;
+    transform: translate(-50%, 0);
+}
+.next-page {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+}
+.prev-page,
+.next-page {
+    width: 45px;
+    border: 1px solid #e4e4e4;
 }

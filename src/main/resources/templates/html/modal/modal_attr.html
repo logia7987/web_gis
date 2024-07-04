@@ -17,12 +17,58 @@
             </div>
             <!-- Modal body -->
             <div class="modal-body">
+                <div>
+                    지도와 DB에 매칭시킬 속성을 골라주세요.
+                </div>
+                <div class="attr-frm layer-setting" id="attr-frm-link">
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td>LINK_ID</td>
+                                <td>
+                                    <select id="select_link_id" name="linkId">
 
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ROAD_NM</td>
+                                <td>
+                                    <select id="select_road_nm" name="roadNm">
+
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="attr-frm layer-setting" id="attr-frm-node">
+                    <table>
+                        <tbody>
+                        <tr>
+                            <td>NODE_ID</td>
+                            <td>
+                                <select id="select_node_id" name="nodeId">
+
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>ROAD_NM</td>
+                            <td>
+                                <select id="select_crossroad_nm" name="crossroadNm">
+
+                                </select>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취 소</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="finishProperties()">완 료</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="saveToMatchObject()">완 료</button>
             </div>
         </div>
     </div>

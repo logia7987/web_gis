@@ -44,7 +44,13 @@ let selectedBasicLink;
 
 const ICON_STATION_SRC = '/image/icon_station.png';
 
+let matchLinkObj = {}
+let matchNodeObj = {}
+let processDataType = "";
 
+let pageIdx = 0;
+const itemsPerPage = 100; // 페이지당 항목 수
+let totalPages = 0
 
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
@@ -1155,17 +1161,60 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
 }
 
 function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
-    function findFeaturesAlongLine(coordinates, layerId) {
-        var featuresAlongLine = [];
+    // 링크의 첫 번째 점과 마지막 점에 가까운 노드를 찾는 함수
+    function findClosestNodesToLinkEnds(linkCoordinates) {
+        // 첫 번째 점과 마지막 점 추출
+        var firstPoint = linkCoordinates[0];
+        var lastPoint = linkCoordinates[linkCoordinates.length - 1];
 
-        // 각 점에 대해 클릭된 피처 찾기
-        coordinates.forEach(function(coord) {
-            var features = map.queryRenderedFeatures(map.project(coord), { layers: [layerId] });
-            featuresAlongLine.push(...features); // 해당 점의 피처들을 배열에 추가
+        // 각 점에서 가장 가까운 노드 찾기
+        var closestNodes = {
+            startPoint: findClosestNode(firstPoint),
+            endPoint: findClosestNode(lastPoint)
+        };
+
+        return closestNodes;
+    }
+
+    // 특정 점에서 가장 가까운 노드를 찾는 함수
+    function findClosestNode(point) {
+        var closestNode = null;
+        var minDistance = Infinity;
+
+        // 모든 노드를 반복하며 가장 가까운 노드 찾기
+        linkNodeStationFeatures.features.forEach(function (feature) {
+            if (feature.geometry.type === 'Point' && feature.properties.nodeId !== undefined) {
+                var nodeCoordinates = feature.geometry.coordinates;
+                var distance = calculateDistance(point, nodeCoordinates);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestNode = feature;
+                }
+            }
         });
 
-        return featuresAlongLine;
+        return closestNode;
     }
+
+    // 두 점 사이의 거리 계산 함수 (예: 유클리디안 거리)
+    function calculateDistance(point1, point2) {
+        var dx = point1[0] - point2[0];
+        var dy = point1[1] - point2[1];
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // function findFeaturesAlongLine(coordinates, layerId) {
+    //     var featuresAlongLine = [];
+    //
+    //     // 각 점에 대해 클릭된 피처 찾기
+    //     coordinates.forEach(function(coord) {
+    //         var features = map.queryRenderedFeatures(map.project(coord), { layers: [layerId] });
+    //         featuresAlongLine.push(...features); // 해당 점의 피처들을 배열에 추가
+    //     });
+    //
+    //     return featuresAlongLine;
+    // }
 
     map.addLayer({
         'id' : layerId,
@@ -1180,14 +1229,27 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e);
 
-        // var clickedFeature = e.features[0];
-        // if (clickedFeature) {
-        //     linkNodeStationFeatures.features.forEach(function (feature) {
-        //         if (feature.geometry.type === 'LineString' && feature.properties.linkId === clickedFeature.properties.linkId) {
-        //             selectedBasicLink = feature.geometry.coordinates;
-        //         }
-        //     });
-        // }
+        var clickedFeature = e.features[0];
+        if (clickedFeature) {
+            linkNodeStationFeatures.features.forEach(function (feature) {
+                if (feature.geometry.type === 'LineString' && feature.properties.linkId === clickedFeature.properties.linkId) {
+                    selectedBasicLink = feature.geometry.coordinates;
+                }
+            });
+
+            // 클릭된 링크의 좌표 가져오기
+            var linkCoordinates = clickedFeature.geometry.coordinates;
+
+            // 링크의 첫 번째 점과 마지막 점에 가까운 노드 찾기
+            var closestNodes = findClosestNodesToLinkEnds(linkCoordinates);
+            var startPointNode = closestNodes.startPoint;
+            var endPointNode = closestNodes.endPoint;
+
+            // 시작 노드와 끝 노드 feature 추출 완료. 후 처리를 어떻게 하는지 못여쭈어봄;
+            console.log('Closest start point node:', startPointNode);
+            console.log('Closest end point node:', endPointNode);
+
+        }
     });
 
     map.on('mouseenter', layerId, () => {
@@ -1470,7 +1532,7 @@ function setMapEvent() {
         });
 
         map.on('mousemove', (e) => {
-            if (map.getLayer(LINK_LAYER_ID) !== undefined) {
+            if (map.getLayer(STATION_LAYER_ID) !== undefined) {
                 //광범위한 링크 선택 근처 도달 시 마우스 모양 포인터로 처리
                 let features = map.queryRenderedFeatures(e.point, {
                     layers : [STATION_LAYER_ID, LINK_LAYER_ID, NODE_LAYER_ID]
@@ -1562,44 +1624,83 @@ function addAttrList() {
 }
 
 function addShpList() {
+    totalPages = Math.ceil(loadData.data.features.length / itemsPerPage);
+
     let target = $(".layer-file-list");
     // 속성리스트 초기화
     target.find("div.layer-file").remove()
     target.find(".empty-layer").hide()
 
+    // 현재 페이지의 시작 인덱스와 끝 인덱스 계산
+    let startIdx = pageIdx * itemsPerPage;
+    let endIdx = startIdx + itemsPerPage;
+    endIdx = endIdx > loadData.data.features.length ? loadData.data.features.length : endIdx;
+
     // 리스트 재생성
     let html = "";
-    for (let i = 0; i < loadData.data.features.length; i++ ) {
+    for (let i = startIdx; i < endIdx; i++) {
         let aData = loadData.data.features[i];
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
+        // TODO 체크박스에서 이미체크되어있는지 확인하는 부분 만들기
         if (type.indexOf('LineString') > -1) {
             // 링크 처리
             html += '<div class="layer-file basic-font">'
-            html += '<input type="checkbox" name="selected_link" value="">'
+            html += '<input type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'">'
             html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            html += '<div class="file-tit">' + 'test' + '</div>'
+            html += '<div class="file-tit">' + aData.properties[matchLinkObj.roadNm] + '</div>'
             html += '</div>'
             html += '</div>'
         } else {
             // 노드 처리
             html += '<div class="layer-file basic-font">'
-            html += '<input type="checkbox" name="selected_node" value="">'
+            html += '<input type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'">'
             html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            // if (aData.properties.crossroadNm.trim() === "") {
-            //     html += '<div class="file-tit">링크명 없음</div>'
-            // } else {
-                html += '<div class="file-tit">' + 'test' +'</div>'
-            // }
+            html += '<div class="file-tit">' + aData.properties[matchNodeObj.crossroadNm] +'</div>'
             html += '</div>'
             html += '</div>'
         }
     }
 
     target.append(html);
+
+    // 페이징 UI 업데이트
+    updatePagingUI();
+
+    $(".tab-links:eq(1)").click()
+}
+
+// 이전 페이지 버튼 클릭 이벤트
+$(document).on('click', '.prev-page', function() {
+    if (pageIdx > 0) {
+        pageIdx--;
+        addShpList();
+    }
+});
+
+// 다음 페이지 버튼 클릭 이벤트
+$(document).on('click', '.next-page', function() {
+    if (pageIdx < totalPages - 1) {
+        pageIdx++;
+        addShpList();
+    }
+});
+
+function updatePagingUI() {
+    let pagingHtml = '<div class="paging-controls">';
+    if (pageIdx > 0) {
+        pagingHtml += '<button class="prev-page">이전</button>';
+    }
+    pagingHtml += '<span>페이지 ' + (pageIdx + 1) + ' / ' + totalPages + '</span>';
+    if (pageIdx < totalPages - 1) {
+        pagingHtml += '<button class="next-page">다음</button>';
+    }
+    pagingHtml += '</div>';
+
+    $('.paging-container').html(pagingHtml);
 }
 
 function moveThenClick(geo) {
@@ -1627,12 +1728,56 @@ function openAttrTab(obj, param) {
 }
 
 function readProperties() {
+    // shp 타입 확인
+    const shpType = loadData.data.features[0].geometry.type
+    let optionHtml = "";
+    // select 에 option 추가
     for (const key in loadData.data.features[0].properties) {
-        console.log("key : " + key + " : " + "value : "+ loadData.data.features[0].properties[key])
+        optionHtml += '<option value="'+key+'">'+key+'</option>';
     }
+
+    // 부합되는 타입에 옵션 추가 후 테이블 보여주는 부분
+    if (shpType.indexOf("LineString") > -1) {
+        processDataType = "link"
+        $("#select_link_id").append(optionHtml);
+        $("#select_road_nm").append(optionHtml);
+        $("#attr-frm-link").show();
+    } else if (shpType.indexOf("Point") > -1) {
+        processDataType = "node"
+        $("#select_node_id").append(optionHtml);
+        $("#select_crossroad_nm").append(optionHtml);
+        $("#attr-frm-node").show();
+    }
+
+    // 완료 후 모달 표출
+    $("#modal_attr").modal('show');
 
     // 모달에서 Name 으로 표츌될 내용을 선택 or 리스트 상에서 표출할 정보 선택 or 정보 매칭시켜서 DB에 넣을때도 매칭
     // addShpList()
+}
+
+function saveToMatchObject() {
+    if (processDataType === 'link') {
+        matchLinkObj.linkId = $("#select_link_id option:selected").val()
+        matchLinkObj.roadNm = $("#select_road_nm option:selected").val()
+    } else {
+        matchNodeObj.nodeId = $("#select_node_id option:selected").val()
+        matchNodeObj.crossroadNm = $("#select_crossroad_nm option:selected").val()
+    }
+
+    // 모달 내용 초기화
+    $("#modal_attr").modal('hide');
+
+    $("#attr-frm-link").hide();
+    $("#attr-frm-node").hide();
+
+    $("#select_link_id").find("option").remove();
+    $("#select_road_nm").find("option").remove();
+    $("#select_node_id").find("option").remove();
+    $("#select_crossroad_nm").find("option").remove();
+
+    // 정보 매칭이 완료되었으면 SHP 리스트에 정보 표출
+    addShpList()
 }
 
 function realTimeUpdateToDB(e) {
@@ -1681,14 +1826,22 @@ function splitLine() {
     var coordinates = selectedShp.geometry.coordinates;
 
     // 선을 분할할 중간 지점 계산
-    var midPointIndex = Math.floor(coordinates.length / 2);
+    var midPointIndex = Math.floor((coordinates.length-1) / 2);
     var part1Coords = coordinates.slice(0, midPointIndex + 1); // 첫 번째 선의 좌표
     var part2Coords = coordinates.slice(midPointIndex);      // 두 번째 선의 좌표
+
+    // linkId를 숫자로 변환하고 새로운 아이디 할당
+    var originalLinkId = parseInt(selectedShp.properties.linkId, 10);
+    var newLinkId1 = originalLinkId;
+    var newLinkId2 = originalLinkId + 1;
 
     // MapboxDraw에 추가할 두 개의 선 생성
     var feature1 = {
         type: 'Feature',
-        properties: selectedShp.properties, // 기존 선의 속성을 유지
+        properties: {
+            ...selectedShp.properties, // 기존 선의 다른 속성 유지
+            linkId: newLinkId1.toString() // 숫자를 문자열로 변환하여 저장
+        },
         geometry: {
             type: 'LineString',
             coordinates: part1Coords
@@ -1697,17 +1850,31 @@ function splitLine() {
 
     var feature2 = {
         type: 'Feature',
-        properties: selectedShp.properties, // 기존 선의 속성을 유지
+        properties: {
+            ...selectedShp.properties, // 기존 선의 다른 속성 유지
+            linkId: newLinkId2.toString() // 숫자를 문자열로 변환하여 저장
+        },
         geometry: {
             type: 'LineString',
             coordinates: part2Coords
         }
     };
 
+    // 기존 선택된 선 삭제
+    draw.deleteAll();
+
     // MapboxDraw에 새로운 선 추가
     draw.add(feature1);
     draw.add(feature2);
-
-    // 기존 선택된 선 삭제
-    draw.delete(selectedShp.id);
 }
+function hideAllTool() {
+    $("#link-tools").hide();
+    $("#point-tools").hide();
+}
+function showLinkTool() {
+    $("#link-tools").show();
+}
+function showNodeStationTool() {
+    $("#point-tools").show();
+}
+
