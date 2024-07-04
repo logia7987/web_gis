@@ -194,22 +194,68 @@
 
     <div class="layer-option-window" style="left: -500px"> <!--레이어 옵션 창-->
         <div class="tab-title padding-10 basic-font">
-            <h5>기본정보 레이어 설정</h5>
+            <h5>레이어 설정</h5>
             <i class="fas fa-times margin-0" onclick='closeLayerOptionWindow()'></i>
         </div>
-        <!--        <div class="padding-10" onclick="changeProperties()">-->
-        <!--            <button class="change-btn">수정</button>-->
-        <!--        </div>-->
-        <div class="property-list padding-10">
+
+        <div class="layer-setting padding-10">
             <table>
-                <tr>
-                    <th>노드</th>
-                    <td></td>
-                </tr>
-                <tr>
-                    <th>링크</th>
-                    <td></td>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>표시여부</th>
+                        <th>구분</th>
+                        <th>레벨</th>
+                        <th>라벨</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <input id="nodeShowFlag" class="show-layer" type="checkbox" value="node" checked="">
+                        </td>
+                        <td>노드</td>
+                        <td>
+                            <select id="nodeShowLvl" class="select-box-zoom" value="14">
+                                <option value="">선택</option>
+                                <option value="14" selected="">14</option>
+                                <option value="16">16</option>
+                                <option value="18">18</option>
+                                <option value="20">20</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="nodeShowLabel" class="select-label">
+                                <option value="emptyLabel">없음</option>
+                                <option value="nodeId">노드 ID</option>
+                                <option value="lat">위도</option>
+                                <option value="lng">경도</option>
+                                <option value="crossroadNm">교차로명</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <input id="linkShowFlag" class="show-layer" type="checkbox" value="link" checked="">
+                        </td>
+                        <td>링크</td>
+                        <td>
+                            <select id="linkShowLvl" class="select-box-zoom" value="14">
+                                <option value="">선택</option>
+                                <option value="14" selected="">14</option>
+                                <option value="16">16</option>
+                                <option value="18">18</option>
+                                <option value="20">20</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="linkShowLabel" class="select-label">
+                                <option value="emptyLabel">없음</option>
+                                <option value="linkId">링크 ID</option>
+                                <option value="linkDist">거리</option>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
             </table>
         </div>
         <!--        <div class="property-info-list"></div>-->
@@ -271,6 +317,8 @@
 
     var fileNm;
     var dataArr = [];
+    // 읽어온 shp 데이터 임시 저장소
+    var loadData;
     var newProperty = [];
     var loadProperty = [];
     var nodeDataArr = [];

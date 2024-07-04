@@ -51,8 +51,9 @@
 
         if (jsonData != null) {
             parent.dataArr[jsonData.fileName] = jsonData
+            parent.loadData = jsonData
             parent.finishLoading();
-            parent.readProperties(jsonData)
+            parent.readProperties()
             jsonData = null
 
             parent.toastOn("ShapeFile 을 읽어 왔습니다.")

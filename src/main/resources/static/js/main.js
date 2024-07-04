@@ -44,6 +44,8 @@ let selectedBasicLink;
 
 const ICON_STATION_SRC = '/image/icon_station.png';
 
+
+
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
     var icon = document.getElementById("mdicon");
@@ -70,8 +72,6 @@ function toggleWhiteMode() {
         }
     }
 }
-
-
 
 function checkTab() {
     for (i = 0; i < tabcontent.length; i++) {
@@ -342,9 +342,9 @@ function removeLayer(key) {
 
     toastOn("레이어를 삭제했습니다.")
 }
-function editShp(property) {
+function editShp(property, type) {
     // 맵에서 데이터를 가져옴
-    var geoData = map.getSource('data_' + fileNm)._options.data.features;
+    var geoData = map.getSource(LINK_NODE_STATION_SOURCE_ID)._options.data.features;
 
     // 그리기 도구를 숨기고 표시
     $('.mapboxgl-ctrl-group').show();
@@ -354,7 +354,7 @@ function editShp(property) {
     draw.getAll().features.forEach(function(drawElement) {
         // 데이터 배열에서 해당 ID를 가진 도형을 찾아 갱신
         for (var i = 0; i < geoData.length; i++) {
-            if (geoData[i].id === drawElement.id) {
+            if (geoData[i].properties[type] === drawElement.properties[type]) {
                 geoData[i] = drawElement;
                 break; // 해당 도형을 찾았으므로 더 이상 반복할 필요가 없음
             }
@@ -363,7 +363,7 @@ function editShp(property) {
 
     // 주어진 속성의 ID와 일치하는 항목을 찾아 제거하고 새로운 속성 추가
     for (var i = 0; i < geoData.length; i++) {
-        if (geoData[i].id === property.id) {
+        if (geoData[i].properties[type] === property.properties[type]) {
             // 해당 ID와 일치하는 도형을 제거하고 새로운 속성을 추가
             geoData.splice(i, 1);
             draw.add(property);
@@ -371,8 +371,7 @@ function editShp(property) {
         }
     }
 
-    // 업데이트된 데이터를 설정하여 맵의 데이터를 업데이트
-    map.getSource('data_' + fileNm).setData({
+    map.getSource(LINK_NODE_STATION_SOURCE_ID).setData({
         type: 'FeatureCollection',
         features: geoData
     });
@@ -393,9 +392,9 @@ document.addEventListener('contextmenu', function (){
 });
 
 function changeEditMode() {
-    if ($('.layer-file').length === 0) {
-        alert('레이어가 없습니다 레이어를 생성해주세요')
-    } else {
+    // if ($('.layer-file').length === 0) {
+    //     alert('레이어가 없습니다 레이어를 생성해주세요')
+    // } else {
         if ( $('#btn-status').text() === '보기 모드') {
             // 편집 모드로 전환
             startEditMode()
@@ -410,7 +409,7 @@ function changeEditMode() {
         } else {
             alert('편집된 부분이 없습니다')
         }
-    }
+    // }
 }
 
 function checkDataType(data) {
@@ -630,12 +629,21 @@ function getBoundingBox(coordinates, type) {
 function handleFeatureSelection(e) {
     // 편집모드 클릭과 일반클릭을 분리
     if (isEdit()) {
+        // 방식 변경하며 변경
         if (e.features !== undefined) {
             selectedShp = e.features[0];
-            const property = findProperty(selectedShp.id);
+            // 수정대상 타입 구분
+            const featureType = selectedShp.geometry.type;
+            let targetId;
+            if (featureType.indexOf("LineString") > -1) {
+                targetId = "linkId"
+            } else {
+                targetId = "nodeId"
+            }
+            const property = findProperty(selectedShp.properties[targetId], targetId);
             if (property) {
-                $('#' + selectedShp.id).parent().addClass("selected");
-                editShp(property);
+                // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+                editShp(property, targetId);
             }
         }
     } else {
@@ -776,10 +784,11 @@ function deg2rad(deg) {
     return deg * (Math.PI / 180)
 }
 
-function findProperty(id) {
-    const info = dataArr[fileNm].data.features;
+function findProperty(id, type) {
+    // const info = dataArr[fileNm].data.features;
+    const info = linkNodeStationFeatures.features;
     for (let i = 0; i < info.length; i++) {
-        if (Number(info[i].id) === id) {
+        if (info[i].properties[type] === id) {
             return info[i];
         }
     }
@@ -851,6 +860,7 @@ function startEditMode() {
             // 새 폴리곤이 추가되었을 때
             $("#modal_addFeature").text("새로운 폴리곤 생성")
         }
+
         $('#newpolygon').modal('show')
         $('#newpolygon .modal-body table').empty()
         var property = Object.keys(newProperty[fileNm])
@@ -866,6 +876,8 @@ function startEditMode() {
             $('#newpolygon .modal-body table').append(html)
         }
     });
+
+
 }
 
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
@@ -1496,46 +1508,45 @@ function addAttrList() {
     linkList.append(linkHtml);
 }
 
-function addShpList(data) {
+function addShpList() {
     let target = $(".layer-file-list");
-    // let linkList = $("#link_list");
     // 속성리스트 초기화
     target.find("div.layer-file").remove()
     target.find(".empty-layer").hide()
 
     // 리스트 재생성
     let html = "";
-    // let linkHtml = "";
-    for (let i = 0; i < data.length; i++ ) {
-        let aData = data[i];
+    for (let i = 0; i < loadData.data.features.length; i++ ) {
+        let aData = loadData.data.features[i];
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
         if (type.indexOf('LineString') > -1) {
             // 링크 처리
             html += '<div class="layer-file basic-font">'
+            html += '<input type="checkbox" name="selected_link" value="">'
             html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            html += '<div class="file-tit">' + aData.properties.linkId + '</div>'
+            html += '<div class="file-tit">' + 'test' + '</div>'
             html += '</div>'
             html += '</div>'
         } else {
             // 노드 처리
             html += '<div class="layer-file basic-font">'
+            html += '<input type="checkbox" name="selected_node" value="">'
             html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            if (aData.properties.crossroadNm.trim() === "") {
-                html += '<div class="file-tit">링크명 없음</div>'
-            } else {
-                html += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
-            }
+            // if (aData.properties.crossroadNm.trim() === "") {
+            //     html += '<div class="file-tit">링크명 없음</div>'
+            // } else {
+                html += '<div class="file-tit">' + 'test' +'</div>'
+            // }
             html += '</div>'
             html += '</div>'
         }
     }
 
     target.append(html);
-    // linkList.append(linkHtml);
 }
 
 function moveThenClick(geo) {
@@ -1562,15 +1573,11 @@ function openAttrTab(obj, param) {
     $("#"+param).show()
 }
 
-function readProperties(data) {
-    for (const key in data.data.features[0].properties) {
-        console.log("key : " + key + " : " + "value : "+ data.data.features[0].properties[key])
+function readProperties() {
+    for (const key in loadData.data.features[0].properties) {
+        console.log("key : " + key + " : " + "value : "+ loadData.data.features[0].properties[key])
     }
 
-
-    // addShpList(data)
-}
-
-function choiceFeatureName() {
-
+    // 모달에서 Name 으로 표츌될 내용을 선택 or 리스트 상에서 표출할 정보 선택 or 정보 매칭시켜서 DB에 넣을때도 매칭
+    // addShpList()
 }
