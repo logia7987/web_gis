@@ -12,4 +12,9 @@ public interface BmsMapper {
     List<BmsVo> getLink(HashMap<String, Object> map);
     List<BmsVo> getNode(HashMap<String, Object> map);
     List<BmsVo> getLinkPointByLinkId(HashMap<String, Object> map);
+    int updateNewLinkGeometry(HashMap<String, Object> map);
+    int deleteOldLinkGeometry(HashMap<String, Object> map);
+    int updateStationGeometry(HashMap<String, Object> map);
+    int updateNodeGeometry(HashMap<String, Object> map);
 }
+

@@ -5,7 +5,6 @@
         SELECT
         STATION_ID,
         NVL(STATION_NM, ' ') STATION_NM,
-        LINK_ID,
         STATION_USE_CD,
         CASE
         WHEN STATION_USE_CD = '0000' THEN '미지정'
@@ -176,4 +175,26 @@
             LINK_ID = #{sc_LINK_ID}
         ORDER BY LINK_SEQ
     </select>
+
+    <insert id="updateNewLinkGeometry" parameterType="map">
+        INSERT INTO GBMS.TEST_TB_LINK_POINT (LINK_ID, LNG, LAT, LINK_SEQ)
+        VALUES (#{linkId}, #{lng}, #{lat}, #{linkSeq})
+    </insert>
+
+    <delete id="deleteOldLinkGeometry" parameterType="map">
+        DELETE FROM GBMS.TEST_TB_LINK_POINT
+        WHERE LINK_ID = #{linkId}
+    </delete>
+
+    <update id="updateStationGeometry" parameterType="map">
+        UPDATE GBMS.TB_STATION
+        SET LAT='${lat}', LNG='${lng}'
+        WHERE STATION_ID = #{stationId}
+    </update>
+
+    <update id="updateNodeGeometry" parameterType="map">
+        UPDATE GBMS.TB_NODE
+        SET LAT='${lat}', LNG='${lng}'
+        WHERE NODE_ID = #{nodeId}
+    </update>
 </mapper>

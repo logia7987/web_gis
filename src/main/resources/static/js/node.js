@@ -55,7 +55,7 @@ function getNodeDetail() {
         // 현재 선택된 노드 표시
         map.on('click', 'nodes_'+fileNm,function (e) {
             // 클릭한 위치에서 가장 가까운 노드 찾기
-            var features = map.queryRenderedFeatures(e.point, { layers: ['nodes_' + fileNm] });
+            var features = map.queryRenderedFeatures(e.point, { layers: [NODE_LAYER_ID] });
 
             if (features.length > 0) {
                 // 가장 가까운 노드에 대한 작업 수행

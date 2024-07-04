@@ -29,6 +29,7 @@ import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -247,6 +248,87 @@ public class ApiController {
             // 링크 정보 호출
             resultMap.put("success", true);
             resultMap.put("data", getGeoJsonLink(bmsService.getLink(commandMap)));
+        }
+
+        return resultMap;
+    }
+
+    @ResponseBody
+    @RequestMapping(value="/updateGeometry.do", method=RequestMethod.POST)
+    public HashMap<String, Object> updateGeometry(@RequestBody Map<String, Object> params) {
+        HashMap<String, Object> resultMap = new HashMap<>();
+        HashMap<String, Object> commandMap = new HashMap<>();
+
+        String type = (String) params.get("type");
+        Map<String, Object> feature = (Map<String, Object>) params.get("feature");
+        System.out.println(feature);
+        Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
+        switch (type) {
+            case "node":
+                List<Double> geometryNode = (List<Double>) ((Map<String, Object>) feature.get("geometry")).get("coordinates");
+                // 좌표값 추출
+                Double lng = geometryNode.get(0);
+                Double lat = geometryNode.get(1);
+
+                // 소수점 6자리까지 표현하기 위한 DecimalFormat 객체 생성
+                DecimalFormat df = new DecimalFormat("#.######");
+
+                // 좌표값을 소수점 6자리까지 포맷팅
+                String formattedLng = df.format(lng);
+                String formattedLat = df.format(lat);
+
+                // commandMap에 값 설정
+                commandMap.put("nodeId", properties.get("nodeId"));
+                commandMap.put("lng", lng); // double 형식으로 변환
+                commandMap.put("lat", lat); // double 형식으로 변환
+
+                if (bmsService.updateNodeGeometry(commandMap) > 0) {
+                    resultMap.put("result", "success");
+                } else {
+                    resultMap.put("result", "fail");
+                }
+                break;
+            case "station":
+                List<Double> geometryLink = (List<Double>) ((Map<String, Object>) feature.get("geometry")).get("coordinates");
+                // 좌표값 추출
+                lng = geometryLink.get(0);
+                lat = geometryLink.get(1);
+
+                commandMap.put("stationId", properties.get("stationId"));
+                commandMap.put("lng", lng); // double 형식으로 변환
+                commandMap.put("lat", lat); // double 형식으로 변환
+                System.out.println("stationId : " + commandMap.get("stationId"));
+                if (bmsService.updateStationGeometry(commandMap) > 0) {
+                    resultMap.put("result", "success");
+                } else {
+                    resultMap.put("result", "fail");
+                }
+                break;
+            case "link":
+                commandMap.put("linkId", properties.get("linkId"));
+                // 기존의 링크 좌표리스트 우선 제거
+                if (bmsService.deleteOldLinkGeometry(commandMap) > 0) {
+                    // 변경 전 정보 삭제 후 정보 재입력
+                    List<List<Double>> geometry = (List<List<Double>>) ((Map<String, Object>) feature.get("geometry")).get("coordinates");
+
+                    for (int i = 0; i < geometry.size(); i++) {
+                        commandMap.put("lng", geometry.get(i).get(0));
+                        commandMap.put("lat", geometry.get(i).get(1));
+                        commandMap.put("linkSeq", i);
+
+                        if (bmsService.updateNewLinkGeometry(commandMap) > 0) {
+                            // 성공처리
+                            resultMap.put("result", "success");
+                        } else {
+                            // 실패처리 2
+                            resultMap.put("result", "fail");
+                        }
+                    }
+                } else {
+                    // 실패처리 1
+                    resultMap.put("result", "fail");
+                }
+                break;
         }
 
         return resultMap;
@@ -472,8 +554,8 @@ public class ApiController {
             properties.put("stationNmChn", data.getStation_nm_chn());
             properties.put("stationNmJap", data.getStation_nm_jap());
             properties.put("stationNmVnm", data.getStation_nm_vnm());
-            properties.put("lat", data.getLat());
-            properties.put("lng", data.getLng());
+            properties.put("lat", Double.parseDouble(data.getLat()));
+            properties.put("lng", Double.parseDouble(data.getLng()));
 
             properties.put("bitInstlYn", data.getBit_instl_yn());
             properties.put("bitPrYn", data.getBit_pr_yn());
@@ -490,8 +572,8 @@ public class ApiController {
             properties.put("alightCnt", data.getAlight_cnt());
 
             //geometry 데이터 삽입
-            coordinates.add(data.getLng());
-            coordinates.add(data.getLat());
+            coordinates.add(Double.parseDouble(data.getLng()));
+            coordinates.add(Double.parseDouble(data.getLat()));
 
             features.add(feature);
         }
@@ -529,13 +611,13 @@ public class ApiController {
             properties.put("nodeId", data.getNode_id());
             properties.put("crossroadNm", data.getCrossroad_nm());
             properties.put("areaCd", data.getArea_cd());
-            properties.put("lat", data.getLat());
-            properties.put("lng", data.getLng());
+            properties.put("lat", Double.parseDouble(data.getLat()));
+            properties.put("lng", Double.parseDouble(data.getLng()));
 
 
             //geometry 데이터 삽입
-            coordinates.add(data.getLng());
-            coordinates.add(data.getLat());
+            coordinates.add(Double.parseDouble(data.getLng()));
+            coordinates.add(Double.parseDouble(data.getLat()));
 
             features.add(feature);
         }

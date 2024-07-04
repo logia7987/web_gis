@@ -43,9 +43,6 @@
 <body>
     <header style="height: 45px;border-bottom: 1px solid #e6e6e6;">
         <div class="top-nav">
-<!--            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기">-->
-<!--                <i class="fa-solid fa-floppy-disk"></i>불러오기-->
-<!--            </button>-->
             <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="SHP 업로드">
                 <i class="fa-solid fa-floppy-disk"></i>SHP 업로드
             </button>
@@ -78,7 +75,7 @@
     </div>
 
     <div id="tab1" class="tab" style="display: block;">
-        <div class="tab-title padding-10 basic-font">
+        <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>속성</h5>
         </div>
 
@@ -86,20 +83,20 @@
             <ul class="attr_tab_bar">
                 <li class="active" onclick="openAttrTab(this, 'node_list')">노드</li>
                 <li onclick="openAttrTab(this, 'link_list')">링크</li>
-            <!-- <li></li>-->
+                <li onclick="openAttrTab(this, 'station_list')">정류소</li>
             </ul>
         </div>
 
         <!-- 속성 탭 나누기 -->
         <div class="attr-list basic-font" id="node_list" style=""></div>
         <div class="attr-list basic-font" id="link_list" style="display: none;"></div>
+        <div class="attr-list basic-font" id="station_list" style="display: none;"></div>
 <!--        <div class="attr-list basic-font" id="station_list" style="display: none;"></div>-->
     </div>
 
     <div id="tab2" class="tab">
-        <div class="tab-title padding-10 basic-font">
+        <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>SHP</h5>
-<!--            <i class="fa-solid fa-file-pen"  data-bs-toggle='modal' data-bs-target='#pluslayer'></i>-->
         </div>
 
         <div class="layer-file-list basic-font">
@@ -114,23 +111,10 @@
     </div>
 
     <div id="tab3" class="tab">
-        <div class="tab-title padding-10 basic-font">
+        <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>도구</h5>
         </div>
 
-<!--        <div class="map-style-change padding-10">-->
-<!--            <label for="map-style" class="select-label">지도 스타일</label>-->
-<!--            <select name="map-styles" id="map-style" >-->
-<!--                <option value="streets-v12" class="style-option">Streets</option>-->
-<!--                <option value="outdoors-v12" class="style-option">Outdoors</option>-->
-<!--                <option value="light-v11" class="style-option">Light</option>-->
-<!--                <option value="dark-v11" class="style-option">Dark</option>-->
-<!--                <option value="satellite-v9" class="style-option">Satellite</option>-->
-<!--                <option value="satellite-streets-v12" class="style-option">Satellite-streets</option>-->
-<!--                <option value="navigation-day-v1" class="style-option">Navigation-day</option>-->
-<!--                <option value="navigation-night-v1" class="style-option">Navigation-night</option>-->
-<!--            </select>-->
-<!--        </div>-->
         <div class="colors-plan padding-10 polygon-style" style="display: none">
             <div class="colors-item">
                 <label class="select-label" data-bs-placement="bottom" data-bs-toggle="tooltip" title="폴리곤"><i class="fa-solid fa-draw-polygon"></i></label>
@@ -169,9 +153,7 @@
             <h5>속성</h5>
             <i class="fas fa-times margin-0" onclick='closePropertyWindow()'></i>
         </div>
-<!--        <div class="padding-10" onclick="changeProperties()">-->
-<!--            <button class="change-btn">수정</button>-->
-<!--        </div>-->
+
         <div id="property-tools" style="display: flex;padding: 0 5px;">
             <button class="top-btn" onclick="generatePoints(5);"
                     data-bs-placement="top"
@@ -189,7 +171,6 @@
             <table>
             </table>
         </div>
-<!--        <div class="property-info-list"></div>-->
     </div>
 
     <div class="layer-option-window" style="left: -500px"> <!--레이어 옵션 창-->
@@ -258,7 +239,6 @@
                 </tbody>
             </table>
         </div>
-        <!--        <div class="property-info-list"></div>-->
     </div>
 
     <div id="loading-window">

@@ -30,23 +30,6 @@ function getProperties() {
     }
 }
 
-function selectedProperty(obj) {
-    if (map.getLayoutProperty('polygons_'+fileNm, 'visibility') === 'none') {
-        alert("선택하신 레이어가 지도에 없습니다")
-    } else {
-        var property = "";
-        var id = obj.querySelector('.info-id').textContent;
-        var info = dataArr[fileNm].data.features
-        $(obj).parent().addClass("selected")
-        for (i = 0; i < info.length; i++) {
-            if (info[i].properties.DIST1_ID === id) {
-                property = info[i]
-            }
-        }
-        editShp(property)
-    }
-}
-
 function changeProperties() {
     if ($('.change-btn').text() === '수정') {
         $('.change-btn').text('완료')

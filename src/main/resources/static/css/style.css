@@ -350,7 +350,7 @@
 
 .property-list {
     overflow-x: hidden;
-    height: 85%;
+    height: 80%;
     font-size: 14px;
 }
 
@@ -712,7 +712,7 @@ th, td {
 
 .attr_tab_bar li {
     display: inline-block;
-    width: 50%;
+    width: 33.32222%;
     font-size: 14px;
     font-weight: 400;
     color: #020202;

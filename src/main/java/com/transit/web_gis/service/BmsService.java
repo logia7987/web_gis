@@ -31,4 +31,12 @@ public class BmsService {
     public List<BmsVo> getLinkPointByLinkId(HashMap<String, Object> map) {
         return bmsMapper.getLinkPointByLinkId(map);
     }
+
+    public int updateNewLinkGeometry(HashMap<String, Object> map) { return bmsMapper.updateNewLinkGeometry(map);}
+
+    public int deleteOldLinkGeometry(HashMap<String, Object> map) { return bmsMapper.deleteOldLinkGeometry(map);}
+
+    public int updateStationGeometry(HashMap<String, Object> map) { return bmsMapper.updateStationGeometry(map);}
+
+    public int updateNodeGeometry(HashMap<String, Object> map) { return bmsMapper.updateNodeGeometry(map);}
 }

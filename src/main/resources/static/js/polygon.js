@@ -41,9 +41,9 @@ function drawPolyline(data) {
                 }
             });
 
-            map.on('click', layerId, function (e) {
-                handleFeatureSelection(e);
-            });
+            // map.on('click', layerId, function (e) {
+            //     handleFeatureSelection(e);
+            // });
 
             resolve();
         } catch (error) {
