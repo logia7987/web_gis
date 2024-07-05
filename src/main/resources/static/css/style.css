@@ -196,7 +196,7 @@
 }
 
 .layer-file-list {
-    height: calc(100% - 100px);
+    height: calc(100% - 140px);
     width: 100%;
     overflow: auto;
     position: relative;
@@ -839,3 +839,8 @@ th, td {
     height: 450px;
     transition: 0.5s;
 }
+
+#all-check {
+    cursor: pointer;
+    font-size: 14px;
+    padding: 10px;}
