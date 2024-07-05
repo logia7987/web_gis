@@ -1269,7 +1269,7 @@ function setLayerLinkDot(layerId, sourceId) {
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
 function generatePoints(segmentLength) {
-    let coordinates = selectedFeature.geometry.coordinates;
+    let coordinates = selectedShp.geometry.coordinates;
     const points = [];
     const R = 6371000; // 지구의 반지름(미터 단위)
 
@@ -1324,16 +1324,27 @@ function generatePoints(segmentLength) {
         points.push(currentPoint); // 다음 원래의 점 추가
     }
 
-    console.log(points)
-    // TODO - 여기서 선택된 draw 링크선에 미터당 선을 반영
-    // meterDotFeatures.features = points
-    // map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
-}
+    // 마지막 점이 원래 선의 마지막 점과 일치하지 않으면 추가
+    if (points[points.length - 1][0] !== coordinates[coordinates.length - 1][0] ||
+        points[points.length - 1][1] !== coordinates[coordinates.length - 1][1]) {
+        points.push(coordinates[coordinates.length - 1]);
+    }
 
-function removePoints() {
-    meterDotFeatures.features = []
+        // 기존 선택된 선을 삭제하고 새로운 선을 추가
+    draw.delete(selectedShp.id);
 
-    map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
+    // 새로운 피처 객체 생성
+    const newFeature = {
+        type: 'Feature',
+        properties: { ...selectedShp.properties },
+        geometry: {
+            type: 'LineString',
+            coordinates: points
+        }
+    };
+
+    // 새로운 피처를 Draw에 추가
+    draw.add(newFeature);
 }
 
 function getClosestLinkId(pointPos){

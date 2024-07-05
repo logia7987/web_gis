@@ -197,4 +197,9 @@
         SET LAT='${lat}', LNG='${lng}'
         WHERE NODE_ID = #{nodeId}
     </update>
+
+    <insert id="insertNewFile" parameterType="map">
+        INSERT INTO GBMS.TS_FILE (FILE_ID, FILE_NAME, REG_DT)
+        VALUES (#{fileId}, #{fileName}, TO_DATE(sysdate,'yyyy.mm.dd hh24:mi'))
+    </insert>
 </mapper>
