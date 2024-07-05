@@ -60,6 +60,7 @@
                 <div id="link-tools">
                     <button class="top-btn" onclick="generatePoints(5);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="5M" data-bs-original-title="5M 간격 점생성">5M</button>
                     <button class="top-btn" onclick="generatePoints(10);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="10M" data-bs-original-title="10M 간격 점생성">10M</button>
+                    <button class="top-btn" onclick="splitLine();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="선 분할" data-bs-original-title="선 분할">선 분할</button>
                 </div>
                 <div id="point-tools">
 
@@ -330,8 +331,35 @@
     var tabcontent = document.getElementsByClassName("tab");
     var tablinks = document.getElementsByClassName("tab-links");
     var propertyArr = []
-    var changeProper;
-    let draw= new MapboxDraw({});
+    let draw= new MapboxDraw({
+        styles: [
+            // 점 스타일
+            {
+                "id": "gl-draw-point",
+                "type": "circle",
+                "filter": ["all", ["==", "$type", "Point"], ["!=", "meta", "midpoint"]],
+                "paint": {
+                    "circle-radius": 5,
+                    "circle-color": "#000000"
+                }
+            },
+            // 선 스타일
+            {
+                "id": "gl-draw-line",
+                "type": "line",
+                "filter": ["all", ["==", "$type", "LineString"], ["!=", "meta", "midpoint"]],
+                "layout": {
+                    "line-cap": "round",
+                    "line-join": "round"
+                },
+                "paint": {
+                    "line-color": "#000000",
+                    "line-width": 2,
+                    "line-dasharray": [2, 2] // 점선 스타일
+                }
+            }
+        ]
+    });
 
     let hoveredPolygonId = null;
     let clickedPolygonId = null;

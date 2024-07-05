@@ -52,6 +52,11 @@ let pageIdx = 0;
 const itemsPerPage = 100; // 페이지당 항목 수
 let totalPages = 0
 
+let pointPopup = new mapboxgl.Popup({
+    closeButton: false,
+    closeOnClick: false
+});
+
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
     var icon = document.getElementById("mdicon");
@@ -372,6 +377,7 @@ function editShp(property, type) {
         if (geoData[i].properties[type] === property.properties[type]) {
             // 해당 ID와 일치하는 도형을 제거하고 새로운 속성을 추가
             geoData.splice(i, 1);
+            property.id = draw.getAll().features.length + 1;
             draw.add(property);
             break; // 해당 도형을 찾았으므로 더 이상 반복할 필요가 없음
         }
@@ -398,30 +404,26 @@ document.addEventListener('contextmenu', function (){
 });
 
 function changeEditMode() {
-    // if ($('.layer-file').length === 0) {
-    //     alert('레이어가 없습니다 레이어를 생성해주세요')
-    // } else {
-        if ( $('#btn-status').text() === '보기 모드') {
-            // 편집 모드로 전환
-            startEditMode()
-        } else if ( $('#btn-status').text() === '편집 모드') {
-            // 보기 모드로 전환
-            startViewerMode()
-            
-            // 수정 내용삭제
-            draw.deleteAll();
+    if ( $('#btn-status').text() === '보기 모드') {
+        // 편집 모드로 전환
+        startEditMode()
+    } else if ( $('#btn-status').text() === '편집 모드') {
+        hideAllTool();
+        // 보기 모드로 전환
+        startViewerMode()
 
-            // 수정 내용삭제 후 지도 정보 재로딩
-            setLinkNodeStationFeature();
-        } else if (draw.getAll().features.length === 0 && drawArr.length > 0) {
-            drawArr = []
-            propertyArr = []
-            loadProperty = dataArr
-            // getProperties()
-        } else {
-            alert('편집된 부분이 없습니다')
-        }
-    // }
+        // 수정 내용삭제
+        draw.deleteAll();
+
+        // 수정 내용삭제 후 지도 정보 재로딩
+        setLinkNodeStationFeature();
+    } else if (draw.getAll().features.length === 0 && drawArr.length > 0) {
+        drawArr = []
+        propertyArr = []
+        loadProperty = dataArr
+    } else {
+        alert('편집된 부분이 없습니다')
+    }
 }
 
 function checkDataType(data) {
@@ -649,12 +651,16 @@ function handleFeatureSelection(e) {
             let targetId;
             if (featureType.indexOf("LineString") > -1) {
                 targetId = "linkId"
+
+                showLinkTool();
             } else {
                 if (selectedShp.properties.stationId !== undefined) {
                     targetId = "stationId"
                 } else {
                     targetId = "nodeId"
                 }
+
+                showNodeStationTool();
             }
             const property = findProperty(selectedShp.properties[targetId], targetId);
             if (property) {
@@ -847,19 +853,6 @@ function startEditMode() {
     // var type = $(".selected").eq(0).attr("class");
     var type = $($(".selected").find("i")[0]).attr("class")
     loadProperty = dataArr
-    // if (type === 'fa-solid fa-share-nodes')  {
-    //     getLinkDetail()
-    //     $('.mapbox-gl-draw_point, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide() // 노드 추가 제외하고 다 숨김 처리
-    //     $('.mapbox-gl-draw_line').show()
-    // } else if (type === 'fa-brands fa-hashnode') {
-    //     getNodeDetail()
-    //     $('.mapbox-gl-draw_line, .mapbox-gl-draw_polygon, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide() // 링크 추가 제외하고 다 숨김 처리
-    //     $('.mapbox-gl-draw_point').show()
-    // } else if (type === 'fa-solid fa-draw-polygon') {
-    //     polygonDetail()
-    //     $('.mapbox-gl-draw_line, .mapbox-gl-draw_point, .mapbox-gl-draw_combine, .mapbox-gl-draw_uncombine').hide() // 폴리곤 추가 제외하고 다 숨김 처리
-    //     $('.mapbox-gl-draw_polygon').show()
-    // }
 
     $('.mapboxgl-ctrl-group').show()
 
@@ -892,8 +885,6 @@ function startEditMode() {
             $('#newpolygon .modal-body table').append(html)
         }
     });
-
-
 }
 
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
@@ -1204,18 +1195,6 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // function findFeaturesAlongLine(coordinates, layerId) {
-    //     var featuresAlongLine = [];
-    //
-    //     // 각 점에 대해 클릭된 피처 찾기
-    //     coordinates.forEach(function(coord) {
-    //         var features = map.queryRenderedFeatures(map.project(coord), { layers: [layerId] });
-    //         featuresAlongLine.push(...features); // 해당 점의 피처들을 배열에 추가
-    //     });
-    //
-    //     return featuresAlongLine;
-    // }
-
     map.addLayer({
         'id' : layerId,
         'type' : 'line',
@@ -1226,6 +1205,7 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         },
         'filter' : ['==', 'featureId', featureId]
     });
+
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e);
 
@@ -1389,11 +1369,11 @@ function getClosestLinkId(pointPos){
 
     //줌 레벨별로 광범위 수준 정도 확대
     if(getMapZoom() <= 14){
-        selectMeter = 20;
-    }else if(getMapZoom() <= 15){
         selectMeter = 15;
-    }else{
+    }else if(getMapZoom() <= 15){
         selectMeter = 10;
+    }else{
+        selectMeter = 5;
     }
 
     if(closestDist * 1000 > selectMeter || !closestPointFeature){
@@ -1438,8 +1418,8 @@ function initBasicTileSet() {
         center: [126.88271541564299, 37.48151056694073],
         zoom: 11,
     });
-
-    // draw = new MapboxDraw({});
+    map.dragRotate.disable();
+    map.touchZoomRotate.disableRotation();
 
     map.addControl(language);
     map.addControl(draw, 'bottom-left')
@@ -1485,7 +1465,7 @@ function getVworldTilesSet(){
 
 function setMapEvent() {
     // draw = new MapboxDraw({});
-    //
+
     // map.addControl(language);
     // map.addControl(draw, 'bottom-left')
 
@@ -1531,6 +1511,26 @@ function setMapEvent() {
             }
         });
 
+        map.on('contextmenu', (e) => {
+            if (isEdit()) {
+                const features = map.queryRenderedFeatures(e.point, {
+                    layers: ['road-secondary-tertiary']
+                });
+                console.log(features);
+
+                if (features.length > 0) {
+                    selectedFeature = features[0];
+
+                    if (selectedFeature.geometry.type.indexOf("LineString") > -1) {
+                        pointPopup
+                            .setLngLat(e.lngLat)
+                            .setDOMContent(createInfoWindowContent(e.lngLat))
+                            .addTo(map);
+                    }
+                }
+            }
+        });
+
         map.on('mousemove', (e) => {
             if (map.getLayer(STATION_LAYER_ID) !== undefined) {
                 //광범위한 링크 선택 근처 도달 시 마우스 모양 포인터로 처리
@@ -1547,7 +1547,7 @@ function setMapEvent() {
 
                 if(!pointPos){
                     map.getCanvas().style.cursor = '';
-                }else{
+                } else {
                     map.getCanvas().style.cursor = 'pointer';
                 }
             }
@@ -1556,6 +1556,7 @@ function setMapEvent() {
         map.on('draw.update', realTimeUpdateToDB);
     })
 }
+
 // 지도에 표출된 정보만을 속성리스트에 제공
 function addAttrList() {
     let nodeList = $("#node_list");
@@ -1751,9 +1752,6 @@ function readProperties() {
 
     // 완료 후 모달 표출
     $("#modal_attr").modal('show');
-
-    // 모달에서 Name 으로 표츌될 내용을 선택 or 리스트 상에서 표출할 정보 선택 or 정보 매칭시켜서 DB에 넣을때도 매칭
-    // addShpList()
 }
 
 function saveToMatchObject() {
@@ -1872,9 +1870,100 @@ function hideAllTool() {
     $("#point-tools").hide();
 }
 function showLinkTool() {
+    hideAllTool();
     $("#link-tools").show();
 }
 function showNodeStationTool() {
+    hideAllTool();
     $("#point-tools").show();
 }
 
+function createInfoWindowContent(lngLat) {
+    const container = document.createElement('div');
+
+    const addButton = document.createElement('button');
+    addButton.innerText = '핸들 포인트 추가';
+    addButton.classList.add('btn-handle-point');
+    addButton.onclick = function() {
+        addHandle(selectedFeature, lngLat);
+        pointPopup.remove();
+    };
+
+    const deleteButton = document.createElement('button');
+    deleteButton.innerText = '핸들 포인트 삭제';
+    deleteButton.classList.add('btn-handle-point');
+    deleteButton.onclick = function() {
+        deleteHandle(selectedFeature, lngLat);
+        pointPopup.remove();
+    };
+
+    container.appendChild(addButton);
+    container.appendChild(deleteButton);
+
+    return container;
+}
+
+function addHandle(feature, lngLat) {
+    const coordinates = feature.geometry.coordinates;
+    const index = findClosestSegmentIndex(coordinates, [lngLat.lng, lngLat.lat]);
+    coordinates.splice(index, 0, [lngLat.lng, lngLat.lat]);
+    draw.add({
+        type: 'Feature',
+        geometry: {
+            type: 'LineString',
+            coordinates: coordinates
+        },
+        properties: feature.properties,
+        id : (feature.id + 1)
+    });
+    draw.delete(feature.id);
+}
+
+function deleteHandle(feature, lngLat) {
+    const coordinates = feature.geometry.coordinates;
+    const index = coordinates.findIndex(coord => coord[0] === lngLat.lng && coord[1] === lngLat.lat);
+    if (index !== -1) {
+        coordinates.splice(index, 1);
+    }
+    draw.add({
+        type: 'Feature',
+        geometry: {
+            type: 'LineString',
+            coordinates: coordinates
+        },
+        properties: feature.properties
+    });
+    draw.delete(feature.id);
+}
+
+function findClosestSegmentIndex(coordinates, point) {
+    let minDistance = Infinity;
+    let closestIndex = 0;
+
+    for (let i = 0; i < coordinates.length - 1; i++) {
+        const segment = [coordinates[i], coordinates[i + 1]];
+        const distance = pointToSegmentDistance(point, segment);
+
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestIndex = i + 1;
+        }
+    }
+
+    return closestIndex;
+}
+
+function pointToSegmentDistance(point, segment) {
+    const [p, q] = segment;
+    const pq = [q[0] - p[0], q[1] - p[1]];
+    const pp = [point[0] - p[0], point[1] - p[1]];
+
+    const pqLengthSquared = pq[0] * pq[0] + pq[1] * pq[1];
+    const t = Math.max(0, Math.min(1, (pp[0] * pq[0] + pp[1] * pq[1]) / pqLengthSquared));
+
+    const closest = [p[0] + t * pq[0], p[1] + t * pq[1]];
+    const dx = point[0] - closest[0];
+    const dy = point[1] - closest[1];
+
+    return Math.sqrt(dx * dx + dy * dy);
+}
