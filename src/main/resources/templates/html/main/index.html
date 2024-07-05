@@ -94,7 +94,6 @@
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>속성</h5>
         </div>
-
         <div class="attr-tab">
             <ul class="attr_tab_bar">
                 <li class="active" onclick="openAttrTab(this, 'node_list')">노드</li>
@@ -113,8 +112,9 @@
     <div id="tab2" class="tab">
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>SHP</h5>
+            <h5>저장</h5>
         </div>
-        <div class="paging-container sp-cf"></div>
+        <div id="all-check" onclick="shpListAllChecked()">전체 선택</div>
         <div class="layer-file-list basic-font">
             <span class="empty-layer">
                 불러온 SHP 파일이 없습니다.
@@ -124,6 +124,7 @@
                 진행해주세요.
             </span>
         </div>
+        <div class="paging-container sp-cf"></div>
     </div>
 
     <div id="tab3" class="tab">
@@ -183,6 +184,18 @@
 <!--                    data-bs-original-title="10M 간격 점생성">10M</button>-->
 <!--        </div>-->
 
+        <div class="property-list padding-10">
+            <table>
+            </table>
+        </div>
+    </div>
+
+    <!--shp 속성창-->
+    <div class="shp-property-window">
+        <div class="tab-title padding-10 basic-font">
+            <h5>SHP 속성</h5>
+            <i class="fas fa-times margin-0" onclick='closeShpPropertyWindow()'></i>
+        </div>
         <div class="property-list padding-10">
             <table>
             </table>

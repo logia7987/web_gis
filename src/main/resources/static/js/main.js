@@ -16,6 +16,8 @@ let meterDotFeatures = {
 // };
 const COORD_ROUND = 6;
 
+// property check 확인
+let isChecked
 let selectedStationId = "";
 let selectedLinkId = "";
 let selectedNodeId = "";
@@ -674,7 +676,7 @@ function handleFeatureSelection(e) {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
         if (e.features !== undefined) {
             $('.property-window').css('left', '10px'); // 속성 창 띄우기
-            $('.property-list table').empty() // 속성 리스트 비우기
+            $('.property-window > .property-list > table').empty() // 속성 리스트 비우기
 
             const properties = e.features[0].properties;
             let propertyHtml = '<tbody>';
@@ -684,13 +686,17 @@ function handleFeatureSelection(e) {
 
             propertyHtml += '</tbody>';
 
-            $('.property-list table').append(propertyHtml);
+            $('.property-window > .property-list > table').append(propertyHtml);
         }
     }
 }
 
 function closePropertyWindow() {
     $('.property-window').css('left', '-500px')
+}
+
+function closeShpPropertyWindow() {
+    $('.shp-property-window').css('right', '80px')
 }
 
 function closeLayerOptionWindow() {
@@ -1643,30 +1649,44 @@ function addShpList() {
     let endIdx = startIdx + itemsPerPage;
     endIdx = endIdx > loadData.data.features.length ? loadData.data.features.length : endIdx;
 
+    shpPropertyAllChecked()
+
     // 리스트 재생성
     let html = "";
     for (let i = startIdx; i < endIdx; i++) {
         let aData = loadData.data.features[i];
+        if (aData.properties.isChecked === undefined) {
+            aData.properties.isChecked = false
+        }
+
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
         // TODO 체크박스에서 이미체크되어있는지 확인하는 부분 만들기
         if (type.indexOf('LineString') > -1) {
             // 링크 처리
-            html += '<div class="layer-file basic-font">'
-            html += '<input type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'">'
+            html += '<div class="layer-file basic-font" >'
+            if (aData.properties.isChecked === true) {
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'" onchange="shpPropertyCheck('+i+')" checked>'
+            } else {
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'" onchange="shpPropertyCheck('+i+')">'
+            }
             html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            html += '<div class="file-tit">' + aData.properties[matchLinkObj.roadNm] + '</div>'
+            html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchLinkObj.roadNm] + '</div>'
             html += '</div>'
             html += '</div>'
         } else {
             // 노드 처리
-            html += '<div class="layer-file basic-font">'
-            html += '<input type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'">'
+            html += '<div class="layer-file basic-font" >'
+            if (aData.properties.isChecked === true) {
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'" onchange="shpPropertyCheck('+i+')" checked>'
+            } else {
+                html += '<input  class="isCheck'+i+'" type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'" onchange="shpPropertyCheck('+i+')">'
+            }
             html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            html += '<div class="file-tit">' + aData.properties[matchNodeObj.crossroadNm] +'</div>'
+            html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchNodeObj.crossroadNm] +'</div>'
             html += '</div>'
             html += '</div>'
         }
@@ -1679,6 +1699,76 @@ function addShpList() {
 
     $(".tab-links:eq(1)").click()
 }
+
+function shpPropertyAllChecked() {
+    let allChecked = true
+    let startIdx = pageIdx * itemsPerPage;
+    let endIdx = startIdx + itemsPerPage;
+    endIdx = endIdx > loadData.data.features.length ? loadData.data.features.length : endIdx;
+
+    // 페이지 내 check가 하나라도 존재하면 allChecked = false
+    for (let i = startIdx; i < endIdx; i++) {
+        if (!loadData.data.features[i].properties.isChecked) {
+            allChecked = false;
+            break;
+        }
+    }
+
+    if (allChecked) {
+        $('#all-check').text('전체 취소')
+    } else {
+        $('#all-check').text('전체 선택')
+    }
+}
+
+// shp 파일 속성 리스트에서 속성 보기 함수
+function shpPropertyDetail(i) {
+    let aFeature = loadData.data.features[i]
+    let html = "<tbody>";
+    $('.shp-property-window > .property-list.padding-10 > table').empty()
+
+    for (const key in aFeature.properties) {
+        html += '<tr><td id="'+key+'">'+key+'</td><td class="property-info">'+aFeature.properties[key]+'</td><tr>';
+    }
+    html += "</tbody>";
+
+    $('.shp-property-window').css('right', '420px')
+    $('.shp-property-window > div.property-list.padding-10 > table').append(html);
+}
+
+// shp 파일 속성 리스트에서 속성 체크 함수
+function shpPropertyCheck(i) {
+    if ($(".isCheck" + i).is(":checked")) {
+        loadData.data.features[i].properties.isChecked = true;
+        shpPropertyAllChecked()
+    } else {
+        loadData.data.features[i].properties.isChecked = false;
+        shpPropertyAllChecked()
+    }
+}
+
+//shp 파일 속성 리스트 전체 선택 함수
+function shpListAllChecked() {
+    let startIdx = pageIdx * itemsPerPage;
+    let endIdx = startIdx + itemsPerPage;
+    endIdx = endIdx > loadData.data.features.length ? loadData.data.features.length : endIdx;
+
+    if ($('#all-check').text() === '전체 선택') {
+        for (let i = startIdx ; i < endIdx ; i++) {
+            loadData.data.features[i].properties.isChecked = true;
+            $(".isCheck" + i).prop('checked', true);
+        }
+        $('#all-check').text('전체 취소')
+    } else {
+        for (let i = startIdx ; i < endIdx ; i++) {
+            loadData.data.features[i].properties.isChecked = false;
+            $(".isCheck" + i).prop('checked', false);
+        }
+        $('#all-check').text('전체 선택')
+    }
+
+}
+
 
 // 이전 페이지 버튼 클릭 이벤트
 $(document).on('click', '.prev-page', function() {
