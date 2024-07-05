@@ -129,6 +129,7 @@
 }
 
 .tab-menu {
+    z-index: 2;
     position: fixed;
     top: 45px;
     right: 0;
@@ -199,6 +200,7 @@
     width: 100%;
     overflow: auto;
     position: relative;
+    border-bottom: 1px solid #e6e6e6;
 }
 
 .layer-file {
@@ -824,4 +826,16 @@ th, td {
 }
 .btn-handle-point:last-child {
     margin-bottom: 0px;
+}
+
+.shp-property-window {
+    z-index: 1;
+    border-radius: 15px;
+    background-color: #fff;
+    position: fixed;
+    right: 80px;
+    top: 55px;
+    width: 300px;
+    height: 450px;
+    transition: 0.5s;
 }
