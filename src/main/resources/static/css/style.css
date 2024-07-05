@@ -822,6 +822,11 @@ th, td {
     display: block;
     margin-bottom: 5px;
 }
+
+.btn-handle-point:first-child {
+    margin-top: 15px;
+}
+
 .btn-handle-point:last-child {
     margin-bottom: 0px;
 }

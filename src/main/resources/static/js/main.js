@@ -367,7 +367,7 @@ function editShp(property, type) {
         for (var i = 0; i < geoData.length; i++) {
             if (geoData[i].properties[type] === drawElement.properties[type]) {
                 geoData[i] = drawElement;
-                break; // 해당 도형을 찾았으므로 더 이상 반복할 필요가 없음
+                break;
             }
         }
     });
@@ -377,6 +377,7 @@ function editShp(property, type) {
         if (geoData[i].properties[type] === property.properties[type]) {
             // 해당 ID와 일치하는 도형을 제거하고 새로운 속성을 추가
             geoData.splice(i, 1);
+            // 임시 아이디 부여
             property.id = draw.getAll().features.length + 1;
             draw.add(property);
             break; // 해당 도형을 찾았으므로 더 이상 반복할 필요가 없음
@@ -646,6 +647,7 @@ function handleFeatureSelection(e) {
         // 방식 변경하며 변경
         if (e.features !== undefined) {
             selectedShp = e.features[0];
+            selectedShp.id = 1;
             // 수정대상 타입 구분
             const featureType = selectedShp.geometry.type;
             let targetId;
@@ -1261,8 +1263,7 @@ function setLayerLinkDot(layerId, sourceId) {
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
 function generatePoints(segmentLength) {
-    let coordinates = selectedBasicLink;
-
+    let coordinates = selectedFeature.geometry.coordinates;
     const points = [];
     const R = 6371000; // 지구의 반지름(미터 단위)
 
@@ -1295,37 +1296,18 @@ function generatePoints(segmentLength) {
     let currentPoint = coordinates[0];
     let remainingDistance = segmentLength;
     let accumulatedDistance = 0;
-    points.push({
-        type: 'Feature',
-        geometry: {
-            type: 'Point',
-            coordinates: currentPoint
-        },
-        properties: {
-            name: 'Point 0',
-            meter: accumulatedDistance
-        }
-    });
+    points.push(currentPoint); // 첫 번째 점 추가
 
     for (let i = 1; i < coordinates.length; i++) {
         const nextPoint = coordinates[i];
         let segmentDistance = haversineDistance(currentPoint, nextPoint);
 
+        // 첫 점과 다음 점 사이의 변수의 거리만큼 점 추가
         while (segmentDistance >= remainingDistance) {
             const factor = remainingDistance / segmentDistance;
             currentPoint = interpolatePoint(currentPoint, nextPoint, factor);
             accumulatedDistance += remainingDistance;
-            points.push({
-                type: 'Feature',
-                geometry: {
-                    type: 'Point',
-                    coordinates: currentPoint
-                },
-                properties: {
-                    name: `Point ${points.length}`,
-                    meter: accumulatedDistance
-                }
-            });
+            points.push(currentPoint); // 새로 생성된 점 추가
             segmentDistance -= remainingDistance;
             remainingDistance = segmentLength;
         }
@@ -1333,11 +1315,13 @@ function generatePoints(segmentLength) {
         accumulatedDistance += segmentDistance;
         remainingDistance -= segmentDistance;
         currentPoint = nextPoint;
+        points.push(currentPoint); // 다음 원래의 점 추가
     }
 
-    meterDotFeatures.features = points
-
-    map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
+    console.log(points)
+    // TODO - 여기서 선택된 draw 링크선에 미터당 선을 반영
+    // meterDotFeatures.features = points
+    // map.getSource(METER_DOT_SOURCE_ID).setData(meterDotFeatures);
 }
 
 function removePoints() {
@@ -1410,6 +1394,27 @@ function findClosestFeature(clickedPoint) {
     return closestFeature;
 }
 
+// 가장 가까운 피처 찾기 함수
+function findClosestFeatureFromFeature(features, lngLat) {
+    let minDistance = Infinity;
+    let closestFeature = null;
+
+    features.forEach(feature => {
+        feature.geometry.coordinates.forEach(coord => {
+            const distance = Math.sqrt(
+                Math.pow(coord[0] - lngLat.lng, 2) + Math.pow(coord[1] - lngLat.lat, 2)
+            );
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestFeature = feature;
+            }
+        });
+    });
+
+    return closestFeature;
+}
+
 function initBasicTileSet() {
     // 맵박스 초기화
     map = new mapboxgl.Map({
@@ -1464,11 +1469,6 @@ function getVworldTilesSet(){
 }
 
 function setMapEvent() {
-    // draw = new MapboxDraw({});
-
-    // map.addControl(language);
-    // map.addControl(draw, 'bottom-left')
-
     map.on('load', function () {
         setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
         setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
@@ -1485,6 +1485,9 @@ function setMapEvent() {
         });
 
         map.on('click', (e) => {
+            // 만약 핸들 포인트 window 가 켜져있다면 종료
+            pointPopup.remove();
+
             //우선 정류소, 노드 클릭상황에서는 당연히 광범위한 링크 선택처리를 막는다.
             //링크 자체를 클릭해버리면 중복되므로 광범위한 링크 선택또한 막는다.
             if (map.getLayer(LINK_LAYER_ID) !== undefined) {
@@ -1513,16 +1516,19 @@ function setMapEvent() {
 
         map.on('contextmenu', (e) => {
             if (isEdit()) {
-                const features = map.queryRenderedFeatures(e.point, {
-                    layers: ['road-secondary-tertiary']
-                });
-                console.log(features);
+                // const features = map.queryRenderedFeatures(e.point, {
+                //     layers: ['gl-draw-line.cold']
+                // });
+                const allFeatures = draw.getAll().features;
+                const closestFeature = findClosestFeatureFromFeature(allFeatures, e.lngLat);
 
-                if (features.length > 0) {
-                    selectedFeature = features[0];
+                console.log(closestFeature);
+
+                if (closestFeature) {
+                    selectedFeature = closestFeature;
 
                     if (selectedFeature.geometry.type.indexOf("LineString") > -1) {
-                        pointPopup
+                        pointPopup = new mapboxgl.Popup()
                             .setLngLat(e.lngLat)
                             .setDOMContent(createInfoWindowContent(e.lngLat))
                             .addTo(map);
@@ -1779,9 +1785,14 @@ function saveToMatchObject() {
 }
 
 function realTimeUpdateToDB(e) {
-    console.log(e)
     // 변경된 features를 가져옵니다.
-    const feature  = e.features[0];
+    let feature;
+    if (e.features === undefined) {
+        feature = e;
+    } else {
+        feature = e.features[0];
+    }
+
     // feature의 타입을 구분합니다.
     let type;
     if (feature.properties.nodeId !== undefined) {
@@ -1858,12 +1869,12 @@ function splitLine() {
         }
     };
 
-    // 기존 선택된 선 삭제
-    draw.deleteAll();
-
     // MapboxDraw에 새로운 선 추가
     draw.add(feature1);
     draw.add(feature2);
+
+    // 기존 선택된 선 삭제
+    draw.delete(selectedShp.id);
 }
 function hideAllTool() {
     $("#link-tools").hide();
@@ -1889,81 +1900,126 @@ function createInfoWindowContent(lngLat) {
         pointPopup.remove();
     };
 
-    const deleteButton = document.createElement('button');
-    deleteButton.innerText = '핸들 포인트 삭제';
-    deleteButton.classList.add('btn-handle-point');
-    deleteButton.onclick = function() {
-        deleteHandle(selectedFeature, lngLat);
+    const removeButton = document.createElement('button');
+    removeButton.innerText = '핸들 포인트 삭제';
+    removeButton.classList.add('btn-handle-point');
+    removeButton.onclick = function() {
+        removeHandle(selectedFeature, lngLat);
         pointPopup.remove();
     };
 
     container.appendChild(addButton);
-    container.appendChild(deleteButton);
+    container.appendChild(removeButton);
 
     return container;
 }
 
+// 핸들 포인트 추가 함수
 function addHandle(feature, lngLat) {
     const coordinates = feature.geometry.coordinates;
-    const index = findClosestSegmentIndex(coordinates, [lngLat.lng, lngLat.lat]);
-    coordinates.splice(index, 0, [lngLat.lng, lngLat.lat]);
-    draw.add({
-        type: 'Feature',
-        geometry: {
-            type: 'LineString',
-            coordinates: coordinates
-        },
-        properties: feature.properties,
-        id : (feature.id + 1)
-    });
+    const closestIndex = findClosestSegmentIndex(coordinates, lngLat);
+
+    // 새로운 핸들 포인트를 추가
+    coordinates.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
+
+    feature.geometry.coordinates = coordinates;
+
+    // Draw 객체에서 피처를 업데이트
     draw.delete(feature.id);
+    draw.add(feature);
 }
 
-function deleteHandle(feature, lngLat) {
+// 핸들 포인트 삭제 함수
+function removeHandle(feature, lngLat) {
     const coordinates = feature.geometry.coordinates;
-    const index = coordinates.findIndex(coord => coord[0] === lngLat.lng && coord[1] === lngLat.lat);
-    if (index !== -1) {
-        coordinates.splice(index, 1);
-    }
-    draw.add({
-        type: 'Feature',
-        geometry: {
-            type: 'LineString',
-            coordinates: coordinates
-        },
-        properties: feature.properties
-    });
+    const closestIndex = findClosestPointIndex(coordinates, lngLat);
+
+    // 가장 가까운 핸들 포인트를 삭제
+    coordinates.splice(closestIndex, 1);
+
+    feature.geometry.coordinates = coordinates;
+
+    // Draw 객체에서 피처를 업데이트
     draw.delete(feature.id);
+    draw.add(feature);
+
+    // 링크 점 삭제 바로 반영되게 업데이트 요청 실행
+    realTimeUpdateToDB(feature)
 }
 
-function findClosestSegmentIndex(coordinates, point) {
+// 가장 가까운 포인트 인덱스 찾기
+function findClosestPointIndex(coordinates, lngLat) {
     let minDistance = Infinity;
-    let closestIndex = 0;
+    let closestIndex = -1;
 
-    for (let i = 0; i < coordinates.length - 1; i++) {
-        const segment = [coordinates[i], coordinates[i + 1]];
-        const distance = pointToSegmentDistance(point, segment);
+    coordinates.forEach((coord, index) => {
+        const distance = Math.sqrt(
+            Math.pow(coord[0] - lngLat.lng, 2) + Math.pow(coord[1] - lngLat.lat, 2)
+        );
 
         if (distance < minDistance) {
             minDistance = distance;
-            closestIndex = i + 1;
+            closestIndex = index;
+        }
+    });
+
+    return closestIndex;
+}
+
+// 두 좌표 사이에서 가장 가까운 세그먼트 인덱스를 찾는 함수
+function findClosestSegmentIndex(coordinates, lngLat) {
+    let minDistance = Infinity;
+    let closestIndex = -1;
+
+    for (let i = 0; i < coordinates.length - 1; i++) {
+        const segment = [coordinates[i], coordinates[i + 1]];
+        const distance = pointToSegmentDistance(lngLat, segment);
+
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestIndex = i;
         }
     }
 
     return closestIndex;
 }
 
+// 두 좌표 사이의 거리를 계산하는 함수
 function pointToSegmentDistance(point, segment) {
-    const [p, q] = segment;
-    const pq = [q[0] - p[0], q[1] - p[1]];
-    const pp = [point[0] - p[0], point[1] - p[1]];
+    const x = point.lng;
+    const y = point.lat;
+    const x1 = segment[0][0];
+    const y1 = segment[0][1];
+    const x2 = segment[1][0];
+    const y2 = segment[1][1];
 
-    const pqLengthSquared = pq[0] * pq[0] + pq[1] * pq[1];
-    const t = Math.max(0, Math.min(1, (pp[0] * pq[0] + pp[1] * pq[1]) / pqLengthSquared));
+    const A = x - x1;
+    const B = y - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
 
-    const closest = [p[0] + t * pq[0], p[1] + t * pq[1]];
-    const dx = point[0] - closest[0];
-    const dy = point[1] - closest[1];
+    const dot = A * C + B * D;
+    const len_sq = C * C + D * D;
+    let param = -1;
 
+    if (len_sq !== 0) {
+        param = dot / len_sq;
+    }
+
+    let xx, yy;
+
+    if (param < 0) {
+        xx = x1;
+        yy = y1;
+    } else if (param > 1) {
+        xx = x2;
+        yy = y2;
+    } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+
+    const dx = x - xx;
+    const dy = y - yy;
     return Math.sqrt(dx * dx + dy * dy);
 }
