@@ -725,13 +725,25 @@ function checkHasSource(sourceId, layerId) {
 }
 
 function checkDistance() {
+    if ($('#btn-status').text() === '편집 모드') {
+        hideAllTool();
+        startViewerMode()
+        map.off('draw.create', editCreate);
+        draw.deleteAll();
+        // 수정 내용삭제 후 지도 정보 재로딩
+        setLinkNodeStationFeature();
+    }
+
     draw.changeMode('draw_line_string');
 
-    map.on('draw.create', function(e) {
-        updateMeasurement(e)
-        distanceId = e.features[0].id; // 선의 ID 저장
-    });
+    map.on('draw.create', drawDistance);
     map.on('draw.update', updateMeasurement);
+}
+
+// 거리 측정을 그리는 함수
+function drawDistance(e) {
+    updateMeasurement(e)
+    distanceId = e.features[0].id; // 선의 ID 저장
 }
 
 var distancePopup = null
@@ -864,35 +876,41 @@ function startEditMode() {
 
     $('.mapboxgl-ctrl-group').show()
 
+    map.off('draw.create', drawDistance);
+    map.off('draw.update', updateMeasurement);
+    draw.changeMode('simple_select');
     // 새 Feature 가 추가되는 걸 감지하는 부분
-    map.on('draw.create', function(e) {
-        const features = e.features;
-        if (features.length > 0 && features[0].geometry.type === 'Point') {
-            // 새 노드가 추가되었을 때
-            $("#modal_addFeature").text("새로운 노드 생성")
-        } else if (features.length > 0 && features[0].geometry.type === 'LineString') {
-            // 새 링크가 추가되었을 때
-            $("#modal_addFeature").text("새로운 링크 생성")
-        } else if (features.length > 0 && features[0].geometry.type === 'Polygon') {
-            // 새 폴리곤이 추가되었을 때
-            $("#modal_addFeature").text("새로운 폴리곤 생성")
-        }
+    map.on('draw.create', editCreate);
+}
 
-        $('#newpolygon').modal('show')
-        $('#newpolygon .modal-body table').empty()
-        var property = Object.keys(newProperty[fileNm])
-        for (var i = 0; i < property.length; i++) {
-            var html = "<tr>" +
-                "<td>" +
-                "<label class='polygon-label' title="+property[i]+">"+property[i]+"</label>" +
-                "</td>" +
-                "<td>" +
-                "<input class='form-control property' type='text'>" +
-                "</td>" +
-                "</tr>"
-            $('#newpolygon .modal-body table').append(html)
-        }
-    });
+/// 편집으로 새로운거 추가되었을 때 이벤트 함수
+function editCreate(e) {
+    const features = e.features;
+    if (features.length > 0 && features[0].geometry.type === 'Point') {
+        // 새 노드가 추가되었을 때
+        $("#modal_addFeature").text("새로운 노드 생성")
+    } else if (features.length > 0 && features[0].geometry.type === 'LineString') {
+        // 새 링크가 추가되었을 때
+        $("#modal_addFeature").text("새로운 링크 생성")
+    } else if (features.length > 0 && features[0].geometry.type === 'Polygon') {
+        // 새 폴리곤이 추가되었을 때
+        $("#modal_addFeature").text("새로운 폴리곤 생성")
+    }
+
+    $('#newpolygon').modal('show')
+    $('#newpolygon .modal-body table').empty()
+    var property = Object.keys(newProperty[fileNm])
+    for (var i = 0; i < property.length; i++) {
+        var html = "<tr>" +
+            "<td>" +
+            "<label class='polygon-label' title="+property[i]+">"+property[i]+"</label>" +
+            "</td>" +
+            "<td>" +
+            "<input class='form-control property' type='text'>" +
+            "</td>" +
+            "</tr>"
+        $('#newpolygon .modal-body table').append(html)
+    }
 }
 
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
