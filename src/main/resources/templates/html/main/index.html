@@ -56,7 +56,8 @@
             <button class="top-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i>거리측정</button>
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>기본 레이어 설정</button>
             <div id="type-select-box">
-                <select name="typeSelect" id="type-select">
+                <select class="form-select" name="typeSelect" id="type-select">
+                    <option value="none">대상</option>
                     <option value="point">노드</option>
                     <option value="lineString">링크</option>
                     <option value="station">정류소</option>
@@ -362,7 +363,7 @@
                     "line-join": "round"
                 },
                 "paint": {
-                    "line-color": "#cccccc",
+                    "line-color": "#1aa3ff",
                     "line-width": 6
                 }
             },
@@ -390,7 +391,7 @@
                     "circle-radius": 7, // 선택 시 점 크기 확대
                     "circle-color": "#000000", // 선택 시 색상 변경
                     "circle-stroke-width": 2, // 외곽선 두께 추가
-                    "circle-stroke-color": "#cccccc" // 외곽선 색상 추가
+                    "circle-stroke-color": "#1aa3ff" // 외곽선 색상 추가
                 }
             },
             // 일반 점 스타일

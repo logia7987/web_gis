@@ -654,32 +654,70 @@ function getBoundingBox(coordinates, type) {
 function handleFeatureSelection(e) {
     // 편집모드 클릭과 일반클릭을 분리
     if (isEdit()) {
-        // 방식 변경하며 변경
-        if (e.features !== undefined) {
-            selectedShp = e.features[0];
-            selectedShp.id = 1;
+        let select = $('#type-select').val()
+        selectedShp = e.features[0];
+        selectedShp.id = 1;
+        const featureType = selectedShp.geometry.type;
+        let targetId;
+        if (select === 'lineString') {
             // 수정대상 타입 구분
-            const featureType = selectedShp.geometry.type;
-            let targetId;
             if (featureType.indexOf("LineString") > -1) {
                 targetId = "linkId"
 
                 showLinkTool();
-            } else {
-                if (selectedShp.properties.stationId !== undefined) {
-                    targetId = "stationId"
-                } else {
-                    targetId = "nodeId"
+            }
+            showLinkTool();
+            const property = findProperty(selectedShp.properties[targetId], targetId);
+            if (property) {
+                // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+                editShp(property, targetId);
+            }
+        } else if (select === 'point') {
+            targetId = "nodeId"
+            const property = findProperty(selectedShp.properties[targetId], targetId);
+                if (property) {
+                    // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+                    editShp(property, targetId);
                 }
-
-                showNodeStationTool();
+            showNodeStationTool();
+        } else if (select === 'station') {
+            if (selectedShp.properties.stationId !== undefined) {
+                targetId = "stationId"
             }
             const property = findProperty(selectedShp.properties[targetId], targetId);
             if (property) {
                 // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
                 editShp(property, targetId);
             }
+        } else {
+
         }
+        // // 방식 변경하며 변경
+        // if (e.features !== undefined) {
+        //     selectedShp = e.features[0];
+        //     selectedShp.id = 1;
+        //     // 수정대상 타입 구분
+        //     const featureType = selectedShp.geometry.type;
+        //     let targetId;
+        //     if (featureType.indexOf("LineString") > -1) {
+        //         targetId = "linkId"
+        //
+        //         showLinkTool();
+        //     } else {
+        //         if (selectedShp.properties.stationId !== undefined) {
+        //             targetId = "stationId"
+        //         } else {
+        //             targetId = "nodeId"
+        //         }
+        //
+        //         showNodeStationTool();
+        //     }
+        //     const property = findProperty(selectedShp.properties[targetId], targetId);
+        //     if (property) {
+        //         // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+        //         editShp(property, targetId);
+        //     }
+        // }
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
         if (e.features !== undefined) {
