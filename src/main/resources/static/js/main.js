@@ -59,6 +59,8 @@ let pointPopup = new mapboxgl.Popup({
     closeOnClick: false
 });
 
+let shpDataIdxArr= []
+
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
     var icon = document.getElementById("mdicon");
@@ -1699,11 +1701,10 @@ function addShpList() {
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
-        // TODO 체크박스에서 이미체크되어있는지 확인하는 부분 만들기
         if (type.indexOf('LineString') > -1) {
             // 링크 처리
             html += '<div class="layer-file basic-font" >'
-            if (aData.properties.isChecked === true) {
+            if (aData.properties.isChecked === true || isAllChecked === true) {
                 html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'" onchange="shpPropertyCheck('+i+')" checked>'
             } else {
                 html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'" onchange="shpPropertyCheck('+i+')">'
@@ -1716,7 +1717,7 @@ function addShpList() {
         } else {
             // 노드 처리
             html += '<div class="layer-file basic-font" >'
-            if (aData.properties.isChecked === true) {
+            if (aData.properties.isChecked === true || isAllChecked === true) {
                 html += '<input class="isCheck'+i+'" type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'" onchange="shpPropertyCheck('+i+')" checked>'
             } else {
                 html += '<input  class="isCheck'+i+'" type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'" onchange="shpPropertyCheck('+i+')">'
@@ -1777,33 +1778,41 @@ function shpPropertyDetail(i) {
 function shpPropertyCheck(i) {
     if ($(".isCheck" + i).is(":checked")) {
         loadData.data.features[i].properties.isChecked = true;
+        shpDataIdxArr.push(i);
         shpPropertyAllChecked()
     } else {
         loadData.data.features[i].properties.isChecked = false;
+        let index = shpDataIdxArr.indexOf(i);
+        if (index !== -1) {
+            shpDataIdxArr.splice(index, 1);
+        }
         shpPropertyAllChecked()
     }
 }
 
+let isAllChecked = false
 //shp 파일 속성 리스트 전체 선택 함수
 function shpListAllChecked() {
     let startIdx = pageIdx * itemsPerPage;
     let endIdx = startIdx + itemsPerPage;
     endIdx = endIdx > loadData.data.features.length ? loadData.data.features.length : endIdx;
 
+    // 전체 선택의 경우 for 문의 리스트가 있어, flag 로 구분
     if ($('#all-check').text() === '전체 선택') {
+        isAllChecked = true
         for (let i = startIdx ; i < endIdx ; i++) {
             loadData.data.features[i].properties.isChecked = true;
             $(".isCheck" + i).prop('checked', true);
         }
         $('#all-check').text('전체 취소')
     } else {
+        isAllChecked = false
         for (let i = startIdx ; i < endIdx ; i++) {
             loadData.data.features[i].properties.isChecked = false;
             $(".isCheck" + i).prop('checked', false);
         }
         $('#all-check').text('전체 선택')
     }
-
 }
 
 
@@ -2149,4 +2158,22 @@ function pointToSegmentDistance(point, segment) {
     const dx = x - xx;
     const dy = y - yy;
     return Math.sqrt(dx * dx + dy * dy);
+}
+
+function uploadShpTable(filename) {
+    $.ajax({
+        url : '/api/uploadShpTable',
+        type : 'POST',
+        data : {
+            fileName : filename,
+            idxArr: JSON.stringify(shpDataIdxArr),
+            isAllChecked : isAllChecked
+        },
+        success : function (result){
+            console.log(result)
+        },
+        error : function (error){
+            console.log(error)
+        }
+    })
 }
