@@ -15,6 +15,8 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.opengis.referencing.FactoryException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -40,27 +42,6 @@ public class ApiController {
     private static final String LINK_FEATURE_ID = "link-feature";
     private static final String STATION_ICON_ID = "station-icon";
     private static final String STATION_FEATURE_ID = "station-feature";
-
-    private static final String STATION_ICON_COLOR_UNDEFINED = "#828282";
-    private static final String STATION_LABEL_COLOR_UNDEFINED = "#646464";
-    //시내버스
-    private static final String STATION_ICON_COLOR_CITY = "#5050FF";
-    private static final String STATION_LABEL_COLOR_CITY = "#0000FF";
-    //마을버스
-    private static final String STATION_ICON_COLOR_VILLAGE = "#228B22";
-    private static final String STATION_LABEL_COLOR_VILLAGE = "#2E8B57";
-    //시외버스
-    private static final String STATION_ICON_COLOR_INTERCITY = "#EB4646";
-    private static final String STATION_LABEL_COLOR_INTERCITY = "#EB0000";
-    //공항버스
-    private static final String STATION_ICON_COLOR_AIRPORT = "#A0522D";
-    private static final String STATION_LABEL_COLOR_AIRPORT = "#8B4513";
-    //가상정류소
-    private static final String STATION_ICON_COLOR_VIRTUAL = "#941494";
-    private static final String STATION_LABEL_COLOR_VIRTUAL = "#800080";
-    //2개 이상 혼합
-    private static final String STATION_ICON_COLOR_MIX = "#FF9614";
-    private static final String STATION_LABEL_COLOR_MIX = "#FF8200";
     //라벨 크기 및 위치
     private static final Integer STATION_ICON_SIZE = 1;
     private static final Integer STATION_LABEL_SIZE = 12;
@@ -87,6 +68,7 @@ public class ApiController {
     private BmsService bmsService;
 
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
+    private static final File geoDir = new File("C:\\mapbox\\geoJson");
 
     @PostMapping(value = "/uploadShapeFiles", consumes = "multipart/form-data", produces = "application/json; charset=UTF-8")
     @ResponseBody
@@ -95,6 +77,7 @@ public class ApiController {
 
         try {
             FileUtils.forceMkdir(tempDir);
+            FileUtils.forceMkdir(geoDir);
             for (MultipartFile aFile : files) {
                 Path filePath = new File(tempDir, Objects.requireNonNull(aFile.getOriginalFilename())).toPath();
                 Files.copy(aFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
@@ -129,7 +112,7 @@ public class ApiController {
                     System.out.println("데이터 준비");
 
                     // JSON 데이터를 파일로 저장
-                    File jsonFile = new File(tempDir, "data.json");
+                    File jsonFile = new File(geoDir, shpFile.getName().replace(".shp", "") + ".json");
                     try (FileWriter fileWriter = new FileWriter(jsonFile)) {
                         fileWriter.write(jsonObj.toJSONString());
                     }
@@ -332,6 +315,18 @@ public class ApiController {
         }
 
         return resultMap;
+    }
+
+    @ResponseBody
+    @RequestMapping(value="/uploadShpTable", method=RequestMethod.POST)
+    public void saveShpFileTable(@RequestParam("fileName") String tableName,
+                                 @RequestParam("idxArr") String idxArr,
+                                 @RequestParam("isAllChecked") boolean isAllChecked) {
+
+        System.out.println(idxArr);
+        System.out.println(isAllChecked + "");
+
+        shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked);
     }
 
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
