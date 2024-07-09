@@ -362,7 +362,13 @@ function editShp(property, type) {
     // 그리기 도구를 숨기고 표시
     $('.mapboxgl-ctrl-group').show();
     $('.mapboxgl-gl-draw_line, .mapboxgl-gl-draw_point, .mapboxgl-gl-draw_combine, .mapboxgl-gl-draw_uncombine').hide();
-
+    if (draw.getAll().features.length > 0) {
+        for (i = 0; i < draw.getAll().features.length; i++) {
+            delete draw.getAll().features[i].id
+            geoData.push(draw.getAll().features[i])
+        }
+        draw.deleteAll()
+    }
     // 현재 그려진 도형들을 가져와서 갱신
     draw.getAll().features.forEach(function(drawElement) {
         // 데이터 배열에서 해당 ID를 가진 도형을 찾아 갱신
@@ -841,6 +847,7 @@ function startViewerMode() {
     toastOn("보기 모드로 전환되었습니다.")
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
+    $('#type-select-box').css('display', 'none');
 
     if (draw.getAll().features.length > 0) { // 편집 모드에서 편집하던 draw 전부 반영되도록
         for (i = 0; i < draw.getAll().features.length; i++) {
@@ -868,8 +875,10 @@ function startViewerMode() {
 function startEditMode() {
     toastOn("편집모드로 전환되었습니다. 좌측하단의 툴을 이용해 지도 위에 그리기가 가능합니다.")
 
+
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
+    $('#type-select-box').css('display', 'block');
     // var type = $(".selected").eq(0).attr("class");
     var type = $($(".selected").find("i")[0]).attr("class")
     loadProperty = dataArr
@@ -1287,7 +1296,7 @@ function setLayerLinkDot(layerId, sourceId) {
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
 function generatePoints(segmentLength) {
-    let coordinates = selectedShp.geometry.coordinates;
+    let coordinates = draw.getAll().features[0].geometry.coordinates;
     const points = [];
     const R = 6371000; // 지구의 반지름(미터 단위)
 
@@ -1348,19 +1357,18 @@ function generatePoints(segmentLength) {
         points.push(coordinates[coordinates.length - 1]);
     }
 
-        // 기존 선택된 선을 삭제하고 새로운 선을 추가
-    draw.delete(selectedShp.id);
-
     // 새로운 피처 객체 생성
     const newFeature = {
         type: 'Feature',
-        properties: { ...selectedShp.properties },
+        properties: { ...draw.getAll().features[0].properties },
         geometry: {
             type: 'LineString',
             coordinates: points
         }
     };
 
+    // 기존 선택된 선을 삭제하고 새로운 선을 추가
+    draw.deleteAll();
     // 새로운 피처를 Draw에 추가
     draw.add(newFeature);
 }
@@ -1951,7 +1959,7 @@ function realTimeUpdateToDB(e) {
 
 function splitLine() {
     // 선택한 선의 좌표 가져오기
-    var coordinates = selectedShp.geometry.coordinates;
+    var coordinates = draw.getAll().features[0].geometry.coordinates;
 
     // 선을 분할할 중간 지점 계산
     var midPointIndex = Math.floor((coordinates.length-1) / 2);
@@ -1959,7 +1967,7 @@ function splitLine() {
     var part2Coords = coordinates.slice(midPointIndex);      // 두 번째 선의 좌표
 
     // linkId를 숫자로 변환하고 새로운 아이디 할당
-    var originalLinkId = parseInt(selectedShp.properties.linkId, 10);
+    var originalLinkId = parseInt(draw.getAll().features[0].properties.linkId, 10);
     var newLinkId1 = originalLinkId;
     var newLinkId2 = originalLinkId + 1;
 
@@ -1967,7 +1975,7 @@ function splitLine() {
     var feature1 = {
         type: 'Feature',
         properties: {
-            ...selectedShp.properties, // 기존 선의 다른 속성 유지
+            ...draw.getAll().features[0].properties, // 기존 선의 다른 속성 유지
             linkId: newLinkId1.toString() // 숫자를 문자열로 변환하여 저장
         },
         geometry: {
@@ -1979,7 +1987,7 @@ function splitLine() {
     var feature2 = {
         type: 'Feature',
         properties: {
-            ...selectedShp.properties, // 기존 선의 다른 속성 유지
+            ...draw.getAll().features[0].properties, // 기존 선의 다른 속성 유지
             linkId: newLinkId2.toString() // 숫자를 문자열로 변환하여 저장
         },
         geometry: {
@@ -1988,12 +1996,12 @@ function splitLine() {
         }
     };
 
+    // 기존 선택된 선 삭제
+    draw.deleteAll();
+
     // MapboxDraw에 새로운 선 추가
     draw.add(feature1);
     draw.add(feature2);
-
-    // 기존 선택된 선 삭제
-    draw.delete(selectedShp.id);
 }
 function hideAllTool() {
     $("#link-tools").hide();

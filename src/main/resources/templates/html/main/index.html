@@ -55,7 +55,13 @@
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <button class="top-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i>거리측정</button>
 <!--            <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>기본 레이어 설정</button>-->
-
+            <div id="type-select-box">
+                <select name="typeSelect" id="type-select">
+                    <option value="point">노드</option>
+                    <option value="lineString">링크</option>
+                    <option value="station">정류소</option>
+                </select>
+            </div>
             <div id="top-tool-box">
                 <div id="link-tools">
                     <button class="top-btn" onclick="generatePoints(5);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="5M" data-bs-original-title="5M 간격 점생성">5M</button>
@@ -161,9 +167,6 @@
             </div>
         </div>
     </div>
-
-
-
     <!--속성 창-->
     <div class="property-window" style="left: -500px">
         <div class="tab-title padding-10 basic-font">
@@ -346,19 +349,23 @@
     var propertyArr = []
     let draw= new MapboxDraw({
         styles: [
-            // 점 스타일
+            // 선의 외곽 스타일
             {
-                "id": "gl-draw-point",
-                "type": "circle",
-                "filter": ["all", ["==", "$type", "Point"], ["!=", "meta", "midpoint"]],
+                "id": "gl-draw-line-outer",
+                "type": "line",
+                "filter": ["all", ["==", "$type", "LineString"], ["!=", "meta", "midpoint"]],
+                "layout": {
+                    "line-cap": "round",
+                    "line-join": "round"
+                },
                 "paint": {
-                    "circle-radius": 5,
-                    "circle-color": "#000000"
+                    "line-color": "#cccccc",
+                    "line-width": 6
                 }
             },
-            // 선 스타일
+            // 선의 내부 스타일
             {
-                "id": "gl-draw-line",
+                "id": "gl-draw-line-inner",
                 "type": "line",
                 "filter": ["all", ["==", "$type", "LineString"], ["!=", "meta", "midpoint"]],
                 "layout": {
@@ -369,6 +376,28 @@
                     "line-color": "#000000",
                     "line-width": 2,
                     "line-dasharray": [2, 2] // 점선 스타일
+                }
+            },
+            // 활성화된 점 스타일
+            {
+                "id": "gl-draw-point-active",
+                "type": "circle",
+                "filter": ["all", ["==", "$type", "Point"], ["!=", "meta", "midpoint"], ["==", "active", "true"]],
+                "paint": {
+                    "circle-radius": 7, // 선택 시 점 크기 확대
+                    "circle-color": "#000000", // 선택 시 색상 변경
+                    "circle-stroke-width": 2, // 외곽선 두께 추가
+                    "circle-stroke-color": "#cccccc" // 외곽선 색상 추가
+                }
+            },
+            // 일반 점 스타일
+            {
+                "id": "gl-draw-point",
+                "type": "circle",
+                "filter": ["all", ["==", "$type", "Point"], ["!=", "meta", "midpoint"], ["==", "active", "false"]],
+                "paint": {
+                    "circle-radius": 5,
+                    "circle-color": "#000000"
                 }
             }
         ]
