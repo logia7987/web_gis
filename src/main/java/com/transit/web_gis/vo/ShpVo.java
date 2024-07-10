@@ -33,4 +33,6 @@ public class ShpVo {
     public void prePersist() {
         uploadDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM.dd HH:mm:ss"));
     }
+
+    private String table_name;
 }

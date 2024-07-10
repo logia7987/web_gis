@@ -212,26 +212,30 @@ public class ApiController {
         double sc_SW_LNG = (double) params.get("sc_SW_LNG");
         double sc_SW_LAT = (double) params.get("sc_SW_LAT");
         String sc_MODE = (String) params.get("sc_MODE");
+        String fileName = (String) params.get("fileName");
 
         commandMap.put("sc_NE_LNG", sc_NE_LNG);
         commandMap.put("sc_NE_LAT", sc_NE_LAT);
         commandMap.put("sc_SW_LNG", sc_SW_LNG);
         commandMap.put("sc_SW_LAT", sc_SW_LAT);
         commandMap.put("sc_MODE", sc_MODE);
+        commandMap.put("fileName", fileName);
 
-        if (sc_MODE.equals("S")) {
-            // 정류소 정보 호출
-            resultMap.put("success", true);
-            resultMap.put("data", getGeoJsonStation(bmsService.getStation(commandMap)));
-        } else if (sc_MODE.equals("N")) {
-            // 노드 정보 호출
-            resultMap.put("success", true);
-            resultMap.put("data", getGeoJsonNode(bmsService.getNode(commandMap)));
-        } else if (sc_MODE.equals("L")) {
-            // 링크 정보 호출
-            resultMap.put("success", true);
-            resultMap.put("data", getGeoJsonLink(bmsService.getLink(commandMap)));
-        }
+        resultMap.put("success", true);
+        resultMap.put("data", getGeoJsonLink(shapeService.getShpData(commandMap)));
+//        if (sc_MODE.equals("S")) {
+//            // 정류소 정보 호출
+//            resultMap.put("success", true);
+//            resultMap.put("data", getGeoJsonStation(bmsService.getStation(commandMap)));
+//        } else if (sc_MODE.equals("N")) {
+//            // 노드 정보 호출
+//            resultMap.put("success", true);
+//            resultMap.put("data", getGeoJsonNode(bmsService.getNode(commandMap)));
+//        } else if (sc_MODE.equals("L")) {
+//            // 링크 정보 호출
+//            resultMap.put("success", true);
+//            resultMap.put("data", getGeoJsonLink(bmsService.getLink(commandMap)));
+//        }
 
         return resultMap;
     }
@@ -321,12 +325,13 @@ public class ApiController {
     @RequestMapping(value="/uploadShpTable", method=RequestMethod.POST)
     public void saveShpFileTable(@RequestParam("fileName") String tableName,
                                  @RequestParam("idxArr") String idxArr,
-                                 @RequestParam("isAllChecked") boolean isAllChecked) {
+                                 @RequestParam("isAllChecked") boolean isAllChecked,
+                                 @RequestParam("shpType") String shpType) {
 
         System.out.println(idxArr);
         System.out.println(isAllChecked + "");
 
-        shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked);
+        shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType);
     }
 
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
@@ -439,14 +444,14 @@ public class ApiController {
         return jsonArrayBuilder.build();
     }
 
-    public String getGeoJsonLink(List<BmsVo> datas) throws Exception{
+    public String getGeoJsonLink(List<Map<String, Object>> datas) throws Exception{
         JSONObject geojson = new JSONObject();
         JSONArray features = new JSONArray();
 
         geojson.put("type", "FeatureCollection");
         geojson.put("features", features);
 
-        for(BmsVo data : datas){
+        for(Map<String, Object> data : datas){
             JSONObject feature = new JSONObject();
             JSONObject properties = new JSONObject();
             JSONObject geometry = new JSONObject();
@@ -465,22 +470,17 @@ public class ApiController {
             properties.put("emptyLabel", "");
 
             //properties 정류소 속성 정보 데이터 삽입
-            properties.put("linkId", data.getLink_id());
-            properties.put("rgtrId", data.getRgtr_id());
-            properties.put("regDt", data.getReg_dt());
-            properties.put("linkDist", data.getLink_dist());
-            properties.put("roadNm", data.getRoad_nm());
-            properties.put("bgngNodeId", data.getBgng_node_id());
-            properties.put("endNodeId", data.getEnd_node_id());
-            properties.put("beginLat", data.getBegin_lat());
-            properties.put("beginLng", data.getBegin_lng());
-            properties.put("endLat", data.getEnd_lat());
-            properties.put("endLng", data.getEnd_lng());
+            for( Map.Entry<String, Object> entry : data.entrySet() ){
+                String strKey = entry.getKey();
+                String strValue = (String) entry.getValue();
+                properties.put(strKey, strValue);
+            }
 
             //링크 lineString 좌표값 받아오기
             HashMap<String, Object> paramMap = new HashMap<>();
-            paramMap.put("sc_LINK_ID", data.getLink_id());
+//            paramMap.put("sc_LINK_ID", data.getLink_id());
 
+            // TODO 링크 포인트 CREATE 미완으로 보류
             List<BmsVo> coords = bmsService.getLinkPointByLinkId(paramMap);
 
             for(BmsVo coord : coords){
@@ -576,14 +576,14 @@ public class ApiController {
         return geojson.toJSONString();
     }
 
-    public String getGeoJsonNode(List<BmsVo> datas){
+    public String getGeoJsonNode(List<Map<String, Object>> datas){
         JSONObject geojson = new JSONObject();
         JSONArray features = new JSONArray();
 
         geojson.put("type", "FeatureCollection");
         geojson.put("features", features);
 
-        for(BmsVo data : datas){
+        for(Map<String, Object> data : datas){
             JSONObject feature = new JSONObject();
             JSONObject properties = new JSONObject();
             JSONObject geometry = new JSONObject();
@@ -603,16 +603,28 @@ public class ApiController {
             properties.put("emptyLabel", "");
 
             //properties 정류소 속성 정보 데이터 삽입
-            properties.put("nodeId", data.getNode_id());
-            properties.put("crossroadNm", data.getCrossroad_nm());
-            properties.put("areaCd", data.getArea_cd());
-            properties.put("lat", Double.parseDouble(data.getLat()));
-            properties.put("lng", Double.parseDouble(data.getLng()));
+            for( Map.Entry<String, Object> entry : data.entrySet() ){
+                String strKey = entry.getKey();
+                String strValue = (String) entry.getValue();
+                properties.put(strKey, strValue);
+
+                //geometry 데이터 삽입
+                if (strKey.equals("LAT")) {
+                    coordinates.set(1, Double.parseDouble(strValue));
+                } else if (strKey.equals("LNG")) {
+                    coordinates.set(0, Double.parseDouble(strValue));
+                }
+            }
+//            properties.put("nodeId", data.getNode_id());
+//            properties.put("crossroadNm", data.getCrossroad_nm());
+//            properties.put("areaCd", data.getArea_cd());
+//            properties.put("lat", Double.parseDouble(data.getLat()));
+//            properties.put("lng", Double.parseDouble(data.getLng()));
 
 
             //geometry 데이터 삽입
-            coordinates.add(Double.parseDouble(data.getLng()));
-            coordinates.add(Double.parseDouble(data.getLat()));
+//            coordinates.add(Double.parseDouble(data.getLng()));
+//            coordinates.add(Double.parseDouble(data.getLat()));
 
             features.add(feature);
         }

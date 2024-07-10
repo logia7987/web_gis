@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTO Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.transit.web_gis.mapper.ShapeMapper">
+    <select id="selectShpList" resultType="com.transit.web_gis.vo.ShpVo" parameterType="com.transit.web_gis.vo.ShpVo">
+        SELECT table_name
+        FROM all_tables
+        WHERE owner = 'TRANSIT'
+    </select>
+
+    <select id="getShpData" resultType="map" parameterType="map">
+        SELECT *
+        FROM TRANSIT.${tale_name}
+        WHERE 1 = 1
+        AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
+        AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
+        AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
+        AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
+    </select>
+</mapper>

@@ -1,5 +1,6 @@
 package com.transit.web_gis.controller;
 
+import com.transit.web_gis.service.ShapeService;
 import com.transit.web_gis.service.ShpService;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
@@ -25,12 +26,15 @@ public class MainController {
     @Autowired
     private ShpService shpService;
 
+    @Autowired
+    private ShapeService shapeService;
+
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
 
     @GetMapping("/")
     public String mainView(Model model) {
         model.addAttribute("mapboxAccessToken", mapboxAccessToken);
-        model.addAttribute("shpList", shpService.selectShp());
+        model.addAttribute("shpList", shapeService.selectShpList());
         return "html/main/index";
     }
 
@@ -52,6 +56,7 @@ public class MainController {
                 resultObj.put("fileName", fileName);
 
                 model.addAttribute("jsonData", resultObj);
+                model.addAttribute("fileName", fileName);
             } catch (IOException | ParseException e) {
                 e.printStackTrace();
                 model.addAttribute("error", "JSON 파일 읽기 중 오류 발생");

@@ -31,6 +31,14 @@
             </label>
             <div class="drag-data"></div>
         </form>
+        <div>
+            <label for="shpType_station">정류소:</label>
+            <input type="radio" name="shpType" id="shpType_station" value="station">
+            <label for="shpType_node">노드:</label>
+            <input type="radio" name="shpType" id="shpType_node" value="node">
+            <label for="shpType_link">링크:</label>
+            <input type="radio" name="shpType" id="shpType_link" value="link">
+        </div>
         <button type="button" class="btn btn-primary btn-send" onclick="sendFiles()" onchange="displayFile(this)">전송</button>
     </div>
 </body>
@@ -52,6 +60,7 @@
         if (jsonData != null) {
             parent.dataArr[jsonData.fileName] = jsonData
             parent.loadData = jsonData
+            parent.fileNm = fileName
             parent.finishLoading();
             parent.readProperties()
             jsonData = null
@@ -95,6 +104,10 @@
 
     function sendFiles() {
         // hideModal('loadFile')
+        if ($("input[name=shpType]:checked").val() === undefined) {
+            parent.toastOn("올리는 ShapeFile 의 타입을 선택해주세요.");
+            return;
+        }
 
         var frmFile = $("#frmFile");
         // 파일 선택 input 요소
@@ -136,6 +149,8 @@
                 parent.viewLoading()
             },
             complete: function( ) {
+                parent.shpType = $("input[name=shpType]:checked").val()
+
                 // finishLoading();
             },
             success: function(response) {

@@ -46,12 +46,12 @@
             <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기">
                 <i class="fa-solid fa-floppy-disk"></i>불러오기
             </button>
-<!--            <div class="custom-select">-->
-<!--                <div class="select-display">이전 파일 불러오기</div>-->
-<!--                <div class="options">-->
-<!--                    <a href="#" th:each="shp : ${shpList}" th:text="${shp.shpName}" th:onclick="'getShpData(' + ${shp.shpId} + ')'"></a>-->
-<!--                </div>-->
-<!--            </div>-->
+            <div class="custom-select">
+                <div class="select-display">이전 파일 불러오기</div>
+                <div class="options">
+                    <a href="#" th:each="shp : ${shpList}" th:text="${shp.table_name}" onclick="getShpData(this)"></a>
+                </div>
+            </div>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <button class="top-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i>거리측정</button>
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>기본 레이어 설정</button>
@@ -112,7 +112,7 @@
     <div id="tab2" class="tab">
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>SHP</h5>
-            <h5>저장</h5>
+            <h5 onclick="uploadShpTable()">저장</h5>
         </div>
         <div id="all-check" onclick="shpListAllChecked()">전체 선택</div>
         <div class="layer-file-list basic-font">
@@ -303,28 +303,8 @@
         return new bootstrap.Tooltip(tooltipTriggerEl)
     })
 
-    //정류소
-    const STATION_ICON_ID = 'station-icon';
-    const STATION_FEATURE_ID = 'station-feature';
-    const STATION_LAYER_ID = 'station-layer';
-    const LINK_NODE_STATION_SOURCE_ID = 'link-node-station-source';
-
-    //링크
-    const LINK_FEATURE_ID = 'link-feature';
-    const LINK_LAYER_ID = 'link-layer';
-    const LINK_LABEL_LAYER_ID = 'link-label-layer';
-
-    //노드
-    const NODE_ICON_ID = 'node-icon';
-    const NODE_FEATURE_ID = 'node-feature';
-    const NODE_LAYER_ID = 'node-layer';
-
-    // 링크 미터당 점 레이어
-    const METER_DOT_LAYER_ID = 'link-meter';
-    const METER_DOT_SOURCE_ID = 'link-source';
-    const METER_DOT_FEATURE_ID = 'link-feature';
-
     var fileNm;
+    var shpType;
     var dataArr = [];
     // 읽어온 shp 데이터 임시 저장소
     var loadData;

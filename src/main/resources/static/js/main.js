@@ -59,7 +59,36 @@ let pointPopup = new mapboxgl.Popup({
     closeOnClick: false
 });
 
-let shpDataIdxArr= []
+//정류소
+const STATION_ICON_ID = 'station-icon';
+const STATION_FEATURE_ID = 'station-feature';
+const STATION_LAYER_ID = 'station-layer';
+const LINK_NODE_STATION_SOURCE_ID = 'link-node-station-source';
+
+//링크
+const LINK_FEATURE_ID = 'link-feature';
+const LINK_LAYER_ID = 'link-layer';
+const LINK_LABEL_LAYER_ID = 'link-label-layer';
+
+//노드
+const NODE_ICON_ID = 'node-icon';
+const NODE_FEATURE_ID = 'node-feature';
+const NODE_LAYER_ID = 'node-layer';
+
+// 링크 미터당 점 레이어
+const METER_DOT_LAYER_ID = 'link-meter';
+const METER_DOT_SOURCE_ID = 'link-source';
+const METER_DOT_FEATURE_ID = 'link-feature';
+
+// DB에 저장될 Shape 파일 인덱스 리스트
+let shpDataIdxArr= [];
+
+// DB에서 불러올 정보 리스트
+let tNameArr = [];
+
+// 보여줄 라벨 정의
+let tNameLabelArr = {};
+
 
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
@@ -182,52 +211,69 @@ function saveFeature(shpId, jsonObj, idx) {
     })
 }
 
-function getShpData(shpId) {
-    $.ajax({
-        url : "/api/getShp",
-        type : "POST",
-        data : {
-            shpId : shpId
-        },
-        beforeSend: function( ) {
-            viewLoading()
-        },
-        complete: function( ) {
-            finishLoading();
-        },
-        success : function(data) {
-            hideModal('loadFile')
-            if (fileNmList.length > 0) {
-                var idx = 0
-                for (i = 0; i < fileNmList.length; i++) {
-                    if (fileNmList[i].indexOf(data.shpName) >  -1) {
-                        idx += 1
-                    }
-                }
-                if (idx !== 0) {
-                    data.fileName = data.shpName + '_' + idx
-                } else {
-                    data.fileName = data.shpName
-                }
-            } else {
-                data.fileName = data.shpName
-            }
+function getShpData(obj) {
+    let fileName = $(this).text();
 
-            if (checkDataType(data) === 'Point') {
-                drawNodePoint(data).then(r => true);
-            } else if (checkDataType(data) === 'MultiLineString') {
-                drawLinkLine(data).then(r => true);
-            } else {
-                drawPolyline(data).then(r => true);
-            }
+    // DB에서 불러올 명단에 추가
+    tNameArr.push(fileName);
+    // 기본 라벨 정의 key : value 로 임시 값 부여
+    tNameLabelArr[fileName] = "";
 
-            createLayer(data, checkDataType(data))
-
-            toastOn("DB에 저장된 정보를 가져왔습니다.")
-        },
-        error: function () {
+    // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
+    if(map.getZoom() >= 14){
+        if (!isEdit()) {
+            setLinkNodeStationFeature();
         }
-    });
+    } else {
+        linkNodeStationFeatures.features = [];
+        map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+    }
+
+    // $.ajax({
+    //     url : "/api/getShp",
+    //     type : "POST",
+    //     data : {
+    //         shpId : shpId
+    //     },
+    //     beforeSend: function( ) {
+    //         viewLoading()
+    //     },
+    //     complete: function( ) {
+    //         finishLoading();
+    //     },
+    //     success : function(data) {
+    //         hideModal('loadFile')
+    //         if (fileNmList.length > 0) {
+    //             var idx = 0
+    //             for (i = 0; i < fileNmList.length; i++) {
+    //                 if (fileNmList[i].indexOf(data.shpName) >  -1) {
+    //                     idx += 1
+    //                 }
+    //             }
+    //             if (idx !== 0) {
+    //                 data.fileName = data.shpName + '_' + idx
+    //             } else {
+    //                 data.fileName = data.shpName
+    //             }
+    //         } else {
+    //             data.fileName = data.shpName
+    //         }
+    //
+    //         if (checkDataType(data) === 'Point') {
+    //             drawNodePoint(data).then(r => true);
+    //         } else if (checkDataType(data) === 'MultiLineString') {
+    //             drawLinkLine(data).then(r => true);
+    //         } else {
+    //             drawPolyline(data).then(r => true);
+    //         }
+    //
+    //         createLayer(data, checkDataType(data))
+    //
+    //         toastOn("DB에 저장된 정보를 가져왔습니다.")
+    //     },
+    //     error: function () {
+    //     }
+    // });
 }
 
 
@@ -989,11 +1035,11 @@ function requestAjax(params, callback, asyncFlag) {
             if(data.success) {
                 if(callback) callback(data);
             } else {
-                alert(data.msg);
+                toastOn(data.msg);
             }
         },
         error : function(request, status, error) {
-            alert("오류가 발생했습니다!" + "\n");
+            toastOn("오류가 발생했습니다!" + "\n");
         },
     });
 }
@@ -1008,75 +1054,95 @@ function setLinkNodeStationFeature() {
             sc_NE_LNG: turf.round(map.getBounds()._ne.lng, COORD_ROUND),
             sc_NE_LAT: turf.round(map.getBounds()._ne.lat, COORD_ROUND),
             sc_SW_LNG: turf.round(map.getBounds()._sw.lng, COORD_ROUND),
-            sc_SW_LAT: turf.round(map.getBounds()._sw.lat, COORD_ROUND)
+            sc_SW_LAT: turf.round(map.getBounds()._sw.lat, COORD_ROUND),
+            fileName : JSON.stringify(tNameArr)
         };
 
-        // Station 처리
-        let stationPromise = new Promise(function(resolveStation, rejectStation) {
-            if (stationShowFlag === true) {
-                params["sc_MODE"] = "S";
-                requestAjax(params, function(result) {
-                    let geoJson = JSON.parse(result.data);
-                    for (let feature of geoJson.features) {
-                        // 현재 적용된 라벨 설정
-                        if (stationShowLabel != undefined && stationShowLabel !== "arsId" && stationShowLabel !== "emptyLabel") {
-                            feature.properties.label = feature.properties["arsId"] + "\n" + feature.properties[stationShowLabel];
-                        } else {
-                            feature.properties.label = feature.properties[stationShowLabel];
-                        }
-                        // 링크, 노드, 정류소 공통 features 저장
-                        linkNodeStationFeatures.features.push(feature);
-                    }
-                    resolveStation();
-                });
-            } else {
-                resolveStation(); // Station 처리가 필요 없는 경우 resolve
-            }
-        });
+        //
+        if (tNameArr.length > 0) {
+            requestAjax(params, function(result) {
+                let geoJson = JSON.parse(result.data);
+                for (let feature of geoJson.features) {
+                    console.log(feature);
+                    // 현재 적용된 라벨 설정
+                    // tNameLabelArr[feature.properties]
+                    // 노드,링크,정류소 포출 여부 판단
+                    // 노드,링크,정류소 라벨 표출
 
-        // Node 처리
-        let nodePromise = new Promise(function(resolveNode, rejectNode) {
-            if (nodeShowFlag === true) {
-                params["sc_MODE"] = "N";
-                requestAjax(params, function(result) {
-                    let geoJson = JSON.parse(result.data);
-                    for (let feature of geoJson.features) {
-                        if (nodeShowLabel != undefined) {
-                            feature.properties.label = feature.properties[nodeShowLabel];
-                        }
-                        if (selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId) {
-                            feature.properties.iconColor = feature.properties.selectedIconColor;
-                            feature.properties.iconSize = feature.properties.selectedIconSize;
-                            feature.properties.textColor = feature.properties.selectedTextColor;
-                            feature.properties.textSize = feature.properties.selectedTextSize;
-                        }
-                        linkNodeStationFeatures.features.push(feature);
-                    }
-                    resolveNode();
-                });
-            } else {
-                resolveNode(); // Node 처리가 필요 없는 경우 resolve
-            }
-        });
-
-        // Link 처리
-        let linkPromise = new Promise(function(resolveLink, rejectLink) {
-            if (linkShowFlag === true) {
-                params["sc_MODE"] = "L";
-                requestAjax(params, function(result) {
-                    let geoJson = JSON.parse(result.data);
-                    for (let feature of geoJson.features) {
-                        if (linkShowLabel != undefined) {
-                            feature.properties.label = feature.properties[linkShowLabel];
-                        }
-                        linkNodeStationFeatures.features.push(feature);
-                    }
-                    resolveLink();
-                });
-            } else {
-                resolveLink(); // Link 처리가 필요 없는 경우 resolve
-            }
-        });
+                    // 정보 업데이트 - 링크, 노드, 정류소 공통 features 저장
+                    linkNodeStationFeatures.features.push(feature);
+                }
+                // resolveStation();
+            });
+        }
+        //
+        //
+        // // Station 처리
+        // let stationPromise = new Promise(function(resolveStation, rejectStation) {
+        //     if (stationShowFlag === true) {
+        //         params["sc_MODE"] = "S";
+        //         requestAjax(params, function(result) {
+        //             let geoJson = JSON.parse(result.data);
+        //             for (let feature of geoJson.features) {
+        //                 // 현재 적용된 라벨 설정
+        //                 if (stationShowLabel != undefined && stationShowLabel !== "arsId" && stationShowLabel !== "emptyLabel") {
+        //                     feature.properties.label = feature.properties["arsId"] + "\n" + feature.properties[stationShowLabel];
+        //                 } else {
+        //                     feature.properties.label = feature.properties[stationShowLabel];
+        //                 }
+        //                 // 링크, 노드, 정류소 공통 features 저장
+        //                 linkNodeStationFeatures.features.push(feature);
+        //             }
+        //             resolveStation();
+        //         });
+        //     } else {
+        //         resolveStation(); // Station 처리가 필요 없는 경우 resolve
+        //     }
+        // });
+        //
+        // // Node 처리
+        // let nodePromise = new Promise(function(resolveNode, rejectNode) {
+        //     if (nodeShowFlag === true) {
+        //         params["sc_MODE"] = "N";
+        //         requestAjax(params, function(result) {
+        //             let geoJson = JSON.parse(result.data);
+        //             for (let feature of geoJson.features) {
+        //                 if (nodeShowLabel != undefined) {
+        //                     feature.properties.label = feature.properties[nodeShowLabel];
+        //                 }
+        //                 if (selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId) {
+        //                     feature.properties.iconColor = feature.properties.selectedIconColor;
+        //                     feature.properties.iconSize = feature.properties.selectedIconSize;
+        //                     feature.properties.textColor = feature.properties.selectedTextColor;
+        //                     feature.properties.textSize = feature.properties.selectedTextSize;
+        //                 }
+        //                 linkNodeStationFeatures.features.push(feature);
+        //             }
+        //             resolveNode();
+        //         });
+        //     } else {
+        //         resolveNode(); // Node 처리가 필요 없는 경우 resolve
+        //     }
+        // });
+        //
+        // // Link 처리
+        // let linkPromise = new Promise(function(resolveLink, rejectLink) {
+        //     if (linkShowFlag === true) {
+        //         params["sc_MODE"] = "L";
+        //         requestAjax(params, function(result) {
+        //             let geoJson = JSON.parse(result.data);
+        //             for (let feature of geoJson.features) {
+        //                 if (linkShowLabel != undefined) {
+        //                     feature.properties.label = feature.properties[linkShowLabel];
+        //                 }
+        //                 linkNodeStationFeatures.features.push(feature);
+        //             }
+        //             resolveLink();
+        //         });
+        //     } else {
+        //         resolveLink(); // Link 처리가 필요 없는 경우 resolve
+        //     }
+        // });
 
         // 모든 Promise가 완료된 후에 레이어 추가
         // Promise.all([stationPromise, nodePromise, linkPromise]).then(function() {
@@ -2134,14 +2200,15 @@ function pointToSegmentDistance(point, segment) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-function uploadShpTable(filename) {
+function uploadShpTable() {
     $.ajax({
         url : '/api/uploadShpTable',
         type : 'POST',
         data : {
-            fileName : filename,
+            fileName : fileNm,
             idxArr: JSON.stringify(shpDataIdxArr),
-            isAllChecked : isAllChecked
+            isAllChecked : isAllChecked,
+            shpType : shpType
         },
         success : function (result){
             console.log(result)
