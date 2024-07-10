@@ -350,7 +350,7 @@ function sendFiles() {
             console.log(data.data)
             // shpLoadFeatures.features = data.data.features
             // readProperties(data.data.features[0].properties)
-            // addShpList(data.data)
+            // ist(data.data)
             // const dataType = checkDataType(data);
             // if (dataType === "Point")  {
             //     drawNodePoint(data);
@@ -406,11 +406,16 @@ function removeLayer(key) {
 function editShp(property, type) {
     // 맵에서 데이터를 가져옴
     var geoData = map.getSource(LINK_NODE_STATION_SOURCE_ID)._options.data.features;
-
     // 그리기 도구를 숨기고 표시
     $('.mapboxgl-ctrl-group').show();
     $('.mapboxgl-gl-draw_line, .mapboxgl-gl-draw_point, .mapboxgl-gl-draw_combine, .mapboxgl-gl-draw_uncombine').hide();
-
+    if (draw.getAll().features.length > 0) {
+        for (i = 0; i < draw.getAll().features.length; i++) {
+            delete draw.getAll().features[i].id
+            geoData.push(draw.getAll().features[i])
+        }
+        draw.deleteAll()
+    }
     // 현재 그려진 도형들을 가져와서 갱신
     draw.getAll().features.forEach(function(drawElement) {
         // 데이터 배열에서 해당 ID를 가진 도형을 찾아 갱신
@@ -694,31 +699,65 @@ function getBoundingBox(coordinates, type) {
 function handleFeatureSelection(e) {
     // 편집모드 클릭과 일반클릭을 분리
     if (isEdit()) {
-        // 방식 변경하며 변경
         if (e.features !== undefined) {
+            hideAllTool()
+            let select = $('#type-select').val()
             selectedShp = e.features[0];
             selectedShp.id = 1;
-            // 수정대상 타입 구분
             const featureType = selectedShp.geometry.type;
             let targetId;
-            if (featureType.indexOf("LineString") > -1) {
+            // 수정대상 타입 구분
+            if (select === 'lineString' && featureType.indexOf("LineString") > -1) {
                 targetId = "linkId"
-
                 showLinkTool();
-            } else {
-                if (selectedShp.properties.stationId !== undefined) {
-                    targetId = "stationId"
-                } else {
-                    targetId = "nodeId"
+                const property = findProperty(selectedShp.properties[targetId], targetId);
+                if (property) {
+                    // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+                    editShp(property, targetId);
                 }
-
+            } else if (select === 'point' && featureType === 'Point' && selectedShp.properties.stationId === undefined) {
+                targetId = "nodeId"
+                const property = findProperty(selectedShp.properties[targetId], targetId);
+                if (property) {
+                    // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+                    editShp(property, targetId);
+                }
                 showNodeStationTool();
+            } else if (select === 'station' && selectedShp.properties.stationId !== undefined) {
+                targetId = "stationId"
+                const property = findProperty(selectedShp.properties[targetId], targetId);
+                if (property) {
+                    // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+                    editShp(property, targetId);
+                }
             }
-            const property = findProperty(selectedShp.properties[targetId], targetId);
-            if (property) {
-                // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
-                editShp(property, targetId);
-            }
+            // // 방식 변경하며 변경
+            // if (e.features !== undefined) {
+            //     selectedShp = e.features[0];
+            //     selectedShp.id = 1;
+            //     // 수정대상 타입 구분
+            //     const featureType = selectedShp.geometry.type;
+            //     let targetId;
+            //     if (featureType.indexOf("LineString") > -1) {
+            //         targetId = "linkId"
+            //
+            //         showLinkTool();
+            //     } else {
+            //         if (selectedShp.properties.stationId !== undefined) {
+            //             targetId = "stationId"
+            //         } else {
+            //             targetId = "nodeId"
+            //         }
+            //
+            //         showNodeStationTool();
+            //     }
+            //     const property = findProperty(selectedShp.properties[targetId], targetId);
+            //     if (property) {
+            //         // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
+            //         editShp(property, targetId);
+            //     }
+            // }
+
         }
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
@@ -773,13 +812,25 @@ function checkHasSource(sourceId, layerId) {
 }
 
 function checkDistance() {
+    if ($('#btn-status').text() === '편집 모드') {
+        hideAllTool();
+        startViewerMode()
+        map.off('draw.create', editCreate);
+        draw.deleteAll();
+        // 수정 내용삭제 후 지도 정보 재로딩
+        setLinkNodeStationFeature();
+    }
+
     draw.changeMode('draw_line_string');
 
-    map.on('draw.create', function(e) {
-        updateMeasurement(e)
-        distanceId = e.features[0].id; // 선의 ID 저장
-    });
+    map.on('draw.create', drawDistance);
     map.on('draw.update', updateMeasurement);
+}
+
+// 거리 측정을 그리는 함수
+function drawDistance(e) {
+    updateMeasurement(e)
+    distanceId = e.features[0].id; // 선의 ID 저장
 }
 
 var distancePopup = null
@@ -877,6 +928,7 @@ function startViewerMode() {
     toastOn("보기 모드로 전환되었습니다.")
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
+    $('#type-select-box').css('display', 'none');
 
     if (draw.getAll().features.length > 0) { // 편집 모드에서 편집하던 draw 전부 반영되도록
         for (i = 0; i < draw.getAll().features.length; i++) {
@@ -904,43 +956,51 @@ function startViewerMode() {
 function startEditMode() {
     toastOn("편집모드로 전환되었습니다. 좌측하단의 툴을 이용해 지도 위에 그리기가 가능합니다.")
 
+
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
+    $('#type-select-box').css('display', 'block');
     // var type = $(".selected").eq(0).attr("class");
     var type = $($(".selected").find("i")[0]).attr("class")
     loadProperty = dataArr
 
     $('.mapboxgl-ctrl-group').show()
 
+    map.off('draw.create', drawDistance);
+    map.off('draw.update', updateMeasurement);
+    draw.changeMode('simple_select');
     // 새 Feature 가 추가되는 걸 감지하는 부분
-    map.on('draw.create', function(e) {
-        const features = e.features;
-        if (features.length > 0 && features[0].geometry.type === 'Point') {
-            // 새 노드가 추가되었을 때
-            $("#modal_addFeature").text("새로운 노드 생성")
-        } else if (features.length > 0 && features[0].geometry.type === 'LineString') {
-            // 새 링크가 추가되었을 때
-            $("#modal_addFeature").text("새로운 링크 생성")
-        } else if (features.length > 0 && features[0].geometry.type === 'Polygon') {
-            // 새 폴리곤이 추가되었을 때
-            $("#modal_addFeature").text("새로운 폴리곤 생성")
-        }
+    map.on('draw.create', editCreate);
+}
 
-        $('#newpolygon').modal('show')
-        $('#newpolygon .modal-body table').empty()
-        var property = Object.keys(newProperty[fileNm])
-        for (var i = 0; i < property.length; i++) {
-            var html = "<tr>" +
-                "<td>" +
-                "<label class='polygon-label' title="+property[i]+">"+property[i]+"</label>" +
-                "</td>" +
-                "<td>" +
-                "<input class='form-control property' type='text'>" +
-                "</td>" +
-                "</tr>"
-            $('#newpolygon .modal-body table').append(html)
-        }
-    });
+/// 편집으로 새로운거 추가되었을 때 이벤트 함수
+function editCreate(e) {
+    const features = e.features;
+    if (features.length > 0 && features[0].geometry.type === 'Point') {
+        // 새 노드가 추가되었을 때
+        $("#modal_addFeature").text("새로운 노드 생성")
+    } else if (features.length > 0 && features[0].geometry.type === 'LineString') {
+        // 새 링크가 추가되었을 때
+        $("#modal_addFeature").text("새로운 링크 생성")
+    } else if (features.length > 0 && features[0].geometry.type === 'Polygon') {
+        // 새 폴리곤이 추가되었을 때
+        $("#modal_addFeature").text("새로운 폴리곤 생성")
+    }
+
+    $('#newpolygon').modal('show')
+    $('#newpolygon .modal-body table').empty()
+    var property = Object.keys(newProperty[fileNm])
+    for (var i = 0; i < property.length; i++) {
+        var html = "<tr>" +
+            "<td>" +
+            "<label class='polygon-label' title="+property[i]+">"+property[i]+"</label>" +
+            "</td>" +
+            "<td>" +
+            "<input class='form-control property' type='text'>" +
+            "</td>" +
+            "</tr>"
+        $('#newpolygon .modal-body table').append(html)
+    }
 }
 
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
@@ -1337,7 +1397,7 @@ function setLayerLinkDot(layerId, sourceId) {
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
 function generatePoints(segmentLength) {
-    let coordinates = selectedShp.geometry.coordinates;
+    let coordinates = draw.getAll().features[0].geometry.coordinates;
     const points = [];
     const R = 6371000; // 지구의 반지름(미터 단위)
 
@@ -1398,19 +1458,18 @@ function generatePoints(segmentLength) {
         points.push(coordinates[coordinates.length - 1]);
     }
 
-        // 기존 선택된 선을 삭제하고 새로운 선을 추가
-    draw.delete(selectedShp.id);
-
     // 새로운 피처 객체 생성
     const newFeature = {
         type: 'Feature',
-        properties: { ...selectedShp.properties },
+        properties: { ...draw.getAll().features[0].properties },
         geometry: {
             type: 'LineString',
             coordinates: points
         }
     };
 
+    // 기존 선택된 선을 삭제하고 새로운 선을 추가
+    draw.deleteAll();
     // 새로운 피처를 Draw에 추가
     draw.add(newFeature);
 }
@@ -1438,11 +1497,11 @@ function getClosestLinkId(pointPos){
 
     //줌 레벨별로 광범위 수준 정도 확대
     if(getMapZoom() <= 14){
-        selectMeter = 15;
-    }else if(getMapZoom() <= 15){
-        selectMeter = 10;
-    }else{
         selectMeter = 5;
+    }else if(getMapZoom() <= 15){
+        selectMeter = 3;
+    }else{
+        selectMeter = 2;
     }
 
     if(closestDist * 1000 > selectMeter || !closestPointFeature){
@@ -1576,24 +1635,45 @@ function setMapEvent() {
             //우선 정류소, 노드 클릭상황에서는 당연히 광범위한 링크 선택처리를 막는다.
             //링크 자체를 클릭해버리면 중복되므로 광범위한 링크 선택또한 막는다.
             if (map.getLayer(LINK_LAYER_ID) !== undefined) {
-                let features = map.queryRenderedFeatures(e.point, {
-                    layers : [STATION_LAYER_ID, LINK_LAYER_ID, NODE_LAYER_ID]
-                });
+                let select = $('#type-select').val()
+                let features;
 
-                if(features.length > 0) {
-                    return;
+                if (select === 'lineString') {
+                    features = map.queryRenderedFeatures(e.point, {
+                        layers : [LINK_LAYER_ID]
+                    });
+
+                    if(features.length > 0) {
+                        return;
+                    }
+
+                    let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
+
+                    if(!pointPos){
+                        return;
+                    }
+                    map.fire('click', {
+                        lngLat : pointPos,
+                        point : map.project(pointPos)
+                    })
+                } else if (select === 'station') {
+                    features = map.queryRenderedFeatures(e.point, {
+                        layers : [STATION_LAYER_ID]
+                    });
+
+                    if(features.length > 0) {
+                        return;
+                    }
+
+                } else if (select === 'point') {
+                    features = map.queryRenderedFeatures(e.point, {
+                        layers : [NODE_LAYER_ID]
+                    });
+
+                    if(features.length > 0) {
+                        return;
+                    }
                 }
-
-                let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
-
-                if(!pointPos){
-                    return;
-                }
-
-                map.fire('click', {
-                    lngLat : pointPos,
-                    point : map.project(pointPos)
-                })
 
                 handleFeatureSelection(e)
             }
@@ -1729,6 +1809,10 @@ function addShpList() {
     endIdx = endIdx > loadData.data.features.length ? loadData.data.features.length : endIdx;
 
     shpPropertyAllChecked()
+
+    if (startIdx > endIdx) {
+        startIdx = (totalPages-1) * 100;
+    }
 
     // 리스트 재생성
     let html = "";
@@ -1874,16 +1958,35 @@ $(document).on('click', '.next-page', function() {
 
 function updatePagingUI() {
     let pagingHtml = '<div class="paging-controls">';
+
     if (pageIdx > 0) {
         pagingHtml += '<button class="prev-page">이전</button>';
     }
-    pagingHtml += '<span>페이지 ' + (pageIdx + 1) + ' / ' + totalPages + '</span>';
+
+    if (pageIdx <= 0) {
+        pageIdx = 1
+    }
+
+    if (pageIdx > totalPages) {
+        pageIdx = totalPages
+    }
+
+    pagingHtml += '<span>페이지 <input id="pageCount" type="text" value="' + (pageIdx) +'"> / ' + totalPages + '</span>';
     if (pageIdx < totalPages - 1) {
         pagingHtml += '<button class="next-page">다음</button>';
     }
     pagingHtml += '</div>';
 
     $('.paging-container').html(pagingHtml);
+
+    // 페이지 숫자 입력 시 해당 페이지 이동 함수
+    $('#pageCount').on('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // 기본 동작 방지
+            pageIdx = Number($('#pageCount').val())
+            addShpList();
+        }
+    });
 }
 
 function moveThenClick(geo) {
@@ -2008,7 +2111,7 @@ function realTimeUpdateToDB(e) {
 
 function splitLine() {
     // 선택한 선의 좌표 가져오기
-    var coordinates = selectedShp.geometry.coordinates;
+    var coordinates = draw.getAll().features[0].geometry.coordinates;
 
     // 선을 분할할 중간 지점 계산
     var midPointIndex = Math.floor((coordinates.length-1) / 2);
@@ -2016,7 +2119,7 @@ function splitLine() {
     var part2Coords = coordinates.slice(midPointIndex);      // 두 번째 선의 좌표
 
     // linkId를 숫자로 변환하고 새로운 아이디 할당
-    var originalLinkId = parseInt(selectedShp.properties.linkId, 10);
+    var originalLinkId = parseInt(draw.getAll().features[0].properties.linkId, 10);
     var newLinkId1 = originalLinkId;
     var newLinkId2 = originalLinkId + 1;
 
@@ -2024,7 +2127,7 @@ function splitLine() {
     var feature1 = {
         type: 'Feature',
         properties: {
-            ...selectedShp.properties, // 기존 선의 다른 속성 유지
+            ...draw.getAll().features[0].properties, // 기존 선의 다른 속성 유지
             linkId: newLinkId1.toString() // 숫자를 문자열로 변환하여 저장
         },
         geometry: {
@@ -2036,7 +2139,7 @@ function splitLine() {
     var feature2 = {
         type: 'Feature',
         properties: {
-            ...selectedShp.properties, // 기존 선의 다른 속성 유지
+            ...draw.getAll().features[0].properties, // 기존 선의 다른 속성 유지
             linkId: newLinkId2.toString() // 숫자를 문자열로 변환하여 저장
         },
         geometry: {
@@ -2045,12 +2148,12 @@ function splitLine() {
         }
     };
 
+    // 기존 선택된 선 삭제
+    draw.deleteAll();
+
     // MapboxDraw에 새로운 선 추가
     draw.add(feature1);
     draw.add(feature2);
-
-    // 기존 선택된 선 삭제
-    draw.delete(selectedShp.id);
 }
 function hideAllTool() {
     $("#link-tools").hide();

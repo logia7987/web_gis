@@ -812,7 +812,7 @@ th, td {
 }
 
 #top-tool-box {
-    padding: 0 20px;
+    padding: 0 10px;
     border-left: 1px solid #e4e4e4;
 }
 
@@ -849,3 +849,19 @@ th, td {
     cursor: pointer;
     font-size: 14px;
     padding: 10px;}
+
+#type-select-box {
+    display: none;
+    padding: 0 0 0 10px;
+    border-left: 1px solid #e4e4e4;
+}
+
+#type-select {
+    line-height: 1;
+}
+
+#pageCount {
+    border-radius: 6px;
+    border: 1px solid;
+    width: 50px;
+}
