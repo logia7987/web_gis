@@ -57,7 +57,7 @@
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>기본 레이어 설정</button>
             <div id="type-select-box">
                 <select class="form-select" name="typeSelect" id="type-select">
-                    <option value="none">대상</option>
+                    <option value="none">선택</option>
                     <option value="point">노드</option>
                     <option value="lineString">링크</option>
                     <option value="station">정류소</option>
@@ -494,6 +494,7 @@
         $('.custom-select').click( function() {
             $('.options').fadeToggle();
         })
+
     });
 
 </script>

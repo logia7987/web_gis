@@ -859,3 +859,9 @@ th, td {
 #type-select {
     line-height: 1;
 }
+
+#pageCount {
+    border-radius: 6px;
+    border: 1px solid;
+    width: 50px;
+}
