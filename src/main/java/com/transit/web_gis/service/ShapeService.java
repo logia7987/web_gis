@@ -85,16 +85,26 @@ public class ShapeService {
                         String typeString = checkFeatureType((JSONObject) ((JSONObject)features.get(0)).get("geometry"));
                         if (typeString.equals("Link")) {
                             System.out.println("링크 타입");
-                            // 링크 shpFile 명과 + _POINTS 로 table 을 생성해야함
-                        } else if (typeString.equals("Point")) {
                             if (isChecked) {
                                 // 전체 선택 - 모든 Feature 를 저장한다.
                                 System.out.println("전체 입력 수행 중");
-                                saveNodeFeatureToDatabase(tableName, features, shpType, null);
+                                saveLink(tableName, features, shpType, null);
                                 System.out.println("전체 입력 수행 완료");
                             } else {
                                 // 일부 선택 - 전달받은 index 를 추출하여 저장한다.
-                                saveNodeFeatureToDatabase(tableName, features, shpType, bArr);
+                                saveLink(tableName, features, shpType, bArr);
+                            }
+                            
+                        } else if (typeString.equals("Point")) {
+                            System.out.println("포인트 타입");
+                            if (isChecked) {
+                                // 전체 선택 - 모든 Feature 를 저장한다.
+                                System.out.println("전체 입력 수행 중");
+                                saveNode(tableName, features, shpType, null);
+                                System.out.println("전체 입력 수행 완료");
+                            } else {
+                                // 일부 선택 - 전달받은 index 를 추출하여 저장한다.
+                                saveNode(tableName, features, shpType, bArr);
                             }
                         }
                     } catch (ParseException e) {
@@ -143,26 +153,40 @@ public class ShapeService {
                     firstColumn = false;
                 }
 
+                // 분류를 위한 공통 컬럼
+                createTableSql.append(", \"FILE_NAME\" VARCHAR2(100)");
+                createTableSql.append(", \"SHP_TYPE\" VARCHAR2(100)");
+
                 JSONObject geometry = (JSONObject) firstFeature.get("geometry");
                 String typeString = checkFeatureType(geometry);
-
-                // 노드, Point 대응
-                createTableSql.append(", \"TYPE\" VARCHAR2(100)");
-                createTableSql.append(", LNG VARCHAR2(100)");
-                createTableSql.append(", LAT VARCHAR2(100)");
-                createTableSql.append(", FILE_NAME VARCHAR2(100)");
-                createTableSql.append(", SHP_TYPE VARCHAR2(100)");
+                if (typeString.equals("Link")) {
+                    createTableSql.append(", \"GEOMETRY\" CLOB");
+                } else if (typeString.equals("Point")) {
+                    createTableSql.append(", \"LNG\" VARCHAR2(100)");
+                    createTableSql.append(", \"LAT\" VARCHAR2(100)");
+                }
             }
+
+            createTableSql.append(") TABLESPACE GBMS_TS");
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
 
-        createTableSql.append(")");
-
         return createTableSql.toString();
     }
 
-    private void saveNodeFeatureToDatabase(String tableName, List<JSONObject> features, String shpType, String[] bArr) {
+    private void createPointsTableSql(String tableName) {
+        StringBuilder createPointsTableSql = new StringBuilder("CREATE TABLE " + tableName + "_POINTS (");
+        createPointsTableSql.append(tableName + "_ID NUMBER, ");
+        createPointsTableSql.append("\"LINK_SEQ\" NUMBER, ");
+        createPointsTableSql.append("\"LNG\" VARCHAR2(100), ");
+        createPointsTableSql.append("\"LAT\" VARCHAR2(100) ");
+        createPointsTableSql.append(")");
+
+        jdbcTemplate.execute(String.valueOf(createPointsTableSql));
+    }
+
+    private void saveNode(String tableName, List<JSONObject> features, String shpType, String[] bArr) {
         Set<Integer> indicesToSave = new HashSet<>();
         if (bArr != null) {
             for (String index : bArr) {
@@ -228,14 +252,74 @@ public class ShapeService {
         });
     }
 
+    private void saveLink(String tableName, List<JSONObject> features, String shpType, String[] bArr) {
+        Set<Integer> indicesToSave = new HashSet<>();
+        if (bArr != null) {
+            for (String index : bArr) {
+                try {
+                    indicesToSave.add(Integer.parseInt(index));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        JSONObject sampleFeature = features.get(0);
+        JSONObject properties = (JSONObject) sampleFeature.get("properties");
+
+        StringBuilder insertSql = new StringBuilder("INSERT INTO " + tableName + " (");
+        StringBuilder valuesSql = new StringBuilder("VALUES (");
+        boolean firstColumn = true;
+
+        for (Object key : properties.keySet()) {
+            if (!firstColumn) {
+                insertSql.append(", ");
+                valuesSql.append(", ");
+            }
+            insertSql.append("\"" + key + "\"");
+            valuesSql.append("?");
+            firstColumn = false;
+        }
+
+        insertSql.append(", \"FILE_NAME\"");
+        insertSql.append(", \"SHP_TYPE\"");
+        insertSql.append(", \"GEOMETRY\"");
+        insertSql.append(")");
+
+        valuesSql.append(", ?, ?, ?)");
+
+        String sql = insertSql + " " + valuesSql;
+
+        // insert 실행
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                int actualIndex = (bArr == null) ? i : (int) indicesToSave.toArray()[i];
+                JSONObject feature = features.get(actualIndex);
+                JSONObject properties = (JSONObject) feature.get("properties");
+                JSONObject geometry = (JSONObject) feature.get("geometry");
+
+                int parameterIndex = 1;
+                for (Object key : properties.keySet()) {
+                    ps.setString(parameterIndex++, String.valueOf(properties.get(key)));
+                }
+                ps.setString(parameterIndex++, tableName);
+                ps.setString(parameterIndex++, shpType);
+                ps.setString(parameterIndex, geometry.toString());
+            }
+
+            @Override
+            public int getBatchSize() {
+                return (bArr == null) ? features.size() : indicesToSave.size();
+            }
+        });
+    }
+
     private String checkFeatureType(JSONObject geometry) {
         String typeString = (String) geometry.get("type");
 
         if (typeString.contains("LineString")) {
-            // 링크
             return "Link";
         } else if (typeString.contains("Point")) {
-            // 포인트
             return "Point";
         }
 

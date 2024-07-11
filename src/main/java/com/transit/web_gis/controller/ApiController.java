@@ -257,17 +257,10 @@ public class ApiController {
                 Double lng = geometryNode.get(0);
                 Double lat = geometryNode.get(1);
 
-                // 소수점 6자리까지 표현하기 위한 DecimalFormat 객체 생성
-                DecimalFormat df = new DecimalFormat("#.######");
-
-                // 좌표값을 소수점 6자리까지 포맷팅
-                String formattedLng = df.format(lng);
-                String formattedLat = df.format(lat);
-
                 // commandMap에 값 설정
                 commandMap.put("nodeId", properties.get("nodeId"));
-                commandMap.put("lng", lng); // double 형식으로 변환
-                commandMap.put("lat", lat); // double 형식으로 변환
+                commandMap.put("lng", lng);
+                commandMap.put("lat", lat);
 
                 if (bmsService.updateNodeGeometry(commandMap) > 0) {
                     resultMap.put("result", "success");
