@@ -215,15 +215,31 @@ public class ApiController {
         String sc_MODE = (String) params.get("sc_MODE");
         String fileName = (String) params.get("fileName");
 
-        commandMap.put("sc_NE_LNG", sc_NE_LNG);
-        commandMap.put("sc_NE_LAT", sc_NE_LAT);
-        commandMap.put("sc_SW_LNG", sc_SW_LNG);
-        commandMap.put("sc_SW_LAT", sc_SW_LAT);
-        commandMap.put("sc_MODE", sc_MODE);
-        commandMap.put("fileName", fileName);
+        ObjectMapper objectMapper = new ObjectMapper();
+        String[] fileNames = objectMapper.readValue(fileName, String[].class);
 
-        resultMap.put("success", true);
-        resultMap.put("data", getGeoJsonLink(shapeService.getShpData(commandMap)));
+        // 배열 초기화
+        List<String> tNameList = new ArrayList<>();
+        for (String aFileName : fileNames) {
+            commandMap.put("sc_NE_LNG", sc_NE_LNG);
+            commandMap.put("sc_NE_LAT", sc_NE_LAT);
+            commandMap.put("sc_SW_LNG", sc_SW_LNG);
+            commandMap.put("sc_SW_LAT", sc_SW_LAT);
+            commandMap.put("sc_MODE", sc_MODE);
+            commandMap.put("fileName", aFileName);
+
+            List<Map<String, Object>> resultData = shapeService.getShpData(commandMap);
+            String shpType = (String) resultData.get(0).get("SHP_TYPE");
+            if (shpType.equals("node")) {
+                resultMap.put(aFileName+"_data", getGeoJsonNode(shapeService.getShpData(commandMap)));
+            } else if (shpType.equals("link")) {
+                resultMap.put(aFileName+"_data", getGeoJsonLink(shapeService.getShpData(commandMap)));
+            } else if (shpType.equals("station")) {
+                resultMap.put(aFileName+"_data", getGeoJsonLink(shapeService.getShpData(commandMap)));
+            }
+//            resultMap.put("message", fileName + " 정보를 불러왔습니다!");
+        }
+
 //        if (sc_MODE.equals("S")) {
 //            // 정류소 정보 호출
 //            resultMap.put("success", true);
@@ -582,6 +598,8 @@ public class ApiController {
             JSONObject properties = new JSONObject();
             JSONObject geometry = new JSONObject();
             JSONArray coordinates = new JSONArray();
+            coordinates.add(0);
+            coordinates.add(0);
 
             //feature 틀 생성
             feature.put("type", "Feature");
@@ -609,17 +627,6 @@ public class ApiController {
                     coordinates.set(0, Double.parseDouble(strValue));
                 }
             }
-//            properties.put("nodeId", data.getNode_id());
-//            properties.put("crossroadNm", data.getCrossroad_nm());
-//            properties.put("areaCd", data.getArea_cd());
-//            properties.put("lat", Double.parseDouble(data.getLat()));
-//            properties.put("lng", Double.parseDouble(data.getLng()));
-
-
-            //geometry 데이터 삽입
-//            coordinates.add(Double.parseDouble(data.getLng()));
-//            coordinates.add(Double.parseDouble(data.getLat()));
-
             features.add(feature);
         }
 

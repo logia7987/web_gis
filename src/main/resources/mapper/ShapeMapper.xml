@@ -9,7 +9,7 @@
 
     <select id="getShpData" resultType="map" parameterType="map">
         SELECT *
-        FROM TRANSIT.${tale_name}
+        FROM TRANSIT.${fileName}
         WHERE 1 = 1
         AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
         AND LAT <![CDATA[<=]]> #{sc_NE_LAT}

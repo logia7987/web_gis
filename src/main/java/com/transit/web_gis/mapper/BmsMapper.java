@@ -16,5 +16,13 @@ public interface BmsMapper {
     int deleteOldLinkGeometry(HashMap<String, Object> map);
     int updateStationGeometry(HashMap<String, Object> map);
     int updateNodeGeometry(HashMap<String, Object> map);
+    // shp 파일 추가
+    int insertNewFile(HashMap<String, Object> map);
+    // shp 파일 링크 정보 추가
+
+    // shp 파일 링크 포인트 추가
+
+    // shp 파일 노드
+
 }
 

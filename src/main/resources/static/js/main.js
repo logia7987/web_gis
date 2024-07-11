@@ -213,10 +213,13 @@ function saveFeature(shpId, jsonObj, idx) {
 }
 
 function getShpData(obj) {
-    let fileName = $(this).text();
+    let fileName = $(obj).text();
 
     // DB에서 불러올 명단에 추가
-    tNameArr.push(fileName);
+    if (!tNameArr.includes(fileName)) {
+        tNameArr.push(fileName);
+    }
+
     // 기본 라벨 정의 key : value 로 임시 값 부여
     tNameLabelArr[fileName] = "";
 
@@ -1093,10 +1096,10 @@ function requestAjax(params, callback, asyncFlag) {
         contentType: 'application/json',
         type: 'POST',
         success : function(data) {
-            if(data.success) {
-                if(callback) callback(data);
+            if (data && Object.keys(data).length > 0) {
+                if (callback) callback(data);
             } else {
-                toastOn(data.msg);
+                toastOn("지도에 표출할 정보가 없습니다. 상단의 이전 파일 불러오기에서 불러올 ShapeFile을 선택해주세요.");
             }
         },
         error : function(request, status, error) {
@@ -1119,112 +1122,50 @@ function setLinkNodeStationFeature() {
             fileName : JSON.stringify(tNameArr)
         };
 
-        //
-        if (tNameArr.length > 0) {
-            requestAjax(params, function(result) {
-                let geoJson = JSON.parse(result.data);
-                for (let feature of geoJson.features) {
-                    console.log(feature);
-                    // 현재 적용된 라벨 설정
-                    // tNameLabelArr[feature.properties]
-                    // 노드,링크,정류소 포출 여부 판단
-                    // 노드,링크,정류소 라벨 표출
+        requestAjax(params, function(result) {
+            try {
+                // toastOn(result.message);
 
-                    // 정보 업데이트 - 링크, 노드, 정류소 공통 features 저장
-                    linkNodeStationFeatures.features.push(feature);
+                Object.entries(result).forEach(([key, value]) => {
+                    // console.log(`${key}:`, value);
+                    if (key !== "message") {
+                        let geoJson = JSON.parse(result[key]);
+
+                        for (let feature of geoJson.features) {
+                            console.log(feature);
+                            // 현재 적용된 라벨 설정
+                            // tNameLabelArr[feature.properties]
+
+                            // 노드, 링크, 정류소 표출 여부 판단
+                            // 노드, 링크, 정류소 라벨 표출
+
+                            // 정보 업데이트 - 링크, 노드, 정류소 공통 features 저장
+                            linkNodeStationFeatures.features.push(feature);
+                        }
+                    }
+                });
+
+                // 데이터 소스에 features 업데이트
+                map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+                addAttrList();
+
+                // 레이어가 없을 때만 추가
+                if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(METER_DOT_LAYER_ID)) {
+                    // 링크 레이어 추가
+                    setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
+                    // 정류소 레이어 추가
+                    setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
+                    // 노드 레이어 추가
+                    setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
+                    // 링크 거리별 포인트 레이어 추가
+                    setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
                 }
-                // resolveStation();
-            });
-        }
-        //
-        //
-        // // Station 처리
-        // let stationPromise = new Promise(function(resolveStation, rejectStation) {
-        //     if (stationShowFlag === true) {
-        //         params["sc_MODE"] = "S";
-        //         requestAjax(params, function(result) {
-        //             let geoJson = JSON.parse(result.data);
-        //             for (let feature of geoJson.features) {
-        //                 // 현재 적용된 라벨 설정
-        //                 if (stationShowLabel != undefined && stationShowLabel !== "arsId" && stationShowLabel !== "emptyLabel") {
-        //                     feature.properties.label = feature.properties["arsId"] + "\n" + feature.properties[stationShowLabel];
-        //                 } else {
-        //                     feature.properties.label = feature.properties[stationShowLabel];
-        //                 }
-        //                 // 링크, 노드, 정류소 공통 features 저장
-        //                 linkNodeStationFeatures.features.push(feature);
-        //             }
-        //             resolveStation();
-        //         });
-        //     } else {
-        //         resolveStation(); // Station 처리가 필요 없는 경우 resolve
-        //     }
-        // });
-        //
-        // // Node 처리
-        // let nodePromise = new Promise(function(resolveNode, rejectNode) {
-        //     if (nodeShowFlag === true) {
-        //         params["sc_MODE"] = "N";
-        //         requestAjax(params, function(result) {
-        //             let geoJson = JSON.parse(result.data);
-        //             for (let feature of geoJson.features) {
-        //                 if (nodeShowLabel != undefined) {
-        //                     feature.properties.label = feature.properties[nodeShowLabel];
-        //                 }
-        //                 if (selectedNodeId.length > 0 && selectedNodeId === feature.properties.nodeId) {
-        //                     feature.properties.iconColor = feature.properties.selectedIconColor;
-        //                     feature.properties.iconSize = feature.properties.selectedIconSize;
-        //                     feature.properties.textColor = feature.properties.selectedTextColor;
-        //                     feature.properties.textSize = feature.properties.selectedTextSize;
-        //                 }
-        //                 linkNodeStationFeatures.features.push(feature);
-        //             }
-        //             resolveNode();
-        //         });
-        //     } else {
-        //         resolveNode(); // Node 처리가 필요 없는 경우 resolve
-        //     }
-        // });
-        //
-        // // Link 처리
-        // let linkPromise = new Promise(function(resolveLink, rejectLink) {
-        //     if (linkShowFlag === true) {
-        //         params["sc_MODE"] = "L";
-        //         requestAjax(params, function(result) {
-        //             let geoJson = JSON.parse(result.data);
-        //             for (let feature of geoJson.features) {
-        //                 if (linkShowLabel != undefined) {
-        //                     feature.properties.label = feature.properties[linkShowLabel];
-        //                 }
-        //                 linkNodeStationFeatures.features.push(feature);
-        //             }
-        //             resolveLink();
-        //         });
-        //     } else {
-        //         resolveLink(); // Link 처리가 필요 없는 경우 resolve
-        //     }
-        // });
 
-        // 모든 Promise가 완료된 후에 레이어 추가
-        // Promise.all([stationPromise, nodePromise, linkPromise]).then(function() {
-        Promise.all([linkPromise]).then(function() {
-            // 데이터 소스에 features 업데이트
-            map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-            addAttrList()
-            // 레이어가 없을 때만 추가
-            // if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(STATION_LAYER_ID) && !map.getLayer(NODE_LAYER_ID)) {
-            if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(METER_DOT_LAYER_ID)) {
-                // 링크 레이어 추가
-                setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
-                // 링크 거리별 포인트 레이어 추가
-                setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
-                // 정류소 레이어 추가
-                setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
-                // 노드 레이어 추가
-                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
+                resolve();
+            } catch (error) {
+                reject(error);
             }
-            resolve();
-        }).catch(function(error) {
+        }, function(error) {
             reject(error);
         });
     });
@@ -1751,7 +1692,7 @@ function addAttrList() {
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
-        if (type === 'LineString') {
+        if (aData.properties.SHP_TYPE !== 'link') {
             // 링크 처리
             // 링크선 가운데 값 추출
             let lng = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][0]
@@ -1762,32 +1703,30 @@ function addAttrList() {
             linkHtml += '<div class="file-tit">' + aData.properties.linkId + '</div>'
             linkHtml += '</div>'
             linkHtml += '</div>'
-        } else {
-            if (aData.properties.crossroadNm !== undefined) {
-                // 노드 처리
-                nodeHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
-                nodeHtml += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
-                nodeHtml += '<div class="file-info">'
-                if (aData.properties.crossroadNm.trim() === "") {
-                    nodeHtml += '<div class="file-tit">링크명 없음</div>'
-                } else {
-                    nodeHtml += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
-                }
-                nodeHtml += '</div>'
-                nodeHtml += '</div>'
-            } else {
-                // 정류소 처리
-                stationHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
-                stationHtml += '<i class="fas fa-bus"></i>'
-                stationHtml += '<div class="file-info">'
-                if (aData.properties.stationNm.trim() === "") {
-                    stationHtml += '<div class="file-tit">정류소명 없음</div>'
-                } else {
-                    stationHtml += '<div class="file-tit">' + aData.properties.stationNm.trim() +'</div>'
-                }
-                stationHtml += '</div>'
-                stationHtml += '</div>'
-            }
+        } else if (aData.properties.SHP_TYPE !== 'node') {
+            // 노드 처리
+            nodeHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
+            nodeHtml += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
+            nodeHtml += '<div class="file-info">'
+            // if (aData.properties.crossroadNm.trim() === "") {
+                nodeHtml += '<div class="file-tit">링크명 없음</div>'
+            // } else {
+            //     nodeHtml += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
+            // }
+            nodeHtml += '</div>'
+            nodeHtml += '</div>'
+        } else if (aData.properties.SHP_TYPE !== 'station') {
+            // 정류소 처리
+            stationHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
+            stationHtml += '<i class="fas fa-bus"></i>'
+            stationHtml += '<div class="file-info">'
+            // if (aData.properties.stationNm.trim() === "") {
+                stationHtml += '<div class="file-tit">정류소명 없음</div>'
+            // } else {
+            //     stationHtml += '<div class="file-tit">' + aData.properties.stationNm.trim() +'</div>'
+            // }
+            stationHtml += '</div>'
+            stationHtml += '</div>'
         }
     }
 
@@ -2124,7 +2063,6 @@ function realTimeUpdateToDB(e) {
         success : function (result){
             console.log(result)
 
-            // toastOn("")
         },
         error : function (error){
             console.log(error)
