@@ -31,13 +31,13 @@
             </label>
             <div class="drag-data"></div>
         </form>
-        <div>
-            <label for="shpType_station">정류소:</label>
-            <input type="radio" name="shpType" id="shpType_station" value="station">
-            <label for="shpType_node">노드:</label>
-            <input type="radio" name="shpType" id="shpType_node" value="node">
-            <label for="shpType_link">링크:</label>
-            <input type="radio" name="shpType" id="shpType_link" value="link">
+        <div class="select-shape-area">
+            <span class="radio-label">업로드할 파일의 형태를 선택을 해주세요</span>
+            <div class="select-shape-btn">
+                <button name="shpType" class="shape-btn" id="shpType_station" onclick="clickSelectBtn(this)" style="margin-left: 0">정류소</button>
+                <button name="shpType" class="shape-btn" id="shpType_node" onclick="clickSelectBtn(this)" >노드</button>
+                <button name="shpType" class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)">링크</button>
+            </div>
         </div>
         <button type="button" class="btn btn-primary btn-send" onclick="sendFiles()" onchange="displayFile(this)">전송</button>
     </div>
@@ -68,7 +68,10 @@
             parent.toastOn("ShapeFile 을 읽어 왔습니다.")
         }
     });
-
+    function clickSelectBtn(e) {
+        $('.shape-btn').removeClass('selected2')
+        $(e).addClass('selected2')
+    }
     function handleDragOver(e) {
         e.preventDefault();
         uploadContainer.classList.add('drag-over');
@@ -104,7 +107,7 @@
 
     function sendFiles() {
         // hideModal('loadFile')
-        if ($("input[name=shpType]:checked").val() === undefined) {
+        if ($('.shape-btn.selected2').attr('id') === undefined) {
             parent.toastOn("올리는 ShapeFile 의 타입을 선택해주세요.");
             return;
         }
@@ -149,7 +152,7 @@
                 parent.viewLoading()
             },
             complete: function( ) {
-                parent.shpType = $("input[name=shpType]:checked").val()
+                parent.shpType = $('.shape-btn.selected2').attr('id')
 
                 // finishLoading();
             },

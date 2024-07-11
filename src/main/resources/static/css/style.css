@@ -184,6 +184,7 @@
     justify-content: space-between;
     border-bottom: 1px solid #e6e6e6;
     border-radius: 15px 15px 0 0;
+    align-items: center;
 }
 
 .tab-title h5 {
@@ -196,7 +197,7 @@
 }
 
 .layer-file-list {
-    height: calc(100% - 140px);
+    height: calc(100%);
     width: 100%;
     overflow: auto;
     position: relative;
@@ -846,9 +847,11 @@ th, td {
 }
 
 #all-check {
+    display: none;
     cursor: pointer;
     font-size: 14px;
-    padding: 10px;}
+    padding: 10px;
+}
 
 #type-select-box {
     display: none;
@@ -861,7 +864,78 @@ th, td {
 }
 
 #pageCount {
+    text-align: center;
     border-radius: 6px;
     border: 1px solid;
     width: 50px;
+}
+
+.select-shape-area {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    flex-direction: column;
+}
+
+#property-select {
+    margin-top: 10px;
+    border-radius: var(--bs-modal-border-radius);
+    border: 1px solid #c6c6c6;
+}
+
+.property-item {
+    display: flex;
+    padding: 10px;
+    list-style: none;
+    font-size: 15px;
+    background-color: unset;
+}
+
+.radio-button {
+    margin-right: 15px;
+    display: inline-grid;
+}
+
+.radio-label {
+    color: #020202;
+    font-size: 15px;
+    margin-right: 10px;
+}
+
+.radio-button > label {
+    font-size: 14px;
+}
+
+.selected2 {
+    background-color: #c6c6c6 !important;
+    color: white;
+}
+
+.shape-btn {
+    width: 33.3%;
+    font-size: 16px;
+    background-color: unset;
+    border: 1px solid #c6c6c6;
+}
+
+.shpSavebtn {
+    cursor: pointer;
+    border: 1px solid #c6c6c6;
+    padding: 5px 10px;
+}
+
+.shpSavebtn:hover {
+    background-color: #c6c6c6 !important;
+    color: white;
+}
+
+.property-example {
+    color: #b2b2b2;
+    margin: 0 0 0 10px;
+}
+
+.select-shape-btn {
+    width: 100%;
+    display: flex;
 }

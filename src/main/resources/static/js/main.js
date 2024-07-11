@@ -17,7 +17,8 @@ let meterDotFeatures = {
 const COORD_ROUND = 6;
 
 // property check 확인
-let isChecked
+let isChecked;
+let notChecked = []
 let selectedStationId = "";
 let selectedLinkId = "";
 let selectedNodeId = "";
@@ -1798,6 +1799,14 @@ function addAttrList() {
 function addShpList() {
     totalPages = Math.ceil(loadData.data.features.length / itemsPerPage);
 
+    if (pageIdx <= 0 || isNaN(pageIdx)) {
+        pageIdx = 0
+    }
+
+    if (notChecked.length > 0) {
+
+    }
+
     let target = $(".layer-file-list");
     // 속성리스트 초기화
     target.find("div.layer-file").remove()
@@ -1828,10 +1837,10 @@ function addShpList() {
         if (type.indexOf('LineString') > -1) {
             // 링크 처리
             html += '<div class="layer-file basic-font" >'
-            if (aData.properties.isChecked === true || isAllChecked === true) {
-                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'" onchange="shpPropertyCheck('+i+')" checked>'
+            if (aData.properties.isChecked === true || isAllChecked === true && !notChecked.includes(i)) {
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" onchange="shpPropertyCheck('+i+')" checked>'
             } else {
-                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" value="'+aData.properties[matchLinkObj.linkId]+'" onchange="shpPropertyCheck('+i+')">'
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" onchange="shpPropertyCheck('+i+')">'
             }
             html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             html += '<div class="file-info">'
@@ -1841,10 +1850,10 @@ function addShpList() {
         } else {
             // 노드 처리
             html += '<div class="layer-file basic-font" >'
-            if (aData.properties.isChecked === true || isAllChecked === true) {
-                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'" onchange="shpPropertyCheck('+i+')" checked>'
+            if (aData.properties.isChecked === true || isAllChecked === true && !notChecked.includes(i)) {
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_node" onchange="shpPropertyCheck('+i+')" checked>'
             } else {
-                html += '<input  class="isCheck'+i+'" type="checkbox" name="selected_node" value="'+aData.properties[matchNodeObj.nodeId]+'" onchange="shpPropertyCheck('+i+')">'
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_node"  onchange="shpPropertyCheck('+i+')">'
             }
             html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             html += '<div class="file-info">'
@@ -1875,12 +1884,13 @@ function shpPropertyAllChecked() {
             break;
         }
     }
-
-    if (allChecked) {
+    if (isAllChecked && notChecked.length === 0) {
         $('#all-check').text('전체 취소')
-    } else {
+    } else  {
         $('#all-check').text('전체 선택')
     }
+
+
 }
 
 // shp 파일 속성 리스트에서 속성 보기 함수
@@ -1903,6 +1913,11 @@ function shpPropertyCheck(i) {
     if ($(".isCheck" + i).is(":checked")) {
         loadData.data.features[i].properties.isChecked = true;
         shpDataIdxArr.push(i);
+        for (j = 0; j < notChecked.length; j++) {
+            if (notChecked[j] === i) {
+                notChecked.splice(j, 1)
+            }
+        }
         shpPropertyAllChecked()
     } else {
         loadData.data.features[i].properties.isChecked = false;
@@ -1910,6 +1925,7 @@ function shpPropertyCheck(i) {
         if (index !== -1) {
             shpDataIdxArr.splice(index, 1);
         }
+        notChecked.push(i)
         shpPropertyAllChecked()
     }
 }
@@ -1928,6 +1944,7 @@ function shpListAllChecked() {
             loadData.data.features[i].properties.isChecked = true;
             $(".isCheck" + i).prop('checked', true);
         }
+        notChecked = []
         $('#all-check').text('전체 취소')
     } else {
         isAllChecked = false
@@ -1963,15 +1980,16 @@ function updatePagingUI() {
         pagingHtml += '<button class="prev-page">이전</button>';
     }
 
-    if (pageIdx <= 0) {
-        pageIdx = 1
-    }
-
-    if (pageIdx > totalPages) {
+    if (pageIdx > totalPages ) {
         pageIdx = totalPages
     }
 
-    pagingHtml += '<span>페이지 <input id="pageCount" type="text" value="' + (pageIdx) +'"> / ' + totalPages + '</span>';
+    if (pageIdx+1 > totalPages) {
+        pagingHtml += '<span>페이지 <input id="pageCount" type="text" value="' +pageIdx+'"> / ' + totalPages + '</span>';
+    } else {
+        pagingHtml += '<span>페이지 <input id="pageCount" type="text" value="' + (pageIdx+1) +'"> / ' + totalPages + '</span>';
+    }
+
     if (pageIdx < totalPages - 1) {
         pagingHtml += '<button class="next-page">다음</button>';
     }
@@ -1983,7 +2001,7 @@ function updatePagingUI() {
     $('#pageCount').on('keydown', function(event) {
         if (event.key === 'Enter') {
             event.preventDefault(); // 기본 동작 방지
-            pageIdx = Number($('#pageCount').val())
+            pageIdx = Number($('#pageCount').val())-1
             addShpList();
         }
     });
@@ -2015,49 +2033,54 @@ function openAttrTab(obj, param) {
 
 function readProperties() {
     // shp 타입 확인
+    $(".attr-frm").empty();
     const shpType = loadData.data.features[0].geometry.type
-    let optionHtml = "";
-    // select 에 option 추가
+    let optionHtml = '</ul>';
+
+    //select 버튼 생성
     for (const key in loadData.data.features[0].properties) {
-        optionHtml += '<option value="'+key+'">'+key+'</option>';
+        if (loadData.data.features[0].properties[key] === '') {
+            optionHtml += '<li class="property-item" onclick="selectPropertyBtn(this)">'+key+'</li>';
+        } else {
+            optionHtml += '<li class="property-item" onclick="selectPropertyBtn(this)">'+key+' <p class="property-example">예) '+loadData.data.features[0].properties[key]+'</p></li>';
+        }
     }
 
-    // 부합되는 타입에 옵션 추가 후 테이블 보여주는 부분
-    if (shpType.indexOf("LineString") > -1) {
-        processDataType = "link"
-        $("#select_link_id").append(optionHtml);
-        $("#select_road_nm").append(optionHtml);
-        $("#attr-frm-link").show();
-    } else if (shpType.indexOf("Point") > -1) {
-        processDataType = "node"
-        $("#select_node_id").append(optionHtml);
-        $("#select_crossroad_nm").append(optionHtml);
-        $("#attr-frm-node").show();
-    }
+    optionHtml += '</ul>';
+    $('#property-select').append(optionHtml)
+    $('.attr-frm').show()
 
     // 완료 후 모달 표출
     $("#modal_attr").modal('show');
 }
 
+function selectPropertyBtn(e) {
+    $('.property-item').removeClass(' selected2');
+    $('.property-example').css('color', '#b2b2b2');
+
+    $(e).addClass('selected2')
+    $(e.children).css('color', 'white');
+}
 function saveToMatchObject() {
     if (processDataType === 'link') {
-        matchLinkObj.linkId = $("#select_link_id option:selected").val()
-        matchLinkObj.roadNm = $("#select_road_nm option:selected").val()
+        matchLinkObj.roadNm = $('.property-item.selected2').first().contents().filter(function() {
+            return this.nodeType === 3; // 텍스트 노드를 필터링합니다.
+        }).text().trim();
     } else {
-        matchNodeObj.nodeId = $("#select_node_id option:selected").val()
-        matchNodeObj.crossroadNm = $("#select_crossroad_nm option:selected").val()
+        matchNodeObj.crossroadNm = $('.property-item.selected2').first().contents().filter(function() {
+            return this.nodeType === 3; // 텍스트 노드를 필터링합니다.
+        }).text().trim();
     }
 
     // 모달 내용 초기화
     $("#modal_attr").modal('hide');
 
-    $("#attr-frm-link").hide();
-    $("#attr-frm-node").hide();
-
     $("#select_link_id").find("option").remove();
     $("#select_road_nm").find("option").remove();
     $("#select_node_id").find("option").remove();
     $("#select_crossroad_nm").find("option").remove();
+    $('#all-check').css('display', 'block')
+    $('.layer-file-list').css('height', 'calc(100% - 150px)')
 
     // 정보 매칭이 완료되었으면 SHP 리스트에 정보 표출
     addShpList()
