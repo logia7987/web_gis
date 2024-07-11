@@ -116,11 +116,12 @@ public class ApiController {
                     try (FileWriter fileWriter = new FileWriter(jsonFile)) {
                         fileWriter.write(jsonObj.toJSONString());
                     }
-
+                    System.out.println("데이터 전송");
                     // 파일 경로를 세션에 저장
                     session.setAttribute("jsonFilePath", jsonFile.getAbsolutePath());
                     // dataArr 에서 구분자로 사용할 파일명
                     session.setAttribute("fileName", shpFile.getName().replace(".shp", ""));
+                    System.out.println("데이터 전송 완료");
                 } catch (Exception e) {
                     e.printStackTrace();
                     result.put("error", "Shp to GeoJSON 변환 중 오류 발생");

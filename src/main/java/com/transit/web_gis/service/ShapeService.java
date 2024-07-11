@@ -214,14 +214,13 @@ public class ShapeService {
             firstColumn = false;
         }
 
-        insertSql.append(", \"TYPE\"");
         insertSql.append(", \"LNG\"");
         insertSql.append(", \"LAT\"");
         insertSql.append(", \"FILE_NAME\"");
         insertSql.append(", \"SHP_TYPE\"");
         insertSql.append(")");
 
-        valuesSql.append(", ?, ?, ?, ?, ?)");
+        valuesSql.append(", ?, ?, ?, ?)");
 
         String sql = insertSql.toString() + " " + valuesSql.toString();
 
@@ -229,6 +228,7 @@ public class ShapeService {
         jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
+
                 JSONObject feature = features.get(i);
                 JSONObject properties = (JSONObject) feature.get("properties");
                 JSONObject geometry = (JSONObject) feature.get("geometry");
@@ -237,7 +237,7 @@ public class ShapeService {
                 for (Object key : properties.keySet()) {
                     ps.setString(parameterIndex++, (String) properties.get(key));
                 }
-                ps.setString(parameterIndex++, (String) geometry.get("type"));
+
                 JSONArray coordinates = (JSONArray) geometry.get("coordinates");
                 ps.setString(parameterIndex++, coordinates.get(0) + "");
                 ps.setString(parameterIndex++, coordinates.get(1) + "");
