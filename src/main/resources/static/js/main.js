@@ -48,8 +48,7 @@ let selectedBasicLink;
 const ICON_STATION_SRC = '/image/icon_station.png';
 
 let matchLinkObj = {}
-let matchNodeObj = {}
-let processDataType = "";
+let matchObj = {}
 
 let pageIdx = 0;
 const itemsPerPage = 100; // 페이지당 항목 수
@@ -711,29 +710,29 @@ function handleFeatureSelection(e) {
             const featureType = selectedShp.geometry.type;
             let targetId;
             // 수정대상 타입 구분
+            const property = selectedShp;
             if (select === 'lineString' && featureType.indexOf("LineString") > -1) {
                 targetId = "linkId"
                 showLinkTool();
-                const property = findProperty(selectedShp.properties[targetId], targetId);
+                // const property = findProperty(selectedShp.properties[targetId], targetId);
+                const property = selectedShp;
                 if (property) {
-                    // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
                     editShp(property, targetId);
                 }
-            } else if (select === 'point' && featureType === 'Point' && selectedShp.properties.stationId === undefined) {
+            } else if (select === 'point' && featureType === 'Point' && selectedShp.properties.SHP_TYPE === "node") {
                 targetId = "nodeId"
-                const property = findProperty(selectedShp.properties[targetId], targetId);
+                // const property = findProperty(selectedShp.properties[targetId], targetId);
                 if (property) {
-                    // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
                     editShp(property, targetId);
                 }
                 showNodeStationTool();
-            } else if (select === 'station' && selectedShp.properties.stationId !== undefined) {
+            } else if (select === 'station' && selectedShp.properties.SHP_TYPE === "station") {
                 targetId = "stationId"
                 const property = findProperty(selectedShp.properties[targetId], targetId);
                 if (property) {
-                    // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
                     editShp(property, targetId);
                 }
+                showNodeStationTool();
             }
             // // 방식 변경하며 변경
             // if (e.features !== undefined) {
@@ -918,7 +917,6 @@ function deg2rad(deg) {
 }
 
 function findProperty(id, type) {
-    // const info = dataArr[fileNm].data.features;
     const info = linkNodeStationFeatures.features;
     for (let i = 0; i < info.length; i++) {
         if (info[i].properties[type] === id) {
@@ -958,8 +956,8 @@ function startViewerMode() {
 
 
 function startEditMode() {
+    // TODO 멘트 수정 필요
     toastOn("편집모드로 전환되었습니다. 좌측하단의 툴을 이용해 지도 위에 그리기가 가능합니다.")
-
 
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
@@ -1099,7 +1097,7 @@ function requestAjax(params, callback, asyncFlag) {
             if (data && Object.keys(data).length > 0) {
                 if (callback) callback(data);
             } else {
-                toastOn("지도에 표출할 정보가 없습니다. 상단의 이전 파일 불러오기에서 불러올 ShapeFile을 선택해주세요.");
+                // toastOn("지도에 표출할 정보가 없습니다. 상단의 이전 파일 불러오기에서 불러올 ShapeFile을 선택해주세요.");
             }
         },
         error : function(request, status, error) {
@@ -1132,7 +1130,6 @@ function setLinkNodeStationFeature() {
                         let geoJson = JSON.parse(result[key]);
 
                         for (let feature of geoJson.features) {
-                            console.log(feature);
                             // 현재 적용된 라벨 설정
                             // tNameLabelArr[feature.properties]
 
@@ -1692,7 +1689,7 @@ function addAttrList() {
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
-        if (aData.properties.SHP_TYPE !== 'link') {
+        if (aData.properties.SHP_TYPE === 'link') {
             // 링크 처리
             // 링크선 가운데 값 추출
             let lng = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][0]
@@ -1700,22 +1697,22 @@ function addAttrList() {
             linkHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\'' + lng + ',' + lat + '\')">'
             linkHtml += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             linkHtml += '<div class="file-info">'
-            linkHtml += '<div class="file-tit">' + aData.properties.linkId + '</div>'
+
+            nodeHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
+
             linkHtml += '</div>'
             linkHtml += '</div>'
-        } else if (aData.properties.SHP_TYPE !== 'node') {
+        } else if (aData.properties.SHP_TYPE === 'node') {
             // 노드 처리
             nodeHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
             nodeHtml += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             nodeHtml += '<div class="file-info">'
-            // if (aData.properties.crossroadNm.trim() === "") {
-                nodeHtml += '<div class="file-tit">링크명 없음</div>'
-            // } else {
-            //     nodeHtml += '<div class="file-tit">' + aData.properties.crossroadNm.trim() +'</div>'
-            // }
+
+            nodeHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
+
             nodeHtml += '</div>'
             nodeHtml += '</div>'
-        } else if (aData.properties.SHP_TYPE !== 'station') {
+        } else if (aData.properties.SHP_TYPE === 'station') {
             // 정류소 처리
             stationHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
             stationHtml += '<i class="fas fa-bus"></i>'
@@ -1783,7 +1780,7 @@ function addShpList() {
             }
             html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchLinkObj.roadNm] + '</div>'
+            html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchObj.label] + '</div>'
             html += '</div>'
             html += '</div>'
         } else {
@@ -1796,7 +1793,7 @@ function addShpList() {
             }
             html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             html += '<div class="file-info">'
-            html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchNodeObj.crossroadNm] +'</div>'
+            html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchObj.label] +'</div>'
             html += '</div>'
             html += '</div>'
         }
@@ -2001,15 +1998,9 @@ function selectPropertyBtn(e) {
     $(e.children).css('color', 'white');
 }
 function saveToMatchObject() {
-    if (processDataType === 'link') {
-        matchLinkObj.roadNm = $('.property-item.selected2').first().contents().filter(function() {
-            return this.nodeType === 3; // 텍스트 노드를 필터링합니다.
-        }).text().trim();
-    } else {
-        matchNodeObj.crossroadNm = $('.property-item.selected2').first().contents().filter(function() {
-            return this.nodeType === 3; // 텍스트 노드를 필터링합니다.
-        }).text().trim();
-    }
+    matchObj.label = $('.property-item.selected2').first().contents().filter(function() {
+        return this.nodeType === 3; // 텍스트 노드를 필터링합니다.
+    }).text().trim();
 
     // 모달 내용 초기화
     $("#modal_attr").modal('hide');
@@ -2265,6 +2256,8 @@ function pointToSegmentDistance(point, segment) {
 }
 
 function uploadShpTable() {
+    let selectedLabel = matchObj.label
+
     $.ajax({
         url : '/api/uploadShpTable',
         type : 'POST',
@@ -2272,10 +2265,15 @@ function uploadShpTable() {
             fileName : fileNm,
             idxArr: JSON.stringify(shpDataIdxArr),
             isAllChecked : isAllChecked,
-            shpType : shpType
+            shpType : shpType,
+            label: selectedLabel
         },
         success : function (result){
             console.log(result)
+            // TODO 완료 처리 필요
+            let html = '<a href="#" onclick="getShpData(this)">'+fileNm+'</a>'
+
+            $("body > header > div > div.custom-select > div.options").append(html);
         },
         error : function (error){
             console.log(error)

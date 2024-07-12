@@ -225,34 +225,17 @@ public class ApiController {
             commandMap.put("sc_NE_LAT", sc_NE_LAT);
             commandMap.put("sc_SW_LNG", sc_SW_LNG);
             commandMap.put("sc_SW_LAT", sc_SW_LAT);
-            commandMap.put("sc_MODE", sc_MODE);
             commandMap.put("fileName", aFileName);
 
             List<Map<String, Object>> resultData = shapeService.getShpData(commandMap);
             String shpType = (String) resultData.get(0).get("SHP_TYPE");
-            if (shpType.equals("node")) {
-                resultMap.put(aFileName+"_data", getGeoJsonNode(shapeService.getShpData(commandMap)));
-            } else if (shpType.equals("link")) {
-                resultMap.put(aFileName+"_data", getGeoJsonLink(shapeService.getShpData(commandMap)));
-            } else if (shpType.equals("station")) {
-                resultMap.put(aFileName+"_data", getGeoJsonLink(shapeService.getShpData(commandMap)));
-            }
-//            resultMap.put("message", fileName + " 정보를 불러왔습니다!");
-        }
 
-//        if (sc_MODE.equals("S")) {
-//            // 정류소 정보 호출
-//            resultMap.put("success", true);
-//            resultMap.put("data", getGeoJsonStation(bmsService.getStation(commandMap)));
-//        } else if (sc_MODE.equals("N")) {
-//            // 노드 정보 호출
-//            resultMap.put("success", true);
-//            resultMap.put("data", getGeoJsonNode(bmsService.getNode(commandMap)));
-//        } else if (sc_MODE.equals("L")) {
-//            // 링크 정보 호출
-//            resultMap.put("success", true);
-//            resultMap.put("data", getGeoJsonLink(bmsService.getLink(commandMap)));
-//        }
+            switch (shpType) {
+                case "node" -> resultMap.put(aFileName + "_data", getGeoJsonNode(shapeService.getShpData(commandMap)));
+                case "link" -> resultMap.put(aFileName + "_data", getGeoJsonLink(shapeService.getShpData(commandMap)));
+                case "station" -> resultMap.put(aFileName + "_data", getGeoJsonStation(shapeService.getShpData(commandMap)));
+            }
+        }
 
         return resultMap;
     }
@@ -336,12 +319,13 @@ public class ApiController {
     public void saveShpFileTable(@RequestParam("fileName") String tableName,
                                  @RequestParam("idxArr") String idxArr,
                                  @RequestParam("isAllChecked") boolean isAllChecked,
-                                 @RequestParam("shpType") String shpType) {
+                                 @RequestParam("shpType") String shpType,
+                                 @RequestParam("label") String label) {
 
         System.out.println(idxArr);
         System.out.println(isAllChecked + "");
 
-        shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType);
+        shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType, label);
     }
 
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
@@ -483,19 +467,15 @@ public class ApiController {
             for( Map.Entry<String, Object> entry : data.entrySet() ){
                 String strKey = entry.getKey();
                 String strValue = (String) entry.getValue();
-                properties.put(strKey, strValue);
-            }
 
-            //링크 lineString 좌표값 받아오기
-            HashMap<String, Object> paramMap = new HashMap<>();
-//            paramMap.put("sc_LINK_ID", data.getLink_id());
-
-            // TODO 링크 포인트 CREATE 미완으로 보류
-            List<BmsVo> coords = bmsService.getLinkPointByLinkId(paramMap);
-
-            for(BmsVo coord : coords){
-                List<Double> tmpCoord = new ArrayList<>(Arrays.asList(Double.parseDouble(coord.getLng()), Double.parseDouble(coord.getLat())));
-                coordinates.add(tmpCoord);
+                if (strKey.equals("GEOMETRY")) {
+//                    for(BmsVo coord : coords){
+//                        List<Double> tmpCoord = new ArrayList<>(Arrays.asList(Double.parseDouble(coord.getLng()), Double.parseDouble(coord.getLat())));
+//                        coordinates.add(tmpCoord);
+//                    }
+                } else {
+                    properties.put(strKey, strValue);
+                }
             }
 
             features.add(feature);
@@ -504,18 +484,21 @@ public class ApiController {
         return geojson.toJSONString();
     }
 
-    public String getGeoJsonStation(List<BmsVo> datas) {
+    public String getGeoJsonStation(List<Map<String, Object>> datas) {
         JSONObject geojson = new JSONObject();
         JSONArray features = new JSONArray();
 
         geojson.put("type", "FeatureCollection");
         geojson.put("features", features);
 
-        for(BmsVo data : datas){
+        for(Map<String, Object> data : datas){
             JSONObject feature = new JSONObject();
             JSONObject properties = new JSONObject();
             JSONObject geometry = new JSONObject();
             JSONArray coordinates = new JSONArray();
+            // .set 사용을 위한 공란 추가
+            coordinates.add(0);
+            coordinates.add(0);
 
             //feature 틀 생성
             feature.put("type", "Feature");
@@ -529,56 +512,20 @@ public class ApiController {
             properties.put("iconId", STATION_ICON_ID);
             properties.put("label", "");
             properties.put("emptyLabel", "");
-            properties.put("iconSize", STATION_ICON_SIZE);
-            properties.put("textSize", STATION_LABEL_SIZE);
-            properties.put("textOffset", STATION_LABEL_OFFSET);
-            properties.put("textOpacity", STATION_LABEL_OPACITY);
 
             //properties 정류소 속성 정보 데이터 삽입
-            properties.put("stationId", data.getStation_id());
-            properties.put("stationNm", data.getStation_nm());
-            properties.put("linkId", data.getLink_id());
-            properties.put("stationUseCd", data.getStation_use_cd());
-            properties.put("StationUseNm", data.getStation_use_nm());
-            properties.put("trsfStationYn", data.getTrsf_station_yn());
-            properties.put("trsfStationNm", data.getTrsf_station_nm());
-            properties.put("ctrdYn", data.getCtrd_yn());
-            properties.put("ctrdNm", data.getCtrd_nm());
-            properties.put("stationNmEng", data.getStation_nm_eng());
-            properties.put("arsId", data.getArs_id());
-            properties.put("orgCd", data.getOrg_cd());
-            properties.put("gisYn", data.getGis_yn());
-            properties.put("rgtrId", data.getRgtr_id());
-            properties.put("regDt", data.getReg_dt());
-            properties.put("mdfrId", data.getMdfr_id());
-            properties.put("mdfcnDt", data.getMdfcn_dt());
-            properties.put("note", data.getNote());
-            properties.put("stdgCd", data.getStdg_cd());
-            properties.put("areaCd", data.getArea_cd());
-            properties.put("useYn", data.getUse_yn());
-            properties.put("stationNmChn", data.getStation_nm_chn());
-            properties.put("stationNmJap", data.getStation_nm_jap());
-            properties.put("stationNmVnm", data.getStation_nm_vnm());
-            properties.put("lat", Double.parseDouble(data.getLat()));
-            properties.put("lng", Double.parseDouble(data.getLng()));
+            for( Map.Entry<String, Object> entry : data.entrySet() ){
+                String strKey = entry.getKey();
+                String strValue = (String) entry.getValue();
+                properties.put(strKey, strValue);
 
-            properties.put("bitInstlYn", data.getBit_instl_yn());
-            properties.put("bitPrYn", data.getBit_pr_yn());
-            properties.put("stationTypeCd", data.getStation_type_cd());
-            properties.put("bitTypeCd01", data.getBit_type_cd_01());
-            properties.put("bitTypeCd02", data.getBit_type_cd_02());
-            properties.put("bitTypeCd03", data.getBit_type_cd_03());
-            properties.put("bitTypeCd04", data.getBit_type_cd_04());
-            properties.put("bitTypeCd05", data.getBit_type_cd_05());
-            properties.put("bitTypeCd06", data.getBit_type_cd_06());
-
-            properties.put("lotNumAddr", data.getLot_num_addr());
-            properties.put("rideTnsCnt", data.getRide_tns_cnt());
-            properties.put("alightCnt", data.getAlight_cnt());
-
-            //geometry 데이터 삽입
-            coordinates.add(Double.parseDouble(data.getLng()));
-            coordinates.add(Double.parseDouble(data.getLat()));
+                //geometry 데이터 삽입
+                if (strKey.equals("LAT")) {
+                    coordinates.set(1, Double.parseDouble(strValue));
+                } else if (strKey.equals("LNG")) {
+                    coordinates.set(0, Double.parseDouble(strValue));
+                }
+            }
 
             features.add(feature);
         }
@@ -598,6 +545,7 @@ public class ApiController {
             JSONObject properties = new JSONObject();
             JSONObject geometry = new JSONObject();
             JSONArray coordinates = new JSONArray();
+            // .set 사용을 위한 공란 추가
             coordinates.add(0);
             coordinates.add(0);
 

@@ -34,12 +34,12 @@
         <div class="select-shape-area">
             <span class="radio-label">업로드할 파일의 형태를 선택을 해주세요</span>
             <div class="select-shape-btn">
-                <button name="shpType" class="shape-btn" id="shpType_station" onclick="clickSelectBtn(this)" style="margin-left: 0">정류소</button>
-                <button name="shpType" class="shape-btn" id="shpType_node" onclick="clickSelectBtn(this)" >노드</button>
-                <button name="shpType" class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)">링크</button>
+                <button class="shape-btn" id="shpType_station" onclick="clickSelectBtn(this)" style="margin-left: 0">정류소</button>
+                <button class="shape-btn" id="shpType_node" onclick="clickSelectBtn(this)" >노드</button>
+                <button class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)">링크</button>
             </div>
         </div>
-        <button type="button" class="btn btn-primary btn-send" onclick="sendFiles()" onchange="displayFile(this)">전송</button>
+        <button type="button" class="btn btn-primary btn-send" onclick="sendFiles()">전송</button>
     </div>
 </body>
 <script th:inline="javascript">
@@ -152,9 +152,7 @@
                 parent.viewLoading()
             },
             complete: function( ) {
-                parent.shpType = $('.shape-btn.selected2').attr('id')
-
-                // finishLoading();
+                parent.shpType = $('.shape-btn.selected2').attr('id').replace("shpType_", "");
             },
             success: function(response) {
                 if (response.error) {
