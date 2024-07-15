@@ -55,8 +55,19 @@ public class ShapeService {
         return shapeMapper.selectShpList();
     }
 
-    public List<Map<String, Object>> getShpData(Map<String, Object> commandMap) {
-        return shapeMapper.getShpData(commandMap);
+    public List<Map<String, Object>> getShpColumnNames(String fileName) {
+        return shapeMapper.getShpColumnNames(fileName);
+    }
+
+    public Map<String, Object> checkShpType(Map<String, Object> commandMap) {
+        return shapeMapper.checkShpType(commandMap);
+    }
+    public List<Map<String, Object>> getNodeShpData(Map<String, Object> commandMap) {
+        return shapeMapper.getNodeShpData(commandMap);
+    }
+
+    public List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap) {
+        return shapeMapper.getLinkShpData(commandMap);
     }
 
     @Transactional
@@ -90,11 +101,11 @@ public class ShapeService {
                             if (isChecked) {
                                 // 전체 선택 - 모든 Feature 를 저장한다.
                                 System.out.println("전체 입력 수행 중");
-                                saveLink(tableName, features, shpType, null);
+                                saveLink(tableName, features, shpType, null, label);
                                 System.out.println("전체 입력 수행 완료");
                             } else {
                                 // 일부 선택 - 전달받은 index 를 추출하여 저장한다.
-                                saveLink(tableName, features, shpType, bArr);
+                                saveLink(tableName, features, shpType, bArr, label);
                             }
                             
                         } else if (typeString.equals("Point")) {
@@ -113,15 +124,17 @@ public class ShapeService {
                         throw new RuntimeException(e);
                     }
 
+                    resultMap.put("result", "success");
                     resultMap.put("message", "ShapeFile 이 정상적으로 저장되었습니다.");
                 } catch (IOException e) {
                     e.printStackTrace();
-                    resultMap.put("error", "ShapeFile 을 읽는데 에러가 발생했습니다.");
+                    resultMap.put("result", "error");
+                    resultMap.put("message", "ShapeFile 을 읽는데 에러가 발생했습니다.");
                 }
             }
         } else {
-            System.out.println("DB에 있음. 명칭을 수정하여 입력할지?");
-            resultMap.put("message", "DB에 있음. 명칭을 수정하여 입력할지?");
+            resultMap.put("result", "has");
+            resultMap.put("message", "업로드한 파일이 현재 DB에 있습니다. 명칭을 수정하여 다시 업로드해주세요.");
         }
 
         return resultMap;
@@ -155,6 +168,9 @@ public class ShapeService {
                     firstColumn = false;
                 }
 
+                // 편집모드 선택을 위한 객체 ID 부여
+                createTableSql.append(", \"").append(tableName).append("_ID\" NUMBER");
+
                 // 분류를 위한 공통 컬럼
                 createTableSql.append(", \"FILE_NAME\" VARCHAR2(100)");
                 createTableSql.append(", \"SHP_TYPE\" VARCHAR2(100)");
@@ -163,7 +179,11 @@ public class ShapeService {
                 JSONObject geometry = (JSONObject) firstFeature.get("geometry");
                 String typeString = checkFeatureType(geometry);
                 if (typeString.equals("Link")) {
-                    createTableSql.append(", \"GEOMETRY\" MDSYS.SDO_GEOMETRY");
+                    createTableSql.append(", \"GEOMETRY\" CLOB");
+                    createTableSql.append(", \"F_LNG\" VARCHAR2(100)");
+                    createTableSql.append(", \"F_LAT\" VARCHAR2(100)");
+                    createTableSql.append(", \"T_LNG\" VARCHAR2(100)");
+                    createTableSql.append(", \"T_LAT\" VARCHAR2(100)");
                 } else if (typeString.equals("Point")) {
                     createTableSql.append(", \"LNG\" VARCHAR2(100)");
                     createTableSql.append(", \"LAT\" VARCHAR2(100)");
@@ -217,6 +237,7 @@ public class ShapeService {
             firstColumn = false;
         }
 
+        insertSql.append(", \"").append(tableName).append("_ID\"");
         insertSql.append(", \"LNG\"");
         insertSql.append(", \"LAT\"");
         insertSql.append(", \"FILE_NAME\"");
@@ -224,7 +245,7 @@ public class ShapeService {
         insertSql.append(", \"LABEL_COLUMN\"");
         insertSql.append(")");
 
-        valuesSql.append(", ?, ?, ?, ?, ?)");
+        valuesSql.append(",? , ?, ?, ?, ?, ?)");
 
         String sql = insertSql.toString() + " " + valuesSql.toString();
 
@@ -243,6 +264,7 @@ public class ShapeService {
                 }
 
                 JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+                ps.setInt(parameterIndex++, (i+1));
                 ps.setString(parameterIndex++, coordinates.get(0) + "");
                 ps.setString(parameterIndex++, coordinates.get(1) + "");
                 ps.setString(parameterIndex++, tableName);
@@ -257,7 +279,7 @@ public class ShapeService {
         });
     }
 
-    private void saveLink(String tableName, List<JSONObject> features, String shpType, String[] bArr) {
+    private void saveLink(String tableName, List<JSONObject> features, String shpType, String[] bArr, String label) {
         Set<Integer> indicesToSave = new HashSet<>();
         if (bArr != null) {
             for (String index : bArr) {
@@ -268,14 +290,13 @@ public class ShapeService {
             }
         }
 
+        JSONObject sampleFeature = features.get(0);
+        JSONObject properties = (JSONObject) sampleFeature.get("properties");
+
         StringBuilder insertSql = new StringBuilder("INSERT INTO " + tableName + " (");
         StringBuilder valuesSql = new StringBuilder("VALUES (");
         boolean firstColumn = true;
 
-        JSONObject sampleFeature = features.get(0);
-        JSONObject properties = (JSONObject) sampleFeature.get("properties");
-
-        // 컬럼명 설정
         for (Object key : properties.keySet()) {
             if (!firstColumn) {
                 insertSql.append(", ");
@@ -286,70 +307,59 @@ public class ShapeService {
             firstColumn = false;
         }
 
-        // 추가 컬럼 설정
-        insertSql.append(", \"FILE_NAME\", \"SHP_TYPE\", \"GEOMETRY\")");
-        valuesSql.append(", ?, ?, SDO_GEOMETRY(2002, NULL, NULL, SDO_ELEM_INFO_ARRAY(1, 2, 1), SDO_ORDINATE_ARRAY(?");
+        insertSql.append(", \"").append(tableName).append("_ID\"");
+        insertSql.append(", \"FILE_NAME\"");
+        insertSql.append(", \"SHP_TYPE\"");
+        insertSql.append(", \"GEOMETRY\"");
+        insertSql.append(", \"F_LNG\"");
+        insertSql.append(", \"F_LAT\"");
+        insertSql.append(", \"T_LNG\"");
+        insertSql.append(", \"T_LAT\"");
+        insertSql.append(", \"LABEL_COLUMN\"");
+        insertSql.append(")");
 
-        String sqlTemplate = insertSql + " " + valuesSql.toString();
+        valuesSql.append(", ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+        String sql = insertSql + " " + valuesSql;
 
         // insert 실행
-        jdbcTemplate.batchUpdate(sqlTemplate + ")))",new BatchPreparedStatementSetter() {
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 int actualIndex = (bArr == null) ? i : (int) indicesToSave.toArray()[i];
                 JSONObject feature = features.get(actualIndex);
                 JSONObject properties = (JSONObject) feature.get("properties");
-                JSONArray coordinates = (JSONArray) ((JSONObject) feature.get("geometry")).get("coordinates");
+                JSONObject geometry = (JSONObject) feature.get("geometry");
+                JSONArray coordinates = (JSONArray) ((JSONArray) geometry.get("coordinates")).get(0);
 
-                // 좌표 배열 설정
-                JSONArray coords = (JSONArray) coordinates.get(0);
-                int numCoords = coords.size() * 2; // 각 좌표는 [lng, lat] 쌍이므로 2배로 계산
-
-                // PreparedStatement에 값 설정
                 int parameterIndex = 1;
                 for (Object key : properties.keySet()) {
                     ps.setString(parameterIndex++, String.valueOf(properties.get(key)));
                 }
+
+                ps.setInt(parameterIndex++, i+1);
                 ps.setString(parameterIndex++, tableName);
                 ps.setString(parameterIndex++, shpType);
+                ps.setString(parameterIndex++, geometry.toString());
 
-                // 좌표값을 문자열로 변환하여 설정
-                StringBuilder sb = new StringBuilder();
-
-
-                for (int j = 0; j < coords.size(); j++) {
-                    JSONArray coordPair = (JSONArray) coords.get(j);
-                    double lng = ((Number) coordPair.get(0)).doubleValue();  // 첫 번째 좌표값
-                    double lat = ((Number) coordPair.get(1)).doubleValue();  // 두 번째 좌표값
-
-                    sb.append("'").append(lng).append("', '").append(lat).append("'");
-
-                    // 마지막 좌표쌍이 아니면 콤마 추가
-                    if (j < coords.size() - 1) {
-                        sb.append(",");
-                    }
-                }
-                String coordinateString = sb.toString();
-                if (coordinateString.endsWith(",")) {
-                    coordinateString = coordinateString.substring(0, coordinateString.length() - 1);
-                }
-
-                // TODO 작업 필요
-//                oracle.jdbc.OracleDriver ora = new oracle.jdbc.OracleDriver();
-//                java.sql.Connection conn = ora.defaultConnection();
-//                OracleConnection oraConn = conn.unwrap(OracleConnection.class);
-//                oracle.sql.ARRAY widgets = oraConn.createARRAY("widgets_t", elements);
-
-                System.out.println("COORD : " + coordinateString);
-                // PreparedStatement에 값 설정
-                ps.setString(parameterIndex, coordinateString);
+                JSONArray fromCoordinate = (JSONArray) coordinates.get(0);
+                JSONArray toCoordinate = (JSONArray) coordinates.get(coordinates.size()-1);
+                // F_LNG
+                ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
+                // F_LAT
+                ps.setString(parameterIndex++, fromCoordinate.get(1).toString());
+                // T_LNG
+                ps.setString(parameterIndex++, toCoordinate.get(0).toString());
+                // T_LAT
+                ps.setString(parameterIndex++, toCoordinate.get(1).toString());
+                // 기본 라벨
+                ps.setString(parameterIndex, label);
             }
 
             @Override
             public int getBatchSize() {
                 return (bArr == null) ? features.size() : indicesToSave.size();
             }
-
         });
     }
 

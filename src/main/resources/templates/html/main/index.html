@@ -49,7 +49,12 @@
             <div class="custom-select">
                 <div class="select-display">이전 파일 불러오기</div>
                 <div class="options">
-                    <a href="#" th:each="shp : ${shpList}" th:text="${shp.table_name}" onclick="getShpData(this)"></a>
+                    <a href="#" th:each="shp : ${shpList}" th:attr="data-table-name=${shp.table_name}" onclick="getShpData(this)">
+                        <span th:text="${shp.table_name}"></span>
+                        <span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >
+                            <i class="fas fa-check"></i>
+                        </span>
+                    </a>
                 </div>
             </div>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
@@ -119,7 +124,7 @@
     <div id="tab2" class="tab">
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>SHP</h5>
-            <h5 class="shpSavebtn" onclick="uploadShpTable()">저장</h5>
+            <h5 class="shpSaveBtn" onclick="uploadShpTable()">저장</h5>
         </div>
         <div id="all-check" onclick="shpListAllChecked()">전체 선택</div>
         <div class="layer-file-list basic-font">
@@ -225,52 +230,9 @@
                         <th>라벨</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr>
-                        <td>
-                            <input id="nodeShowFlag" class="show-layer" type="checkbox" value="node" checked="">
-                        </td>
-                        <td>노드</td>
-                        <td>
-                            <select id="nodeShowLvl" class="select-box-zoom" value="14">
-                                <option value="">선택</option>
-                                <option value="14" selected="">14</option>
-                                <option value="16">16</option>
-                                <option value="18">18</option>
-                                <option value="20">20</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select id="nodeShowLabel" class="select-label">
-                                <option value="emptyLabel">없음</option>
-                                <option value="nodeId">노드 ID</option>
-                                <option value="lat">위도</option>
-                                <option value="lng">경도</option>
-                                <option value="crossroadNm">교차로명</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <input id="linkShowFlag" class="show-layer" type="checkbox" value="link" checked="">
-                        </td>
-                        <td>링크</td>
-                        <td>
-                            <select id="linkShowLvl" class="select-box-zoom" value="14">
-                                <option value="">선택</option>
-                                <option value="14" selected="">14</option>
-                                <option value="16">16</option>
-                                <option value="18">18</option>
-                                <option value="20">20</option>
-                            </select>
-                        </td>
-                        <td>
-                            <select id="linkShowLabel" class="select-label">
-                                <option value="emptyLabel">없음</option>
-                                <option value="linkId">링크 ID</option>
-                                <option value="linkDist">거리</option>
-                            </select>
-                        </td>
+                <tbody id="layerOptionList">
+                    <tr id="empty-layerOption">
+                        <td colspan="4">불러온 ShapeFile 이 없습니다!</td>
                     </tr>
                 </tbody>
             </table>

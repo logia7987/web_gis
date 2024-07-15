@@ -3,7 +3,6 @@ package com.transit.web_gis.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.transit.web_gis.service.*;
-import com.transit.web_gis.vo.BmsVo;
 import com.transit.web_gis.vo.FeatureVo;
 import com.transit.web_gis.vo.GeometryVo;
 import com.transit.web_gis.vo.ShpVo;
@@ -15,23 +14,15 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.opengis.referencing.FactoryException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.StringReader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.text.DecimalFormat;
+import java.sql.Clob;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -194,7 +185,6 @@ public class ApiController {
         GeometryVo geometryVo = new GeometryVo();
         geometryVo.setFeatureVo(nFeature);
         geometryVo.setType((String) geometry.get("type"));
-//        geometryVo.setCoordinates(geometry.toString());
         geometryVo.setCoordinates(geometry.get("coordinates").toString());
 
         geometryService.saveGeometry(geometryVo);
@@ -212,29 +202,20 @@ public class ApiController {
         double sc_NE_LAT = (double) params.get("sc_NE_LAT");
         double sc_SW_LNG = (double) params.get("sc_SW_LNG");
         double sc_SW_LAT = (double) params.get("sc_SW_LAT");
-        String sc_MODE = (String) params.get("sc_MODE");
         String fileName = (String) params.get("fileName");
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        String[] fileNames = objectMapper.readValue(fileName, String[].class);
+        commandMap.put("sc_NE_LNG", sc_NE_LNG);
+        commandMap.put("sc_NE_LAT", sc_NE_LAT);
+        commandMap.put("sc_SW_LNG", sc_SW_LNG);
+        commandMap.put("sc_SW_LAT", sc_SW_LAT);
+        commandMap.put("fileName", fileName);
 
-        // 배열 초기화
-        List<String> tNameList = new ArrayList<>();
-        for (String aFileName : fileNames) {
-            commandMap.put("sc_NE_LNG", sc_NE_LNG);
-            commandMap.put("sc_NE_LAT", sc_NE_LAT);
-            commandMap.put("sc_SW_LNG", sc_SW_LNG);
-            commandMap.put("sc_SW_LAT", sc_SW_LAT);
-            commandMap.put("fileName", aFileName);
-
-            List<Map<String, Object>> resultData = shapeService.getShpData(commandMap);
-            String shpType = (String) resultData.get(0).get("SHP_TYPE");
-
-            switch (shpType) {
-                case "node" -> resultMap.put(aFileName + "_data", getGeoJsonNode(shapeService.getShpData(commandMap)));
-                case "link" -> resultMap.put(aFileName + "_data", getGeoJsonLink(shapeService.getShpData(commandMap)));
-                case "station" -> resultMap.put(aFileName + "_data", getGeoJsonStation(shapeService.getShpData(commandMap)));
-            }
+        String sc_MODE = (String) shapeService.checkShpType(commandMap).get("SHP_TYPE");
+        commandMap.put("sc_MODE", sc_MODE);
+        switch (sc_MODE) {
+            case "node" -> resultMap.put(fileName + "_data", getGeoJsonNode(shapeService.getNodeShpData(commandMap)));
+            case "link" -> resultMap.put(fileName + "_data", getGeoJsonLink(shapeService.getLinkShpData(commandMap)));
+//                case "station" -> resultMap.put(aFileName + "_data", getGeoJsonStation(shapeService.getShpData(commandMap)));
         }
 
         return resultMap;
@@ -277,7 +258,7 @@ public class ApiController {
                 commandMap.put("stationId", properties.get("stationId"));
                 commandMap.put("lng", lng); // double 형식으로 변환
                 commandMap.put("lat", lat); // double 형식으로 변환
-                System.out.println("stationId : " + commandMap.get("stationId"));
+
                 if (bmsService.updateStationGeometry(commandMap) > 0) {
                     resultMap.put("result", "success");
                 } else {
@@ -316,16 +297,20 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(value="/uploadShpTable", method=RequestMethod.POST)
-    public void saveShpFileTable(@RequestParam("fileName") String tableName,
-                                 @RequestParam("idxArr") String idxArr,
-                                 @RequestParam("isAllChecked") boolean isAllChecked,
-                                 @RequestParam("shpType") String shpType,
-                                 @RequestParam("label") String label) {
+    public Map<String, Object> saveShpFileTable(@RequestParam("fileName") String tableName,
+                                                @RequestParam("idxArr") String idxArr,
+                                                @RequestParam("isAllChecked") boolean isAllChecked,
+                                                @RequestParam("shpType") String shpType,
+                                                @RequestParam("label") String label) {
 
-        System.out.println(idxArr);
-        System.out.println(isAllChecked + "");
+        return shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType, label);
+    }
 
-        shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType, label);
+    @ResponseBody
+    @RequestMapping(value = "/getShpProperties", method = RequestMethod.POST)
+    public List<Map<String, Object>> getShpProperties(@RequestParam("fileName") String fileName) {
+
+        return shapeService.getShpColumnNames(fileName);
     }
 
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
@@ -426,18 +411,6 @@ public class ApiController {
         return input;
     }
 
-    private static JsonArray convertToJsonArray(String jsonCoordinates) {
-        // JsonArrayBuilder 생성
-        JsonArrayBuilder jsonArrayBuilder = Json.createArrayBuilder();
-
-        // JSON 문자열을 파싱하여 JsonArray로 변환
-        // 여기서는 간단하게 JsonArray의 첫 번째 요소로만 변환하였습니다.
-        jsonArrayBuilder.add(Json.createReader(new StringReader(jsonCoordinates)).readArray());
-
-        // 완성된 JsonArray 반환
-        return jsonArrayBuilder.build();
-    }
-
     public String getGeoJsonLink(List<Map<String, Object>> datas) throws Exception{
         JSONObject geojson = new JSONObject();
         JSONArray features = new JSONArray();
@@ -466,15 +439,19 @@ public class ApiController {
             //properties 정류소 속성 정보 데이터 삽입
             for( Map.Entry<String, Object> entry : data.entrySet() ){
                 String strKey = entry.getKey();
-                String strValue = (String) entry.getValue();
+                Object value = entry.getValue();
 
                 if (strKey.equals("GEOMETRY")) {
-//                    for(BmsVo coord : coords){
-//                        List<Double> tmpCoord = new ArrayList<>(Arrays.asList(Double.parseDouble(coord.getLng()), Double.parseDouble(coord.getLat())));
-//                        coordinates.add(tmpCoord);
-//                    }
+                    String geometryString = clobToString((Clob) entry.getValue());
+
+                    JSONArray coordArray = (JSONArray) ((JSONArray) ((JSONObject) new org.json.simple.parser.JSONParser().parse(geometryString)).get("coordinates")).get(0);
+                    coordinates.addAll(coordArray);
                 } else {
-                    properties.put(strKey, strValue);
+                    if (value instanceof Number) {
+                        properties.put(strKey, value.toString());
+                    } else if (value instanceof String) {
+                        properties.put(strKey, (String) value);
+                    }
                 }
             }
 
@@ -565,19 +542,31 @@ public class ApiController {
             //properties 정류소 속성 정보 데이터 삽입
             for( Map.Entry<String, Object> entry : data.entrySet() ){
                 String strKey = entry.getKey();
-                String strValue = (String) entry.getValue();
-                properties.put(strKey, strValue);
+                Object value = entry.getValue();
+                properties.put(strKey, value.toString());
 
                 //geometry 데이터 삽입
                 if (strKey.equals("LAT")) {
-                    coordinates.set(1, Double.parseDouble(strValue));
+                    coordinates.set(1, Double.parseDouble((String) value));
                 } else if (strKey.equals("LNG")) {
-                    coordinates.set(0, Double.parseDouble(strValue));
+                    coordinates.set(0, Double.parseDouble((String) value));
                 }
             }
             features.add(feature);
         }
 
         return geojson.toJSONString();
+    }
+
+    private String clobToString(Clob clob) throws Exception {
+        StringBuilder sb = new StringBuilder();
+        Reader reader = clob.getCharacterStream();
+        BufferedReader br = new BufferedReader(reader);
+        String line;
+        while (null != (line = br.readLine())) {
+            sb.append(line);
+        }
+        br.close();
+        return sb.toString();
     }
 }

@@ -89,6 +89,8 @@ let tNameArr = [];
 // 보여줄 라벨 정의
 let tNameLabelArr = {};
 
+let isSaving = false;
+
 
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
@@ -212,15 +214,25 @@ function saveFeature(shpId, jsonObj, idx) {
 }
 
 function getShpData(obj) {
-    let fileName = $(obj).text();
+    let fileName = $(obj).find("span:eq(0)").text();
 
     // DB에서 불러올 명단에 추가
     if (!tNameArr.includes(fileName)) {
         tNameArr.push(fileName);
+        $(obj).find("span:eq(1)").show();
+    } else {
+        tNameArr = tNameArr.filter(function(item) {
+            return item !== fileName;
+        });
+        $(obj).find("span:eq(1)").hide();
     }
+
+    console.log(tNameArr);
 
     // 기본 라벨 정의 key : value 로 임시 값 부여
     tNameLabelArr[fileName] = "";
+
+    appendToLayerOption()
 
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
     if(map.getZoom() >= 14){
@@ -231,52 +243,6 @@ function getShpData(obj) {
         linkNodeStationFeatures.features = [];
         map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
     }
-
-    // $.ajax({
-    //     url : "/api/getShp",
-    //     type : "POST",
-    //     data : {
-    //         shpId : shpId
-    //     },
-    //     beforeSend: function( ) {
-    //         viewLoading()
-    //     },
-    //     complete: function( ) {
-    //         finishLoading();
-    //     },
-    //     success : function(data) {
-    //         hideModal('loadFile')
-    //         if (fileNmList.length > 0) {
-    //             var idx = 0
-    //             for (i = 0; i < fileNmList.length; i++) {
-    //                 if (fileNmList[i].indexOf(data.shpName) >  -1) {
-    //                     idx += 1
-    //                 }
-    //             }
-    //             if (idx !== 0) {
-    //                 data.fileName = data.shpName + '_' + idx
-    //             } else {
-    //                 data.fileName = data.shpName
-    //             }
-    //         } else {
-    //             data.fileName = data.shpName
-    //         }
-    //
-    //         if (checkDataType(data) === 'Point') {
-    //             drawNodePoint(data).then(r => true);
-    //         } else if (checkDataType(data) === 'MultiLineString') {
-    //             drawLinkLine(data).then(r => true);
-    //         } else {
-    //             drawPolyline(data).then(r => true);
-    //         }
-    //
-    //         createLayer(data, checkDataType(data))
-    //
-    //         toastOn("DB에 저장된 정보를 가져왔습니다.")
-    //     },
-    //     error: function () {
-    //     }
-    // });
 }
 
 
@@ -708,59 +674,27 @@ function handleFeatureSelection(e) {
             selectedShp = e.features[0];
             selectedShp.id = 1;
             const featureType = selectedShp.geometry.type;
-            let targetId;
+            const fileName = selectedShp.properties.FILE_NAME;
+
+            let targetId = fileName + "_ID";
             // 수정대상 타입 구분
-            const property = selectedShp;
+            const property = findProperty(selectedShp.properties[targetId], targetId);
             if (select === 'lineString' && featureType.indexOf("LineString") > -1) {
-                targetId = "linkId"
                 showLinkTool();
-                // const property = findProperty(selectedShp.properties[targetId], targetId);
-                const property = selectedShp;
                 if (property) {
                     editShp(property, targetId);
                 }
             } else if (select === 'point' && featureType === 'Point' && selectedShp.properties.SHP_TYPE === "node") {
-                targetId = "nodeId"
-                // const property = findProperty(selectedShp.properties[targetId], targetId);
                 if (property) {
                     editShp(property, targetId);
                 }
                 showNodeStationTool();
             } else if (select === 'station' && selectedShp.properties.SHP_TYPE === "station") {
-                targetId = "stationId"
-                const property = findProperty(selectedShp.properties[targetId], targetId);
                 if (property) {
                     editShp(property, targetId);
                 }
                 showNodeStationTool();
             }
-            // // 방식 변경하며 변경
-            // if (e.features !== undefined) {
-            //     selectedShp = e.features[0];
-            //     selectedShp.id = 1;
-            //     // 수정대상 타입 구분
-            //     const featureType = selectedShp.geometry.type;
-            //     let targetId;
-            //     if (featureType.indexOf("LineString") > -1) {
-            //         targetId = "linkId"
-            //
-            //         showLinkTool();
-            //     } else {
-            //         if (selectedShp.properties.stationId !== undefined) {
-            //             targetId = "stationId"
-            //         } else {
-            //             targetId = "nodeId"
-            //         }
-            //
-            //         showNodeStationTool();
-            //     }
-            //     const property = findProperty(selectedShp.properties[targetId], targetId);
-            //     if (property) {
-            //         // $('#' + selectedShp.properties[targetId]).parent().addClass("selected");
-            //         editShp(property, targetId);
-            //     }
-            // }
-
         }
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
@@ -794,7 +728,11 @@ function closeLayerOptionWindow() {
 }
 
 function openLayerOptionWindow() {
-    $('.layer-option-window').css('left', '10px')
+    if ($('.layer-option-window').css('left') == '10px') {
+        closeLayerOptionWindow()
+    } else {
+        $('.layer-option-window').css('left', '10px')
+    }
 }
 
 function isEdit() {
@@ -1107,7 +1045,7 @@ function requestAjax(params, callback, asyncFlag) {
 }
 
 function setLinkNodeStationFeature() {
-    return new Promise(function(resolve, reject) {
+    return new Promise(async function(resolve, reject) {
         // 공통 features 초기화
         linkNodeStationFeatures.features = [];
 
@@ -1117,54 +1055,62 @@ function setLinkNodeStationFeature() {
             sc_NE_LAT: turf.round(map.getBounds()._ne.lat, COORD_ROUND),
             sc_SW_LNG: turf.round(map.getBounds()._sw.lng, COORD_ROUND),
             sc_SW_LAT: turf.round(map.getBounds()._sw.lat, COORD_ROUND),
-            fileName : JSON.stringify(tNameArr)
         };
 
-        requestAjax(params, function(result) {
-            try {
-                // toastOn(result.message);
+        // Promise 배열 생성
+        let promises = [];
 
-                Object.entries(result).forEach(([key, value]) => {
-                    // console.log(`${key}:`, value);
-                    if (key !== "message") {
-                        let geoJson = JSON.parse(result[key]);
+        // 파일별로 요청을 병렬 처리
+        tNameArr.forEach(function(aName) {
+            params["fileName"] = aName;
+            let promise = new Promise(function(innerResolve, innerReject) {
+                requestAjax(params, function(result) {
+                    try {
+                        Object.entries(result).forEach(([key, value]) => {
+                            if (key !== "message") {
+                                let geoJson = JSON.parse(result[key]);
+                                geoJson.features.forEach(function(feature) {
+                                    linkNodeStationFeatures.features.push(feature);
+                                });
+                            }
+                        });
 
-                        for (let feature of geoJson.features) {
-                            // 현재 적용된 라벨 설정
-                            // tNameLabelArr[feature.properties]
-
-                            // 노드, 링크, 정류소 표출 여부 판단
-                            // 노드, 링크, 정류소 라벨 표출
-
-                            // 정보 업데이트 - 링크, 노드, 정류소 공통 features 저장
-                            linkNodeStationFeatures.features.push(feature);
-                        }
+                        innerResolve();
+                    } catch (error) {
+                        innerReject(error);
                     }
+                }, function(error) {
+                    innerReject(error);
                 });
+            });
 
-                // 데이터 소스에 features 업데이트
-                map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-                addAttrList();
-
-                // 레이어가 없을 때만 추가
-                if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(METER_DOT_LAYER_ID)) {
-                    // 링크 레이어 추가
-                    setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
-                    // 정류소 레이어 추가
-                    setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
-                    // 노드 레이어 추가
-                    setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
-                    // 링크 거리별 포인트 레이어 추가
-                    setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
-                }
-
-                resolve();
-            } catch (error) {
-                reject(error);
-            }
-        }, function(error) {
-            reject(error);
+            promises.push(promise);
         });
+
+        // 모든 요청이 완료될 때까지 기다림
+        try {
+            await Promise.all(promises);
+
+            // 데이터 소스에 features 업데이트
+            map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+            addAttrList();
+
+            // 레이어가 없을 때만 추가
+            if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(METER_DOT_LAYER_ID)) {
+                // 링크 레이어 추가
+                setLayerTypeLine(LINK_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, LINK_FEATURE_ID, true);
+                // 정류소 레이어 추가
+                setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
+                // 노드 레이어 추가
+                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
+                // 링크 거리별 포인트 레이어 추가
+                setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
+            }
+
+            resolve();
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
@@ -1697,9 +1643,7 @@ function addAttrList() {
             linkHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\'' + lng + ',' + lat + '\')">'
             linkHtml += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             linkHtml += '<div class="file-info">'
-
-            nodeHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
-
+            linkHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
             linkHtml += '</div>'
             linkHtml += '</div>'
         } else if (aData.properties.SHP_TYPE === 'node') {
@@ -1707,9 +1651,7 @@ function addAttrList() {
             nodeHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
             nodeHtml += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             nodeHtml += '<div class="file-info">'
-
             nodeHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
-
             nodeHtml += '</div>'
             nodeHtml += '</div>'
         } else if (aData.properties.SHP_TYPE === 'station') {
@@ -1717,11 +1659,7 @@ function addAttrList() {
             stationHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
             stationHtml += '<i class="fas fa-bus"></i>'
             stationHtml += '<div class="file-info">'
-            // if (aData.properties.stationNm.trim() === "") {
-                stationHtml += '<div class="file-tit">정류소명 없음</div>'
-            // } else {
-            //     stationHtml += '<div class="file-tit">' + aData.properties.stationNm.trim() +'</div>'
-            // }
+            stationHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
             stationHtml += '</div>'
             stationHtml += '</div>'
         }
@@ -2256,27 +2194,75 @@ function pointToSegmentDistance(point, segment) {
 }
 
 function uploadShpTable() {
-    let selectedLabel = matchObj.label
+    if (!isSaving) {
+        isSaving = true;
+        let selectedLabel = matchObj.label
 
-    $.ajax({
-        url : '/api/uploadShpTable',
-        type : 'POST',
-        data : {
-            fileName : fileNm,
-            idxArr: JSON.stringify(shpDataIdxArr),
-            isAllChecked : isAllChecked,
-            shpType : shpType,
-            label: selectedLabel
-        },
-        success : function (result){
-            console.log(result)
-            // TODO 완료 처리 필요
-            let html = '<a href="#" onclick="getShpData(this)">'+fileNm+'</a>'
+        $.ajax({
+            url : '/api/uploadShpTable',
+            type : 'POST',
+            data : {
+                fileName : fileNm,
+                idxArr: JSON.stringify(shpDataIdxArr),
+                isAllChecked : isAllChecked,
+                shpType : shpType,
+                label: selectedLabel
+            },
+            success : function (result){
+                console.log(result)
+                toastOn(result.message);
 
-            $("body > header > div > div.custom-select > div.options").append(html);
-        },
-        error : function (error){
-            console.log(error)
-        }
-    })
+                let html = '<a href="#" onclick="getShpData(this)"><span>'+fileNm+'</span>' +
+                    '<span class="option-selected" ' +
+                    'data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >' +
+                    '<i class="fas fa-check"></i></span></a>'
+
+                $("body > header > div > div.custom-select > div.options").append(html);
+
+                $("body > header > div > div.custom-select > div.options a:last-child").click();
+                isSaving = false;
+
+                clearShpList()
+            },
+            error : function (error){
+                console.log(error)
+            }
+        })
+    } else {
+        toastOn("현재 저장중인 파일이 있습니다. 잠시만 기다려주세요.");
+    }
+}
+
+// ShapeFile 업로드 후 리스트를 비우는 로직
+function clearShpList() {
+    $(".layer-file-list").find(".layer-file").remove();
+
+    isAllChecked = false
+}
+
+function appendToLayerOption(data) {
+    let html = '<tr>'
+    html += '<td>'
+    html += '<input id="showFlag" class="show-layer" type="checkbox" value="" checked="">'
+    html += '</td>'
+    html += '<td></td>'
+    html += '<td>'
+    html += '<select id="showLvl" class="select-box-zoom" value="14">'
+    html += '<option value="">선택</option>'
+    html += '<option value="14" selected>14</option>'
+    html += '<option value="16">16</option>'
+    html += '<option value="18">18</option>'
+    html += '<option value="20">20</option>'
+    html += '</select>'
+    html += '</td>'
+    html += '<td>'
+    html += '<select id="showLabel" class="select-label">'
+    html += '<option value="emptyLabel">없음</option>'
+    /*
+    *TODO for 돌려서 여기서 모든 옵션을 넣게 만듬
+    * 조건을 통하여 기본 선택 컬럼을 확인하여 selected 되어있게 작업할 필요가 있음
+    * */ 
+    html += '</select>'
+    html += '</td>'
+    html += '</tr>'
 }

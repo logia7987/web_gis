@@ -7,13 +7,43 @@
         WHERE owner = 'TRANSIT'
     </select>
 
-    <select id="getShpData" resultType="map" parameterType="map">
+    <select id="getShpColumnNames" resultType="map" parameterType="String">
+        SELECT *
+        FROM  TRANSIT.${fileName}
+        WHERE 1=1
+        AND rownum <![CDATA[<=]]> 1
+    </select>
+
+    <select id="checkShpType" resultType="map" parameterType="map">
+        SELECT DISTINCT SHP_TYPE
+        FROM TRANSIT.${fileName}
+    </select>
+
+    <select id="getNodeShpData" resultType="map" parameterType="map">
         SELECT *
         FROM TRANSIT.${fileName}
         WHERE 1 = 1
-        AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
-        AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
-        AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
-        AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
+          AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
+          AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
+          AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
+          AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
     </select>
+
+    <select id="getLinkShpData" resultType="map" parameterType="map">
+        SELECT *
+        FROM TRANSIT.${fileName}
+        WHERE 1 = 1
+        AND (
+            (F_LNG <![CDATA[<=]]> #{sc_NE_LNG} AND F_LAT <![CDATA[<=]]> #{sc_NE_LAT} AND F_LNG <![CDATA[>=]]> #{sc_SW_LNG} AND F_LAT <![CDATA[>=]]> #{sc_SW_LAT})
+            OR
+            (T_LNG <![CDATA[<=]]> #{sc_NE_LNG} AND T_LAT <![CDATA[<=]]> #{sc_NE_LAT} AND T_LNG <![CDATA[>=]]> #{sc_SW_LNG} AND T_LAT <![CDATA[>=]]> #{sc_SW_LAT})
+        )
+    </select>
+
+    <update id="updateShpData">
+        UPDATE TRANSIT.${fileName}
+        SET
+
+        WHERE
+    </update>
 </mapper>

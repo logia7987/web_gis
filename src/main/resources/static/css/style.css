@@ -919,13 +919,14 @@ th, td {
     border: 1px solid #c6c6c6;
 }
 
-.shpSavebtn {
+.shpSaveBtn {
     cursor: pointer;
     border: 1px solid #c6c6c6;
     padding: 5px 10px;
+    margin: -5px -5px!important;
 }
 
-.shpSavebtn:hover {
+.shpSaveBtn:hover {
     background-color: #c6c6c6 !important;
     color: white;
 }
@@ -938,4 +939,13 @@ th, td {
 .select-shape-btn {
     width: 100%;
     display: flex;
+}
+
+.option-selected {
+    float: right;
+    display: none;
+}
+
+#empty-layerOption {
+
 }
