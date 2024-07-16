@@ -1,5 +1,6 @@
 package com.transit.web_gis.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.transit.web_gis.service.*;
@@ -223,13 +224,21 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(value="/updateGeometry.do", method=RequestMethod.POST)
-    public HashMap<String, Object> updateGeometry(@RequestBody Map<String, Object> params) {
+    public HashMap<String, Object> updateGeometry(@RequestBody Map<String, Object> params) throws JsonProcessingException {
         HashMap<String, Object> resultMap = new HashMap<>();
         HashMap<String, Object> commandMap = new HashMap<>();
 
+        ObjectMapper objectMapper = new ObjectMapper();
+
         String type = (String) params.get("type");
         Map<String, Object> feature = (Map<String, Object>) params.get("feature");
-        System.out.println(feature);
+
+        String fileName = (String) ((Map<String, Object>) feature.get("properties")).get("FILE_NAME");
+        String fileFeatureId = (String) ((Map<String, Object>) feature.get("properties")).get(fileName+"_ID");
+
+        commandMap.put("fileName", fileName);
+        commandMap.put("fileFeatureId", fileFeatureId);
+
         Map<String, Object> properties = (Map<String, Object>) feature.get("properties");
         switch (type) {
             case "node":
@@ -239,11 +248,10 @@ public class ApiController {
                 Double lat = geometryNode.get(1);
 
                 // commandMap에 값 설정
-                commandMap.put("nodeId", properties.get("nodeId"));
                 commandMap.put("lng", lng);
                 commandMap.put("lat", lat);
 
-                if (bmsService.updateNodeGeometry(commandMap) > 0) {
+                if (shapeService.updateNodeStationShpData(commandMap) > 0) {
                     resultMap.put("result", "success");
                 } else {
                     resultMap.put("result", "fail");
@@ -255,38 +263,23 @@ public class ApiController {
                 lng = geometryLink.get(0);
                 lat = geometryLink.get(1);
 
-                commandMap.put("stationId", properties.get("stationId"));
                 commandMap.put("lng", lng); // double 형식으로 변환
                 commandMap.put("lat", lat); // double 형식으로 변환
 
-                if (bmsService.updateStationGeometry(commandMap) > 0) {
+                if (shapeService.updateNodeStationShpData(commandMap) > 0) {
                     resultMap.put("result", "success");
                 } else {
                     resultMap.put("result", "fail");
                 }
                 break;
             case "link":
-                commandMap.put("linkId", properties.get("linkId"));
-                // 기존의 링크 좌표리스트 우선 제거
-                if (bmsService.deleteOldLinkGeometry(commandMap) > 0) {
-                    // 변경 전 정보 삭제 후 정보 재입력
-                    List<List<Double>> geometry = (List<List<Double>>) ((Map<String, Object>) feature.get("geometry")).get("coordinates");
-
-                    for (int i = 0; i < geometry.size(); i++) {
-                        commandMap.put("lng", geometry.get(i).get(0));
-                        commandMap.put("lat", geometry.get(i).get(1));
-                        commandMap.put("linkSeq", i);
-
-                        if (bmsService.updateNewLinkGeometry(commandMap) > 0) {
-                            // 성공처리
-                            resultMap.put("result", "success");
-                        } else {
-                            // 실패처리 2
-                            resultMap.put("result", "fail");
-                        }
-                    }
+                String geometryJson = objectMapper.writeValueAsString(feature.get("geometry"));
+                commandMap.put("geometry", geometryJson);
+                if (shapeService.updateLinkShpData(commandMap) > 0) {
+                    // 성공처리
+                    resultMap.put("result", "success");
                 } else {
-                    // 실패처리 1
+                    // 실패처리 2
                     resultMap.put("result", "fail");
                 }
                 break;
@@ -308,9 +301,34 @@ public class ApiController {
 
     @ResponseBody
     @RequestMapping(value = "/getShpProperties", method = RequestMethod.POST)
-    public List<Map<String, Object>> getShpProperties(@RequestParam("fileName") String fileName) {
+    public Map<String, Object> getShpProperties(@RequestParam("fileName") String fileName) {
+        Map<String, Object> resultMap = new HashMap<>();
 
-        return shapeService.getShpColumnNames(fileName);
+        List<String> columnNames = shapeService.getShpColumnNames(fileName);
+        Map<String, Object> labelColumn = shapeService.getDefaultLabel(fileName);
+
+        resultMap.put("columnNames", columnNames);
+        resultMap.put("labelColumn", labelColumn);
+        return resultMap;
+    }
+
+    @ResponseBody
+    @RequestMapping(value = "/updateLabel", method = RequestMethod.POST)
+    public Map<String, Object> updateLabel(@RequestParam("fileName") String fileName,
+                                           @RequestParam("labelColumn") String labelColumn) {
+        Map<String, Object> resultMap = new HashMap<>();
+        Map<String, Object> commandMap = new HashMap<>();
+
+        commandMap.put("fileName", fileName);
+        commandMap.put("labelColumn", labelColumn);
+
+        if (shapeService.updateLabel(commandMap) > 0) {
+            resultMap.put("result", "success");
+        } else {
+            resultMap.put("result", "fail");
+        }
+
+        return resultMap;
     }
 
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {

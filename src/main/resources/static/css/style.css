@@ -291,7 +291,7 @@
 /* 셀렉트 박스 스타일 */
 .custom-select {
     display: inline-block;
-    width: 200px;
+    width: 135px;
     background-color: #fff;
     position: relative;
     border: 1px solid #ebebeb;
@@ -676,7 +676,7 @@ th, td {
     position: absolute;
     left: 10px;
     bottom: 10px;
-    width: 300px;
+    width: 35%;
     height: 300px;
     transition: 0.5s;
 }

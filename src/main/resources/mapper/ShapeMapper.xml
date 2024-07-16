@@ -7,11 +7,16 @@
         WHERE owner = 'TRANSIT'
     </select>
 
-    <select id="getShpColumnNames" resultType="map" parameterType="String">
-        SELECT *
+    <select id="getShpColumnNames" resultType="String" parameterType="String">
+        SELECT COLUMN_NAME
+        FROM ALL_TAB_COLUMNS
+        WHERE TABLE_NAME = '${fileName}'
+        AND OWNER = 'TRANSIT'
+    </select>
+
+    <select id="getDefaultLabel" resultType="map" parameterType="String">
+        SELECT DISTINCT LABEL_COLUMN
         FROM  TRANSIT.${fileName}
-        WHERE 1=1
-        AND rownum <![CDATA[<=]]> 1
     </select>
 
     <select id="checkShpType" resultType="map" parameterType="map">
@@ -40,10 +45,21 @@
         )
     </select>
 
-    <update id="updateShpData">
+    <update id="updateLabel" parameterType="map">
         UPDATE TRANSIT.${fileName}
-        SET
+        SET LABEL_COLUMN = #{labelColumn}
+    </update>
 
-        WHERE
+    <update id="updateNodeStationShpData" parameterType="map">
+        UPDATE TRANSIT.${fileName}
+        SET LAT = #{lat},
+            LNG = #{lng}
+        WHERE ${fileName}_ID = #{fileFeatureId}
+    </update>
+
+    <update id="updateLinkShpData" parameterType="map">
+        UPDATE TRANSIT.${fileName}
+        SET    GEOMETRY = #{geometry}
+        WHERE ${fileName}_ID = #{fileFeatureId}
     </update>
 </mapper>

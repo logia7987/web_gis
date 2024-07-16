@@ -55,19 +55,32 @@ public class ShapeService {
         return shapeMapper.selectShpList();
     }
 
-    public List<Map<String, Object>> getShpColumnNames(String fileName) {
+    public List<String> getShpColumnNames(String fileName) {
         return shapeMapper.getShpColumnNames(fileName);
     }
-
+    public Map<String, Object> getDefaultLabel(String fileName) {
+        return shapeMapper.getDefaultLabel(fileName);
+    }
     public Map<String, Object> checkShpType(Map<String, Object> commandMap) {
         return shapeMapper.checkShpType(commandMap);
     }
     public List<Map<String, Object>> getNodeShpData(Map<String, Object> commandMap) {
         return shapeMapper.getNodeShpData(commandMap);
     }
-
     public List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap) {
         return shapeMapper.getLinkShpData(commandMap);
+    }
+
+    public int updateLabel(Map<String, Object> commandMap) {
+        return shapeMapper.updateLabel(commandMap);
+    }
+
+    public int updateNodeStationShpData(Map<String, Object> commandMap) {
+        return shapeMapper.updateNodeStationShpData(commandMap);
+    }
+
+    public int updateLinkShpData(Map<String, Object> commandMap) {
+        return shapeMapper.updateLinkShpData(commandMap);
     }
 
     @Transactional

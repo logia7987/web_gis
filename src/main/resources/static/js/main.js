@@ -46,6 +46,7 @@ let dblClickLinkId = '';
 let selectedBasicLink;
 
 const ICON_STATION_SRC = '/image/icon_station.png';
+const ICON_NODE_SRC = '/image/icon_node.png';
 
 let matchLinkObj = {}
 let matchObj = {}
@@ -220,6 +221,8 @@ function getShpData(obj) {
     if (!tNameArr.includes(fileName)) {
         tNameArr.push(fileName);
         $(obj).find("span:eq(1)").show();
+
+        appendToLayerOption(fileName)
     } else {
         tNameArr = tNameArr.filter(function(item) {
             return item !== fileName;
@@ -227,22 +230,11 @@ function getShpData(obj) {
         $(obj).find("span:eq(1)").hide();
     }
 
-    console.log(tNameArr);
-
     // 기본 라벨 정의 key : value 로 임시 값 부여
     tNameLabelArr[fileName] = "";
 
-    appendToLayerOption()
-
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
-    if(map.getZoom() >= 14){
-        if (!isEdit()) {
-            setLinkNodeStationFeature();
-        }
-    } else {
-        linkNodeStationFeatures.features = [];
-        map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-    }
+    updateMapData();
 }
 
 
@@ -724,7 +716,7 @@ function closeShpPropertyWindow() {
 }
 
 function closeLayerOptionWindow() {
-    $('.layer-option-window').css('left', '-500px')
+    $('.layer-option-window').css('left', '-35%')
 }
 
 function openLayerOptionWindow() {
@@ -1070,7 +1062,16 @@ function setLinkNodeStationFeature() {
                             if (key !== "message") {
                                 let geoJson = JSON.parse(result[key]);
                                 geoJson.features.forEach(function(feature) {
-                                    linkNodeStationFeatures.features.push(feature);
+                                    if ($("#isShow_"+feature.properties.FILE_NAME).is(":checked")) {
+                                        feature.properties.label = feature.properties[feature.properties.LABEL_COLUMN];
+                                    } else {
+                                        feature.properties.label = "";
+                                    }
+
+                                    const lvlVal = $("#lvl_" + feature.properties.FILE_NAME + " option:selected").val();
+                                    if (getMapZoom() >= lvlVal) {
+                                        linkNodeStationFeatures.features.push(feature);
+                                    }
                                 });
                             }
                         });
@@ -1102,7 +1103,7 @@ function setLinkNodeStationFeature() {
                 // 정류소 레이어 추가
                 setLayerTypeIconAndLabel(STATION_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, STATION_FEATURE_ID, ICON_STATION_SRC);
                 // 노드 레이어 추가
-                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, "");
+                setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, ICON_NODE_SRC);
                 // 링크 거리별 포인트 레이어 추가
                 setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
             }
@@ -1122,39 +1123,51 @@ function setSource(sourceId, features){
 }
 
 function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
-    if (symbolImage === "") {
-        map.addLayer({
-            'id' : layerId,
-            'type' : 'circle',
-            'source' : sourceId,
-            'paint': {
-                'circle-radius': 6,
-                'circle-color': '#001ab0',
-                'circle-opacity': [
-                    'case',
-                    ['boolean', ['feature-state', 'hover'], false],
-                    1,
-                    1
-                ]
-            },
-            'filter' : ['==', 'featureId', featureId]
-        });
-    } else {
+
+    if (layerId == "station-layer") {
         map.loadImage(symbolImage, function (error, image) {
             if (error) throw error;
-            map.addImage('custom-icon', image);
+            map.addImage('icon-station', ICON_STATION_SRC);
 
             map.addLayer({
                 'id': layerId,
                 'type': 'symbol',
                 'source': sourceId,
                 'layout': {
-                    'icon-image': 'custom-icon',
-                    'icon-size': 0.5,
+                    'icon-image': 'icon-station',
+                    'icon-size': 0.2,
                     'icon-allow-overlap': true,
-                    'icon-ignore-placement': true
+                    'icon-ignore-placement': true,
+                    'text-field':  ['get', 'label'],
+                    'text-font': ['Open Sans Regular'],
+                    'text-anchor': 'bottom',
                 },
                 'filter': ['==', 'featureId', featureId]
+            });
+        });
+    } else {
+        map.loadImage(symbolImage, function (error, image) {
+            if (error) throw error;
+            map.addImage('icon-node', image);
+
+            map.addLayer({
+                'id' : layerId,
+                'type' : 'symbol',
+                'source' : sourceId,
+                'paint': {
+                    'icon-color' : '#001ab0'
+                },
+                'layout': {
+                    'icon-image': 'icon-node',
+                    'icon-size': 0.2,
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true,
+                    'text-field': ['get', 'label'],  // 레이블로 표시할 속성 이름
+                    'text-font': ['Open Sans Regular'],
+                    'text-anchor': 'bottom',
+                    'text-offset': [0, -0.5],
+                },
+                'filter' : ['==', 'featureId', featureId]
             });
         });
     }
@@ -1195,7 +1208,8 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
 
         // 모든 노드를 반복하며 가장 가까운 노드 찾기
         linkNodeStationFeatures.features.forEach(function (feature) {
-            if (feature.geometry.type === 'Point' && feature.properties.nodeId !== undefined) {
+            // && feature.properties.nodeId !== undefined
+            if (feature.geometry.type === 'Point' ) {
                 var nodeCoordinates = feature.geometry.coordinates;
                 var distance = calculateDistance(point, nodeCoordinates);
 
@@ -1456,7 +1470,7 @@ function initBasicTileSet() {
     map.touchZoomRotate.disableRotation();
 
     map.addControl(language);
-    map.addControl(draw, 'bottom-left')
+    map.addControl(draw, 'bottom-left');
 
     setMapEvent();
 }
@@ -1503,14 +1517,7 @@ function setMapEvent() {
         setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
 
         map.on('moveend', ()=>{
-            if(map.getZoom() >= 14){
-                if (!isEdit()) {
-                    setLinkNodeStationFeature();
-                }
-            } else {
-                linkNodeStationFeatures.features = [];
-                map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-            }
+            updateMapData();
         });
 
         map.on('click', (e) => {
@@ -1964,17 +1971,7 @@ function realTimeUpdateToDB(e) {
     }
 
     // feature의 타입을 구분합니다.
-    let type;
-    if (feature.properties.nodeId !== undefined) {
-        // 노드 처리
-        type = "node"
-    } else if (feature.properties.stationId !== undefined) {
-        // 정류소 처리
-        type = "station"
-    } else {
-        // 링크 처리
-        type = "link"
-    }
+    let type = feature.properties.SHP_TYPE;
 
     // 서버로 전송할 데이터를 구성합니다.
     const data = {
@@ -1991,7 +1988,6 @@ function realTimeUpdateToDB(e) {
         data : JSON.stringify(data),
         success : function (result){
             console.log(result)
-
         },
         error : function (error){
             console.log(error)
@@ -2240,29 +2236,91 @@ function clearShpList() {
     isAllChecked = false
 }
 
-function appendToLayerOption(data) {
-    let html = '<tr>'
-    html += '<td>'
-    html += '<input id="showFlag" class="show-layer" type="checkbox" value="" checked="">'
-    html += '</td>'
-    html += '<td></td>'
-    html += '<td>'
-    html += '<select id="showLvl" class="select-box-zoom" value="14">'
-    html += '<option value="">선택</option>'
-    html += '<option value="14" selected>14</option>'
-    html += '<option value="16">16</option>'
-    html += '<option value="18">18</option>'
-    html += '<option value="20">20</option>'
-    html += '</select>'
-    html += '</td>'
-    html += '<td>'
-    html += '<select id="showLabel" class="select-label">'
-    html += '<option value="emptyLabel">없음</option>'
-    /*
-    *TODO for 돌려서 여기서 모든 옵션을 넣게 만듬
-    * 조건을 통하여 기본 선택 컬럼을 확인하여 selected 되어있게 작업할 필요가 있음
-    * */ 
-    html += '</select>'
-    html += '</td>'
-    html += '</tr>'
+function appendToLayerOption(fileName) {
+    $.ajax({
+        url : '/api/getShpProperties',
+        type : 'POST',
+        data : {
+            fileName : fileName
+        },
+        success : function (data){
+            const defaultLabel = data.labelColumn.LABEL_COLUMN
+
+            let html = '<tr id="TR_'+fileName+'">'
+            html += '<td>'
+            // 값 변화 감지 후 지도에 반영
+            html += '<input id="isShow_'+fileName+'" class="show-layer" type="checkbox" checked onchange="updateMapData()">'
+            html += '</td>'
+            html += '<td>'+fileName+'</td>'
+            html += '<td>'
+            html += '<select id="lvl_'+fileName+'" class="select-box-zoom" onchange="updateMapData();">'
+            html += '<option value="">선택</option>'
+            html += '<option value="14" selected>14</option>'
+            html += '<option value="16">16</option>'
+            html += '<option value="18">18</option>'
+            html += '<option value="20">20</option>'
+            html += '</select>'
+            html += '</td>'
+            html += '<td>'
+            html += '<select id="label_'+fileName+'" class="select-label" onchange="updateLabel(this)">'
+            html += '<option value="emptyLabel">없음</option>'
+            for (let i = 0; i < data.columnNames.length; i++) {
+                let aColumn = data.columnNames[i]
+                if (defaultLabel === aColumn) {
+                    html += '<option value="'+aColumn+'" selected>'+aColumn+'</option>'
+                } else {
+                    html += '<option value="'+aColumn+'">'+aColumn+'</option>'
+                }
+            }
+            html += '</select>'
+            html += '</td>'
+            html += '</tr>'
+
+            $("#empty-layerOption").hide()
+            $("#layerOptionList").append(html)
+        },
+        error : function (error){
+            console.log(error)
+        }
+    })
+}
+
+function checkAttribute() {
+
+}
+
+function updateLabel(obj) {
+    const fileName = $(obj).attr("id").replace("label_", "");
+    const labelColumn = $(obj).find("option:selected").val()
+
+    $.ajax({
+        url : '/api/updateLabel',
+        type : 'POST',
+        data : {
+            fileName : fileName,
+            labelColumn : labelColumn
+        },
+        success : function (data){
+            if (data.result === "success") {
+                // 성공시 지도 정보 재호출
+                updateMapData();
+            } else {
+                toastOn("파일의 라벨수정 중 에러가 발생했습니다.");
+            }
+        },
+        error : function (error){
+            console.log(error)
+        }
+    })
+}
+
+function updateMapData() {
+    if(map.getZoom() >= 14){
+        if (!isEdit()) {
+            setLinkNodeStationFeature();
+        }
+    } else {
+        linkNodeStationFeatures.features = [];
+        map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
+    }
 }
