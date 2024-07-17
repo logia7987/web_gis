@@ -50,11 +50,9 @@ public class ShapeService {
     public ShapeService(ShapeMapper shapeMapper) {
         this.shapeMapper = shapeMapper;
     }
-
     public List<ShpVo> selectShpList() {
         return shapeMapper.selectShpList();
     }
-
     public List<String> getShpColumnNames(String fileName) {
         return shapeMapper.getShpColumnNames(fileName);
     }
@@ -70,19 +68,15 @@ public class ShapeService {
     public List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap) {
         return shapeMapper.getLinkShpData(commandMap);
     }
-
     public int updateLabel(Map<String, Object> commandMap) {
         return shapeMapper.updateLabel(commandMap);
     }
-
     public int updateNodeStationShpData(Map<String, Object> commandMap) {
         return shapeMapper.updateNodeStationShpData(commandMap);
     }
-
     public int updateLinkShpData(Map<String, Object> commandMap) {
         return shapeMapper.updateLinkShpData(commandMap);
     }
-
     @Transactional
     public Map<String, Object> saveSelectedFeatures(String tableName, String idxArr, boolean isChecked, String shpType, String label) {
         Map<String, Object> resultMap = new HashMap<>();
@@ -343,7 +337,15 @@ public class ShapeService {
                 JSONObject feature = features.get(actualIndex);
                 JSONObject properties = (JSONObject) feature.get("properties");
                 JSONObject geometry = (JSONObject) feature.get("geometry");
+
+                // MultiLineString 과 LineString 을 구분하여 입력하기 위한 타입 구분
+                String shpType = (String) geometry.get("type");
                 JSONArray coordinates = (JSONArray) ((JSONArray) geometry.get("coordinates")).get(0);
+                if (shpType.equals("LineString")) {
+                    coordinates = (JSONArray) (geometry.get("coordinates"));
+                } else if (shpType.equals("MultiLineString")) {
+                    coordinates = (JSONArray) ((JSONArray) geometry.get("coordinates")).get(0);
+                }
 
                 int parameterIndex = 1;
                 for (Object key : properties.keySet()) {
@@ -352,7 +354,7 @@ public class ShapeService {
 
                 ps.setInt(parameterIndex++, i+1);
                 ps.setString(parameterIndex++, tableName);
-                ps.setString(parameterIndex++, shpType);
+                ps.setString(parameterIndex++, "link");
                 ps.setString(parameterIndex++, geometry.toString());
 
                 JSONArray fromCoordinate = (JSONArray) coordinates.get(0);

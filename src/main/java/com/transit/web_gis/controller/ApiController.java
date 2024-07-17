@@ -214,8 +214,12 @@ public class ApiController {
         String sc_MODE = (String) shapeService.checkShpType(commandMap).get("SHP_TYPE");
         commandMap.put("sc_MODE", sc_MODE);
         switch (sc_MODE) {
-            case "node" -> resultMap.put(fileName + "_data", getGeoJsonNode(shapeService.getNodeShpData(commandMap)));
-            case "link" -> resultMap.put(fileName + "_data", getGeoJsonLink(shapeService.getLinkShpData(commandMap)));
+            case "node" :
+                resultMap.put(fileName + "_data", getGeoJsonNode(shapeService.getNodeShpData(commandMap)));
+                break;
+            case "link" :
+                resultMap.put(fileName + "_data", getGeoJsonLink(shapeService.getLinkShpData(commandMap)));
+                break;
 //                case "station" -> resultMap.put(aFileName + "_data", getGeoJsonStation(shapeService.getShpData(commandMap)));
         }
 
@@ -446,7 +450,7 @@ public class ApiController {
             feature.put("type", "Feature");
             feature.put("properties", properties);
             feature.put("geometry", geometry);
-            geometry.put("type", "LineString");
+            geometry.put("type", "");
             geometry.put("coordinates", coordinates);
 
             //properties 정류소 CSS 정보 데이터 삽입
@@ -462,8 +466,14 @@ public class ApiController {
                 if (strKey.equals("GEOMETRY")) {
                     String geometryString = clobToString((Clob) entry.getValue());
 
-                    JSONArray coordArray = (JSONArray) ((JSONArray) ((JSONObject) new org.json.simple.parser.JSONParser().parse(geometryString)).get("coordinates")).get(0);
-                    coordinates.addAll(coordArray);
+                    JSONArray coordArray = (JSONArray) ((JSONObject) new JSONParser().parse(geometryString)).get("coordinates");
+
+                    String geoDataType = (String) ((JSONObject) new JSONParser().parse(geometryString)).get("type");
+                    if (geometry.get("type").equals("")) {
+                        geometry.put("type", geoDataType);
+                    }
+
+                    geometry.put("coordinates", coordArray);
                 } else {
                     if (value instanceof Number) {
                         properties.put(strKey, value.toString());

@@ -1380,14 +1380,34 @@ function getClosestLinkId(pointPos){
     let closestPointFeature;
     let clickPointFeature = turf.point(pointPos);
 
-    for(let linkFeature of linkNodeStationFeatures.features){
-        if(linkFeature.properties.featureId === LINK_FEATURE_ID){
-            let tmpDist = turf.pointToLineDistance(clickPointFeature, linkFeature);
+    for (let linkFeature of linkNodeStationFeatures.features) {
+        if (linkFeature.properties.featureId === LINK_FEATURE_ID) {
+            // MultiLineString일 경우 각 LineString을 개별적으로 처리
+            if (linkFeature.geometry.type === 'MultiLineString') {
+                for (let line of linkFeature.geometry.coordinates) {
+                    let tmpFeature = {
+                        type: 'Feature',
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: line
+                        }
+                    };
+                    let tmpDist = turf.pointToLineDistance(clickPointFeature, tmpFeature);
 
-            if(!closestDist || closestDist > tmpDist){
-                closestDist = tmpDist;
-                closestId = linkFeature.properties.linkId;
-                closestPointFeature = turf.nearestPointOnLine(linkFeature, clickPointFeature);
+                    if (!closestDist || closestDist > tmpDist) {
+                        closestDist = tmpDist;
+                        closestId = linkFeature.properties.linkId;
+                        closestPointFeature = turf.nearestPointOnLine(tmpFeature, clickPointFeature);
+                    }
+                }
+            } else if (linkFeature.geometry.type === 'LineString') {
+                let tmpDist = turf.pointToLineDistance(clickPointFeature, linkFeature);
+
+                if (!closestDist || closestDist > tmpDist) {
+                    closestDist = tmpDist;
+                    closestId = linkFeature.properties.linkId;
+                    closestPointFeature = turf.nearestPointOnLine(linkFeature, clickPointFeature);
+                }
             }
         }
     }
@@ -1396,11 +1416,16 @@ function getClosestLinkId(pointPos){
 
     //줌 레벨별로 광범위 수준 정도 확대
     if(getMapZoom() <= 14){
-        selectMeter = 5;
+        selectMeter = 10;
     }else if(getMapZoom() <= 15){
-        selectMeter = 3;
+        selectMeter = 7.5;
     }else{
-        selectMeter = 2;
+        selectMeter = 5;
+    }
+
+    if (isEdit()) {
+        // 수정모드일때 선택 범위를 좀더 좁게하여 선택을 섬세하게 하기위한
+        selectMeter = Math.floor(selectMeter / 2);
     }
 
     if(closestDist * 1000 > selectMeter || !closestPointFeature){
@@ -1524,15 +1549,52 @@ function setMapEvent() {
             // 만약 핸들 포인트 window 가 켜져있다면 종료
             pointPopup.remove();
 
-            //우선 정류소, 노드 클릭상황에서는 당연히 광범위한 링크 선택처리를 막는다.
-            //링크 자체를 클릭해버리면 중복되므로 광범위한 링크 선택또한 막는다.
             if (map.getLayer(LINK_LAYER_ID) !== undefined) {
-                let select = $('#type-select').val()
                 let features;
+                // 일반 선택과 편집모드의 선택 구분 분할
+                if (isEdit()) {
+                    // 편집 모드일때 각 레이어 아이디 선택기능으로 변경
+                    let select = $('#type-select').val();
+                    if (select === 'lineString') {
+                        features = map.queryRenderedFeatures(e.point, {
+                            layers : [LINK_LAYER_ID]
+                        });
 
-                if (select === 'lineString') {
+                        if(features.length > 0) {
+                            return;
+                        }
+                        
+                        let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
+
+                        if(!pointPos){
+                            return;
+                        }
+
+                        map.fire('click', {
+                            lngLat : pointPos,
+                            point : map.project(pointPos)
+                        })
+                    } else if (select === 'station') {
+                        features = map.queryRenderedFeatures(e.point, {
+                            layers : [STATION_LAYER_ID]
+                        });
+
+                        if(features.length > 0) {
+                            return;
+                        }
+                    } else if (select === 'point') {
+                        features = map.queryRenderedFeatures(e.point, {
+                            layers : [NODE_LAYER_ID]
+                        });
+
+                        if(features.length > 0) {
+                            return;
+                        }
+                    }
+                } else {
+                    // 일반모드일때 선택 최적화 적용
                     features = map.queryRenderedFeatures(e.point, {
-                        layers : [LINK_LAYER_ID]
+                        layers : [LINK_LAYER_ID, STATION_LAYER_ID, NODE_LAYER_ID]
                     });
 
                     if(features.length > 0) {
@@ -1548,26 +1610,9 @@ function setMapEvent() {
                         lngLat : pointPos,
                         point : map.project(pointPos)
                     })
-                } else if (select === 'station') {
-                    features = map.queryRenderedFeatures(e.point, {
-                        layers : [STATION_LAYER_ID]
-                    });
 
-                    if(features.length > 0) {
-                        return;
-                    }
-
-                } else if (select === 'point') {
-                    features = map.queryRenderedFeatures(e.point, {
-                        layers : [NODE_LAYER_ID]
-                    });
-
-                    if(features.length > 0) {
-                        return;
-                    }
+                    handleFeatureSelection(e)
                 }
-
-                handleFeatureSelection(e)
             }
         });
 
@@ -1577,8 +1622,8 @@ function setMapEvent() {
                 //     layers: ['gl-draw-line.cold']
                 // });
                 const allFeatures = draw.getAll().features;
-                const closestFeature = findClosestFeatureFromFeature(allFeatures, e.lngLat);
-
+                // const closestFeature = findClosestFeatureFromFeature(allFeatures, e.lngLat);
+                const closestFeature = allFeatures[0];
                 console.log(closestFeature);
 
                 if (closestFeature) {
@@ -1645,8 +1690,14 @@ function addAttrList() {
         if (aData.properties.SHP_TYPE === 'link') {
             // 링크 처리
             // 링크선 가운데 값 추출
-            let lng = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][0]
-            let lat = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][1]
+            let lng, lat;
+            if (aData.geometry.type === "MultiLineString") {
+                lng = aData.geometry.coordinates[0][Math.ceil(aData.geometry.coordinates[0].length / 2)][0]
+                lat = aData.geometry.coordinates[0][Math.ceil(aData.geometry.coordinates[0].length / 2)][1]
+            } else if (aData.geometry.type === "LineString") {
+                lng = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][0]
+                lat = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][1]
+            }
             linkHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\'' + lng + ',' + lat + '\')">'
             linkHtml += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             linkHtml += '<div class="file-info">'
@@ -2081,32 +2132,58 @@ function createInfoWindowContent(lngLat) {
 
 // 핸들 포인트 추가 함수
 function addHandle(feature, lngLat) {
-    const coordinates = feature.geometry.coordinates;
-    const closestIndex = findClosestSegmentIndex(coordinates, lngLat);
+    const shpType = feature.geometry.type
 
-    // 새로운 핸들 포인트를 추가
-    coordinates.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
-
-    feature.geometry.coordinates = coordinates;
+    if (shpType ==="LineString") {
+        let coordinates = feature.geometry.coordinates;
+        const closestIndex = findClosestSegmentIndex(coordinates, lngLat);
+        // 새로운 핸들 포인트를 추가
+        coordinates.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
+        feature.geometry.coordinates = coordinates;
+    } else {
+        let coordinates = feature.geometry.coordinates[0];
+        const closestIndex = findClosestSegmentIndex(coordinates, lngLat);
+        // 새로운 핸들 포인트를 추가
+        coordinates.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
+        feature.geometry.coordinates[0] = coordinates;
+    }
 
     // Draw 객체에서 피처를 업데이트
     draw.delete(feature.id);
     draw.add(feature);
+
+    realTimeUpdateToDB(feature)
 }
 
 // 핸들 포인트 삭제 함수
 function removeHandle(feature, lngLat) {
-    const coordinates = feature.geometry.coordinates;
-    const closestIndex = findClosestPointIndex(coordinates, lngLat);
+    const shpType = feature.geometry.type
 
-    // 가장 가까운 핸들 포인트를 삭제
-    coordinates.splice(closestIndex, 1);
+    if (shpType ==="LineString") {
+        const coordinates = feature.geometry.coordinates;
 
-    feature.geometry.coordinates = coordinates;
+        const closestIndex = findClosestPointIndex(coordinates, lngLat);
+
+        // 가장 가까운 핸들 포인트를 삭제
+        coordinates.splice(closestIndex, 1);
+
+        feature.geometry.coordinates = coordinates;
+    } else {
+        const coordinates = feature.geometry.coordinates[0];
+
+        const closestIndex = findClosestPointIndex(coordinates, lngLat);
+
+        // 가장 가까운 핸들 포인트를 삭제
+        coordinates.splice(closestIndex, 1);
+
+        feature.geometry.coordinates[0] = coordinates;
+    }
 
     // Draw 객체에서 피처를 업데이트
     draw.delete(feature.id);
     draw.add(feature);
+    
+    // TODO 새로고쳐지고, 해당 feature 가 선택되게 변경해야함
 
     // 링크 점 삭제 바로 반영되게 업데이트 요청 실행
     realTimeUpdateToDB(feature)
