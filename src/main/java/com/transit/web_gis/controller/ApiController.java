@@ -307,12 +307,15 @@ public class ApiController {
     @RequestMapping(value = "/getShpProperties", method = RequestMethod.POST)
     public Map<String, Object> getShpProperties(@RequestParam("fileName") String fileName) {
         Map<String, Object> resultMap = new HashMap<>();
+        Map<String, Object> commandMap = new HashMap<>();
+        commandMap.put("fileName", fileName);
 
         List<String> columnNames = shapeService.getShpColumnNames(fileName);
         Map<String, Object> labelColumn = shapeService.getDefaultLabel(fileName);
-
+        String shpType = (String) shapeService.checkShpType(commandMap).get("SHP_TYPE");
         resultMap.put("columnNames", columnNames);
         resultMap.put("labelColumn", labelColumn);
+        resultMap.put("shpType", shpType);
         return resultMap;
     }
 
@@ -327,6 +330,25 @@ public class ApiController {
         commandMap.put("labelColumn", labelColumn);
 
         if (shapeService.updateLabel(commandMap) > 0) {
+            resultMap.put("result", "success");
+        } else {
+            resultMap.put("result", "fail");
+        }
+
+        return resultMap;
+    }
+
+    @ResponseBody
+    @RequestMapping(value = "/deleteShpFeatureData", method = RequestMethod.POST)
+    public Map<String, Object> deleteShpFeatureData(@RequestParam("fileName") String fileName,
+                                           @RequestParam("featureId") String featureId) {
+        Map<String, Object> resultMap = new HashMap<>();
+        Map<String, Object> commandMap = new HashMap<>();
+
+        commandMap.put("fileName", fileName);
+        commandMap.put("featureId", featureId);
+
+        if (shapeService.deleteShpFeatureData(commandMap) > 0) {
             resultMap.put("result", "success");
         } else {
             resultMap.put("result", "fail");

@@ -61,7 +61,7 @@
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>기본 레이어 설정</button>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <div id="type-select-box">
-                <select class="form-select" name="typeSelect" id="type-select">
+                <select class="form-select" name="typeSelect" id="type-select" onchange="checkEditSelect()">
                     <option value="none">선택</option>
                     <option value="point">노드</option>
                     <option value="lineString">링크</option>
@@ -70,12 +70,19 @@
             </div>
             <div id="top-tool-box">
                 <div id="link-tools">
+                    <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
                     <button class="top-btn" onclick="generatePoints(5);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="5M" data-bs-original-title="5M 간격 점생성">5M</button>
                     <button class="top-btn" onclick="generatePoints(10);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="10M" data-bs-original-title="10M 간격 점생성">10M</button>
-                    <button class="top-btn" onclick="splitLine();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="선 분할" data-bs-original-title="선 분할">선 분할</button>
+                    <button class="top-btn" onclick="splitLine();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 분할" data-bs-original-title="링크 분할">선 분할</button>
+                    <button class="top-btn" onclick="" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 삭제" data-bs-original-title="링크 삭제">링크 삭제</button>
                 </div>
-                <div id="point-tools">
-
+                <div id="node-tools">
+                    <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
+                    <button class="top-btn" onclick="" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="노드 삭제" data-bs-original-title="노드 삭제">노드 삭제</button>
+                </div>
+                <div id="station-tools">
+                    <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
+                    <button class="top-btn" onclick="" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="정류소 삭제" data-bs-original-title="정류소 삭제">정류소 삭제</button>
                 </div>
             </div>
 <!--            <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_line top-btn mapbox-ctrl-btn" title="LineString tool (l)"></button>-->
@@ -258,6 +265,10 @@
 
     <div class="modal" id="pluslayer">
         <div th:insert="~{html/modal/modal_layer.html::pluslayer}"></div>
+    </div>
+
+    <div class="modal" id="modal_feature">
+        <div th:insert="~{html/modal/modal_feature.html::feature}"></div>
     </div>
 
     <div id="toast_popup">

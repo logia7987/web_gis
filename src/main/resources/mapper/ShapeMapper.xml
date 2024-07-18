@@ -62,4 +62,9 @@
         SET    GEOMETRY = #{geometry}
         WHERE ${fileName}_ID = #{fileFeatureId}
     </update>
+
+    <delete id="deleteShpFeatureData" parameterType="map">
+        DELETE FROM TRANSIT.${fileName}
+        WHERE ${fileName}_ID = #{featureId}
+    </delete>
 </mapper>

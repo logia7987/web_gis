@@ -8,24 +8,24 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-    <div class="modal-dialog basic-font" th:fragment="attr">
+    <div class="modal-dialog basic-font" th:fragment="feature">
         <div class="modal-content" >
             <!-- Modal Header -->
             <div class="modal-header">
-                <h4 class="modal-title">속성 정보 수정</h4>
+                <h4 class="modal-title">새 객체 추가</h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <!-- Modal body -->
             <div class="modal-body">
                 <div>
-                    리스트에 표출한 속성을 골라주세요.
+                    새로운 정보를 추가할 대상 파일을 선택해주세요.
                 </div>
-                <div class="attr-frm layer-setting" id="property-select">
+                <div class="shp-frm layer-setting" id="shp-select">
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취 소</button>
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="saveToMatchObject()">완 료</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="setTargetShp()">완 료</button>
             </div>
         </div>
     </div>

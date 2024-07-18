@@ -74,6 +74,9 @@ public class ShapeService {
     public int updateNodeStationShpData(Map<String, Object> commandMap) {
         return shapeMapper.updateNodeStationShpData(commandMap);
     }
+    public int deleteShpFeatureData(Map<String, Object> commandMap) {
+        return shapeMapper.deleteShpFeatureData(commandMap);
+    }
     public int updateLinkShpData(Map<String, Object> commandMap) {
         return shapeMapper.updateLinkShpData(commandMap);
     }

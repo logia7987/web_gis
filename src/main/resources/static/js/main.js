@@ -228,6 +228,7 @@ function getShpData(obj) {
             return item !== fileName;
         });
         $(obj).find("span:eq(1)").hide();
+        $("#TR_"+fileName).remove()
     }
 
     // 기본 라벨 정의 key : value 로 임시 값 부여
@@ -235,6 +236,9 @@ function getShpData(obj) {
 
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
     updateMapData();
+
+    // 선택된 파일을 TODO 멘트 생각
+    addToFileModal(fileName);
 }
 
 
@@ -661,7 +665,7 @@ function handleFeatureSelection(e) {
     // 편집모드 클릭과 일반클릭을 분리
     if (isEdit()) {
         if (e.features !== undefined) {
-            hideAllTool()
+            // hideAllTool()
             let select = $('#type-select').val()
             selectedShp = e.features[0];
             selectedShp.id = 1;
@@ -671,22 +675,22 @@ function handleFeatureSelection(e) {
             let targetId = fileName + "_ID";
             // 수정대상 타입 구분
             const property = findProperty(selectedShp.properties[targetId], targetId);
-            if (select === 'lineString' && featureType.indexOf("LineString") > -1) {
-                showLinkTool();
-                if (property) {
-                    editShp(property, targetId);
-                }
-            } else if (select === 'point' && featureType === 'Point' && selectedShp.properties.SHP_TYPE === "node") {
-                if (property) {
-                    editShp(property, targetId);
-                }
-                showNodeStationTool();
-            } else if (select === 'station' && selectedShp.properties.SHP_TYPE === "station") {
-                if (property) {
-                    editShp(property, targetId);
-                }
-                showNodeStationTool();
+            if (property) {
+                editShp(property, targetId);
             }
+            // if (select === 'lineString' && featureType.indexOf("LineString") > -1) {
+            //     if (property) {
+            //         editShp(property, targetId);
+            //     }
+            // } else if (select === 'point' && featureType === 'Point' && selectedShp.properties.SHP_TYPE === "node") {
+            //     if (property) {
+            //         editShp(property, targetId);
+            //     }
+            // } else if (select === 'station' && selectedShp.properties.SHP_TYPE === "station") {
+            //     if (property) {
+            //         editShp(property, targetId);
+            //     }
+            // }
         }
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
@@ -861,6 +865,7 @@ function startViewerMode() {
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
     $('#type-select-box').css('display', 'none');
+    $("#type-select").val("none").prop("selected", true);
 
     if (draw.getAll().features.length > 0) { // 편집 모드에서 편집하던 draw 전부 반영되도록
         for (i = 0; i < draw.getAll().features.length; i++) {
@@ -896,7 +901,7 @@ function startEditMode() {
     var type = $($(".selected").find("i")[0]).attr("class")
     loadProperty = dataArr
 
-    $('.mapboxgl-ctrl-group').show()
+    // $('.mapboxgl-ctrl-group').show()
 
     map.off('draw.create', drawDistance);
     map.off('draw.update', updateMeasurement);
@@ -935,17 +940,14 @@ function editCreate(e) {
     }
 }
 
+let properties = {};
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
-    var features = draw.getAll().features;
-    var obj = Object.keys(newProperty[fileNm])
-    var ids = dataArr[fileNm].data.features.map(feature => feature.id);
-    var maxId = Math.max.apply(null, ids)
-    var property = $('#newpolygon .modal-body table').find('input')
-    var properties = {}
-    var proper = $('.property')
-    var isProperty = true
+    properties = {};
+    var property = $('#newpolygon .modal-body table').find('input');
+    var proper = $('.property');
+    var isProperty = true;
 
-    for (i = 0; i < proper.length; i++) { // 빈칸 여부 체크
+    for (let i = 0; i < proper.length; i++) { // 빈칸 여부 체크
         if (proper[i].value === '') {
             toastOn("빈칸을 채워주세요.")
             isProperty = false;
@@ -954,33 +956,28 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
     }
 
     if (isProperty) {
-        if (dataArr[fileNm].data.features.length === 0) {
-            maxId = -1
+        for (let i = 0; i < property.length; i++) {
+            let name = $(property[i]).attr("attr");
+            let value = $(property[i]).val();
+
+            if (name) {
+                properties[name] = value;
+            }
         }
 
-        for (i = 0; i < property.length; i++) {
-            properties[obj[i]] = property[i].value
-        }
-
-        if (checkDataType(dataArr[fileNm]) === 'Point') { // 폴리곤, 노드, 링크 구분 작업
-            updateNodeData(features, properties, maxId)
-        } else if (checkDataType(dataArr[fileNm]) === 'MultiLineString' || checkDataType(dataArr[fileNm]) === 'LineString') {
-            updateLinkData(features, properties, maxId)
-        } else if (checkDataType(dataArr[fileNm]) === 'MultiPolygon' || checkDataType(dataArr[fileNm]) === 'Polygon') {
-            updatePolygonData(features, properties, maxId)
-        }
-        $('#newpolygon').modal('hide')
-        toastOn("정상적으로 추가되었습니다.")
+        $('#newpolygon').modal('hide');
+        // TODO 멘트 수정 필요
+        // toastOn("");
     }
 }
 
 function cancelAdd() { // 취소 버튼 눌렀을 때 그렸던 draw 내용 제거
-    var checkData= draw.getAll().features
-    for (i = 0; i < checkData.length; i++) {
-        if (Object.keys(checkData[i].properties).length === 0) {
-            draw.delete(checkData[i].id)
-        }
-    }
+    // var checkData= draw.getAll().features
+    // for (i = 0; i < checkData.length; i++) {
+    //     if (Object.keys(checkData[i].properties).length === 0) {
+    //         draw.delete(checkData[i].id)
+    //     }
+    // }
     $('#newpolygon').modal('hide')
 }
 
@@ -1296,8 +1293,17 @@ function setLayerLinkDot(layerId, sourceId) {
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
 function generatePoints(segmentLength) {
-    let coordinates = draw.getAll().features[0].geometry.coordinates;
-    const points = [];
+    let coordinates;
+    const targetFeature = draw.getAll().features[0];
+    const featureType = targetFeature.geometry.type;
+
+    if (featureType === "MultiLineString") {
+        coordinates = draw.getAll().features[0].geometry.coordinates[0];
+    } else if (featureType === "LineString") {
+        coordinates = draw.getAll().features[0].geometry.coordinates;
+    }
+
+    let points = [];
     const R = 6371000; // 지구의 반지름(미터 단위)
 
     // 도와 관련된 함수들
@@ -1357,12 +1363,16 @@ function generatePoints(segmentLength) {
         points.push(coordinates[coordinates.length - 1]);
     }
 
+    if (featureType === "MultiLineString") {
+        points = [points]
+    }
     // 새로운 피처 객체 생성
     const newFeature = {
         type: 'Feature',
+        id : 1, // 임시아이디 부여
         properties: { ...draw.getAll().features[0].properties },
         geometry: {
-            type: 'LineString',
+            type: featureType,
             coordinates: points
         }
     };
@@ -1370,7 +1380,12 @@ function generatePoints(segmentLength) {
     // 기존 선택된 선을 삭제하고 새로운 선을 추가
     draw.deleteAll();
     // 새로운 피처를 Draw에 추가
-    draw.add(newFeature);
+    // draw.add(newFeature);
+    const newFeatureIds = draw.add(newFeature);
+
+    draw.changeMode('simple_select', {
+        featureIds: newFeatureIds.map(f => f)
+    });
 }
 
 function getClosestLinkId(pointPos){
@@ -2047,41 +2062,57 @@ function realTimeUpdateToDB(e) {
 }
 
 function splitLine() {
+    let coordinates;
     // 선택한 선의 좌표 가져오기
-    var coordinates = draw.getAll().features[0].geometry.coordinates;
+    const targetFeature = draw.getAll().features[0];
+    const featureType = targetFeature.geometry.type;
 
-    // 선을 분할할 중간 지점 계산
-    var midPointIndex = Math.floor((coordinates.length-1) / 2);
-    var part1Coords = coordinates.slice(0, midPointIndex + 1); // 첫 번째 선의 좌표
-    var part2Coords = coordinates.slice(midPointIndex);      // 두 번째 선의 좌표
+    if (featureType === "MultiLineString") {
+        coordinates = draw.getAll().features[0].geometry.coordinates;
+    } else if (featureType === "LineString") {
+        coordinates = [draw.getAll().features[0].geometry.coordinates];
+    }
+
+    const newCoordinates = [];
+
+    // 각 라인에 대해 분할 처리
+    coordinates.forEach(lineCoords => {
+        // 선을 분할할 중간 지점 계산
+        if (lineCoords.length == 2) {
+            const midPoint = [
+                (lineCoords[0][0] + lineCoords[1][0]) / 2,
+                (lineCoords[0][1] + lineCoords[1][1]) / 2
+            ];
+
+            const part1Coords = [lineCoords[0], midPoint];
+            const part2Coords = [midPoint, lineCoords[1]];
+
+            newCoordinates.push(part1Coords);
+            newCoordinates.push(part2Coords);
+        } else {
+            const midPointIndex = Math.floor((lineCoords.length - 1) / 2);
+            const part1Coords = lineCoords.slice(0, midPointIndex + 1); // 첫 번째 선의 좌표
+            const part2Coords = lineCoords.slice(midPointIndex);       // 두 번째 선의 좌표
+
+            newCoordinates.push(part1Coords);
+            newCoordinates.push(part2Coords);
+        }
+    });
 
     // linkId를 숫자로 변환하고 새로운 아이디 할당
-    var originalLinkId = parseInt(draw.getAll().features[0].properties.linkId, 10);
-    var newLinkId1 = originalLinkId;
-    var newLinkId2 = originalLinkId + 1;
+    const originalLinkId = parseInt(draw.getAll().features[0].properties.linkId, 10);
+    const newLinkIds = newCoordinates.map((_, index) => (originalLinkId + index).toString());
 
-    // MapboxDraw에 추가할 두 개의 선 생성
-    var feature1 = {
+    // MapboxDraw에 추가할 새로운 MultiLineString 생성
+    const multiLineStringFeature = {
         type: 'Feature',
         properties: {
             ...draw.getAll().features[0].properties, // 기존 선의 다른 속성 유지
-            linkId: newLinkId1.toString() // 숫자를 문자열로 변환하여 저장
+            linkId: newLinkIds // 새로운 linkId 배열
         },
         geometry: {
-            type: 'LineString',
-            coordinates: part1Coords
-        }
-    };
-
-    var feature2 = {
-        type: 'Feature',
-        properties: {
-            ...draw.getAll().features[0].properties, // 기존 선의 다른 속성 유지
-            linkId: newLinkId2.toString() // 숫자를 문자열로 변환하여 저장
-        },
-        geometry: {
-            type: 'LineString',
-            coordinates: part2Coords
+            type: 'MultiLineString',
+            coordinates: newCoordinates
         }
     };
 
@@ -2089,20 +2120,28 @@ function splitLine() {
     draw.deleteAll();
 
     // MapboxDraw에 새로운 선 추가
-    draw.add(feature1);
-    draw.add(feature2);
+    // draw.add(multiLineStringFeature);
+    const newFeatureIds = draw.add(multiLineStringFeature);
+    draw.changeMode('simple_select', {
+        featureIds: newFeatureIds.map(f => f)
+    });
 }
 function hideAllTool() {
     $("#link-tools").hide();
-    $("#point-tools").hide();
+    $("#node-tools").hide();
+    $("#station-tools").hide();
 }
 function showLinkTool() {
     hideAllTool();
     $("#link-tools").show();
 }
-function showNodeStationTool() {
+function showNodeTool() {
     hideAllTool();
-    $("#point-tools").show();
+    $("#node-tools").show();
+}
+function showStationTool() {
+    hideAllTool();
+    $("#station-tools").show();
 }
 
 function createInfoWindowContent(lngLat) {
@@ -2400,4 +2439,72 @@ function updateMapData() {
         linkNodeStationFeatures.features = [];
         map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
     }
+}
+
+function checkEditSelect() {
+    hideAllTool()
+    let select = $('#type-select').val();
+
+    if (select === 'lineString') {
+        showLinkTool();
+    } else if (select === 'point') {
+        showNodeTool();
+    } else if (select === 'station') {
+        showStationTool();
+    }
+}
+
+function addToFileModal(fileName) {
+    const target = $(".shp-frm");
+
+    let optionHtml = '</ul>';
+    optionHtml += '<li class="shp-item" id="shp_'+fileName+'" onclick="selectTargetShp(this);">'+fileName+'</li>';
+    optionHtml += '</ul>';
+
+    target.append(optionHtml)
+    $('.shp-frm').show()
+}
+function selectTargetShp(obj) {
+    $(".shp-item").removeClass("selected2");
+    $(obj).addClass("selected2");
+}
+function setTargetShp() {
+    // 링크 9 개의 서비스 속성
+    // 정류소, 노드 6개의 서비스 속성
+    const targetShp = $("#shp-select").find(".selected2").text();
+
+    $.ajax({
+        url : '/api/getShpProperties',
+        type : 'POST',
+        data : {
+            fileName : targetShp
+        },
+        success : function (data){
+            const targetTable = $('#newpolygon .modal-body table tbody');
+            targetTable.empty()
+
+            console.log(data)
+
+            let columnLength;
+            if (data.shpType === "link") {
+                columnLength = data.columnNames.length - 9;
+            } else if (data.shpType === "node" || data.shpType === "station") {
+                columnLength = data.columnNames.length - 6;
+            }
+
+            for (let i = 0; i < columnLength; i++) {
+                var html = "<tr><td><label class='polygon-label' title="+data.columnNames[i]+">"+data.columnNames[i]+"</label></td><td><input class='property' attr='"+data.columnNames[i]+"' type='text'></td></tr>"
+                targetTable.append(html)
+            }
+
+            $('#newpolygon').modal('show')
+        },
+        error : function (error){
+            console.log(error)
+        }
+    })
+}
+
+function openNewFeatureModal() {
+    $('#modal_feature').modal('show');
 }
