@@ -275,8 +275,13 @@ function sendFiles() {
     hasShx = false
     hasDdf = false
 
-
     for (var i = 0; i < files.length; i++) {
+        let fileName = files[i].name.split(".")[0]
+        if (checkFile(fileName)) {
+            toastOn("이미 해당 파일 테이블이 존재합니다.");
+            return
+        }
+
         if (files[i].name.indexOf('.shp') > -1) {
             hasShp = true
         } else if (files[i].name.indexOf('.shx') > -1) {
@@ -307,24 +312,9 @@ function sendFiles() {
             finishLoading();
         },
         success: function (data) {
-            /* geojson 형식
-            * Point: [longitude, latitude]
-            * LineString: [[longitude1, latitude1], [longitude2, latitude2], ...]
-            * Polygon: [[[longitude1, latitude1], [longitude2, latitude2], ...], ...]
-            */
-            console.log(data.data)
-            // shpLoadFeatures.features = data.data.features
-            // readProperties(data.data.features[0].properties)
-            // ist(data.data)
-            // const dataType = checkDataType(data);
-            // if (dataType === "Point")  {
-            //     drawNodePoint(data);
-            // } else if (dataType === "MultiLineString") {
-            //     drawLinkLine(data)
-            // } else {
-            //     drawPolyline(data);
-            // }
-            // createLayer(data, dataType);
+            finishLoading();
+            console.log(data)
+            toastOn(data);
         },
         error: function (error) {
             console.error('Error uploading file:', error);
@@ -907,7 +897,7 @@ function startEditMode() {
     map.off('draw.update', updateMeasurement);
     draw.changeMode('simple_select');
     // 새 Feature 가 추가되는 걸 감지하는 부분
-    map.on('draw.create', editCreate);
+    // map.on('draw.create', editCreate);
 }
 
 /// 편집으로 새로운거 추가되었을 때 이벤트 함수
@@ -966,8 +956,54 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
         }
 
         $('#newpolygon').modal('hide');
-        // TODO 멘트 수정 필요
-        // toastOn("");
+
+        let shpType = $("#shpType").val();
+        if (shpType === "link") {
+            draw.changeMode('draw_line_string');
+        } else if (shpType === "node" || shpType === "station") {
+            draw.changeMode('draw_point');
+        }
+
+        properties["FILE_NAME"] = $('#fileName').val();
+        properties["SHP_TYPE"] = shpType;
+
+        map.on('draw.create', function (e) {
+            const featureId = e.features[0].id;
+            const allFeatures = draw.getAll().features;
+            const feature = allFeatures.find(f => f.id === featureId);
+
+            if (feature) {
+                feature.properties = properties; // 속성 업데이트
+                const featureType = feature.geometry.type;
+
+                properties["LABEL_COLUMN"] = shpType;
+                if (featureType.indexOf("LineString") > -1) {
+                    properties["GEOMETRY"] = feature.geometry;
+                    if (featureType === "MultiLineString") {
+                        properties["F_LNG"] = feature.geometry.coordinates[0][0][0];
+                        properties["F_LAT"] = feature.geometry.coordinates[0][0][1];
+                        properties["T_LNG"] = feature.geometry.coordinates[0][feature.geometry.coordinates[0].length-1][0];
+                        properties["T_LAT"] = feature.geometry.coordinates[0][feature.geometry.coordinates[0].length-1][1];
+                    } else {
+                        properties["F_LNG"] = feature.geometry.coordinates[0][0];
+                        properties["F_LAT"] = feature.geometry.coordinates[0][1];
+                        properties["T_LNG"] = feature.geometry.coordinates[feature.geometry.coordinates.length-1][0];
+                        properties["T_LAT"] = feature.geometry.coordinates[feature.geometry.coordinates.length-1][1];
+                    }
+                } else if (featureType === "Point") {
+                    properties["LNG"] = feature.geometry.coordinates[0];
+                    properties["LAT"] = feature.geometry.coordinates[1];
+                }
+
+                draw.set({
+                    type: 'FeatureCollection',
+                    features: allFeatures
+                });
+
+                insertShpTable(feature);
+            }
+        });
+
     }
 }
 
@@ -1639,7 +1675,6 @@ function setMapEvent() {
                 const allFeatures = draw.getAll().features;
                 // const closestFeature = findClosestFeatureFromFeature(allFeatures, e.lngLat);
                 const closestFeature = allFeatures[0];
-                console.log(closestFeature);
 
                 if (closestFeature) {
                     selectedFeature = closestFeature;
@@ -2483,9 +2518,9 @@ function setTargetShp() {
             const targetTable = $('#newpolygon .modal-body table tbody');
             targetTable.empty()
 
-            console.log(data)
-
             let columnLength;
+            $("#shpType").val(data.shpType)
+            $("#fileName").val(targetShp)
             if (data.shpType === "link") {
                 columnLength = data.columnNames.length - 9;
             } else if (data.shpType === "node" || data.shpType === "station") {
@@ -2507,4 +2542,34 @@ function setTargetShp() {
 
 function openNewFeatureModal() {
     $('#modal_feature').modal('show');
+}
+
+function insertShpTable(data) {
+    $.ajax({
+        url : '/api/insertShpTable',
+        data : JSON.stringify(data),
+        dataType: "json",
+        contentType: 'application/json',
+        type : 'POST',
+        success : function (data){
+            console.log(data)
+            toastOn("새 객체가 추가되었습니다.");
+        },
+        error : function (error){
+            console.log(error)
+        }
+    })
+}
+
+function checkFile(fileName) {
+    let isHasFile = false;
+    const fileListItems = $(".options a");
+
+    for (let i = 0; i <fileListItems.length; i++) {
+        if ($(fileListItems[i]).find("span:eq(0)").text() === fileName) {
+            isHasFile = true
+        }
+    }
+
+    return isHasFile;
 }

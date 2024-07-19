@@ -80,6 +80,17 @@ public class ShapeService {
     public int updateLinkShpData(Map<String, Object> commandMap) {
         return shapeMapper.updateLinkShpData(commandMap);
     }
+    public int insertShpTable(Map<String, Object> commandMap) {
+        return shapeMapper.insertShpTable(commandMap);
+    }
+
+    public boolean checkTableExists(String tableName) {
+        // Oracle에서는 테이블 이름을 대문자로 변환하여 쿼리합니다.
+        String sql = "SELECT COUNT(*) FROM all_tables WHERE table_name = ? AND owner = 'TRANSIT'";
+        Integer count = jdbcTemplate.queryForObject(sql, new Object[]{tableName.toUpperCase()}, Integer.class);
+        return count != null && count > 0;
+    }
+
     @Transactional
     public Map<String, Object> saveSelectedFeatures(String tableName, String idxArr, boolean isChecked, String shpType, String label) {
         Map<String, Object> resultMap = new HashMap<>();
@@ -206,17 +217,6 @@ public class ShapeService {
         }
 
         return createTableSql.toString();
-    }
-
-    private void createPointsTableSql(String tableName) {
-        StringBuilder createPointsTableSql = new StringBuilder("CREATE TABLE " + tableName + "_POINTS (");
-        createPointsTableSql.append(tableName + "_ID NUMBER, ");
-        createPointsTableSql.append("\"LINK_SEQ\" NUMBER, ");
-        createPointsTableSql.append("\"LNG\" VARCHAR2(100), ");
-        createPointsTableSql.append("\"LAT\" VARCHAR2(100) ");
-        createPointsTableSql.append(")");
-
-        jdbcTemplate.execute(String.valueOf(createPointsTableSql));
     }
 
     private void saveNode(String tableName, List<JSONObject> features, String shpType, String[] bArr, String label) {

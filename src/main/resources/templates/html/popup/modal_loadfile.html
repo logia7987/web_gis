@@ -124,6 +124,12 @@
         var hasDdf = false
 
         for (var i = 0; i < files.length; i++) {
+            let fileName = files[i].name.split(".")[0]
+            if (parent.checkFile(fileName)) {
+                parent.toastOn("이미 해당 파일 테이블이 존재합니다.");
+                return
+            }
+
             if (files[i].name.indexOf('.shp') > -1) { // .shp 파일 여부 검사
                 hasShp = true
             } else if (files[i].name.indexOf('.shx') > -1) { // .shx 파일 여부 검사

@@ -20,4 +20,5 @@ public interface ShapeMapper {
     int updateNodeStationShpData(Map<String, Object> commandMap);
     int updateLinkShpData(Map<String, Object> commandMap);
     int deleteShpFeatureData(Map<String, Object> commandMap);
+    int insertShpTable(Map<String, Object> commandMap);
 }

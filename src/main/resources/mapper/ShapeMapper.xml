@@ -67,4 +67,26 @@
         DELETE FROM TRANSIT.${fileName}
         WHERE ${fileName}_ID = #{featureId}
     </delete>
+
+    <insert id="insertShpTable" parameterType="map">
+        INSERT INTO TRANSIT.${fileName}
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <foreach collection="properties" item="value" index="key" separator=",">
+                ${key}
+            </foreach>
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <foreach collection="properties" item="value" index="key" separator=",">
+                <choose>
+                    <when test="value instanceof java.lang.Double">
+                        #{value, jdbcType=NUMERIC}
+                    </when>
+                    <otherwise>
+                        #{value}
+                    </otherwise>
+                </choose>
+            </foreach>
+        </trim>
+    </insert>
 </mapper>

@@ -15,6 +15,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.opengis.referencing.FactoryException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -57,7 +58,7 @@ public class ApiController {
     private ShapeService shapeService;
 
     @Autowired
-    private BmsService bmsService;
+    private JdbcTemplate jdbcTemplate;
 
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
     private static final File geoDir = new File("C:\\mapbox\\geoJson");
@@ -301,6 +302,56 @@ public class ApiController {
                                                 @RequestParam("label") String label) {
 
         return shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType, label);
+    }
+
+    @ResponseBody
+    @RequestMapping(value = "/insertShpTable", method = RequestMethod.POST)
+    public Map<String, Object> insertShpFileTable(@RequestBody Map<String, Object> params) {
+        // 파라미터에서 properties와 geometry 추출
+        Map<String, Object> properties = (Map<String, Object>) params.get("properties");
+        Map<String, Object> geometry = (Map<String, Object>) params.get("geometry");
+
+        // 파일 이름 추출
+        String fileName = (String) properties.get("FILE_NAME");
+        String idColumn = fileName + "_ID";
+
+        // 테이블에서 현재 최대 ID 조회
+        String maxIdQuery = String.format("SELECT COALESCE(MAX(%s), 0) FROM TRANSIT.%s", idColumn, fileName);
+        Integer maxId = jdbcTemplate.queryForObject(maxIdQuery, Integer.class);
+        int newId = (maxId == null ? 0 : maxId) + 1; // 새로운 ID는 최대 ID + 1
+
+        // SQL 쿼리 동적 생성
+        StringJoiner columns = new StringJoiner(", ");
+        StringJoiner values = new StringJoiner(", ");
+
+        for (Map.Entry<String, Object> entry : properties.entrySet()) {
+            columns.add("'"+entry.getKey() +"'");
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                values.add("'" + value + "'");
+            } else if (value instanceof Number) {
+                values.add(value.toString());
+            } else {
+                values.add("'" + value.toString() + "'");
+            }
+        }
+
+        values.add(Integer.toString(newId));
+        columns.add("'"+fileName+"_ID'");
+
+        String sql = String.format(
+                "INSERT INTO TRANSIT.%s (%s) VALUES (%s)",
+                fileName,
+                columns.toString(),
+                values.toString()
+        );
+
+        System.out.println(sql);
+
+        // SQL 실행
+        jdbcTemplate.update(sql);
+
+        return Map.of("status", "success");
     }
 
     @ResponseBody
