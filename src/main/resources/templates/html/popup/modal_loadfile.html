@@ -39,7 +39,7 @@
                 <button class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)">링크</button>
             </div>
         </div>
-        <button type="button" class="btn btn-primary btn-send" onclick="sendFiles()">전송</button>
+        <button type="button" class="btn btn-primary btn-send" onclick="sendFiles(true)">전송</button>
     </div>
 </body>
 <script th:inline="javascript">
@@ -105,8 +105,9 @@
         }
     }
 
-    function sendFiles() {
+    function sendFiles(isCheck) {
         // hideModal('loadFile')
+
         if ($('.shape-btn.selected2').attr('id') === undefined) {
             parent.toastOn("올리는 ShapeFile 의 타입을 선택해주세요.");
             return;
@@ -125,9 +126,16 @@
 
         for (var i = 0; i < files.length; i++) {
             let fileName = files[i].name.split(".")[0]
-            if (parent.checkFile(fileName)) {
-                parent.toastOn("이미 해당 파일 테이블이 존재합니다.");
-                return
+            if (isCheck) {
+                if (parent.checkFile(fileName)) {
+                    // TODO 중복 파일 처리
+                    // parent.toastOn("이미 해당 파일 테이블이 존재합니다.");
+                    // 이미 파일이 존재할 경우, 아래 모달을 띄움
+                    parent.hideModal('loadFile');
+                    parent.$("#modal_shp").modal('show');
+
+                    return
+                }
             }
 
             if (files[i].name.indexOf('.shp') > -1) { // .shp 파일 여부 검사

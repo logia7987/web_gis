@@ -263,11 +263,12 @@ function setMapBounds(data) {
 function sendFiles() {
     hideModal('loadFile')
 
-    var frmFile = $("#frmFile");
-    // 파일 선택 input 요소
-    var fileInput = frmFile.find("input[name='shpData']")[0];
+    var iframe = $("#shpFrame")[0];
 
-    // 선택한 파일 가져오기
+    var iframeDocument = iframe.contentWindow.document;
+
+    var fileInput = $(iframeDocument).find("input[name='shpData']")[0];
+
     var files = fileInput.files;
     var formData = new FormData();
 
@@ -276,12 +277,6 @@ function sendFiles() {
     hasDdf = false
 
     for (var i = 0; i < files.length; i++) {
-        let fileName = files[i].name.split(".")[0]
-        if (checkFile(fileName)) {
-            toastOn("이미 해당 파일 테이블이 존재합니다.");
-            return
-        }
-
         if (files[i].name.indexOf('.shp') > -1) {
             hasShp = true
         } else if (files[i].name.indexOf('.shx') > -1) {
@@ -299,28 +294,7 @@ function sendFiles() {
         alert ("필수 파일을 확인해주세요.")
     }
 
-    $.ajax({
-        url: '/api/uploadShapeFiles',  // 서버 엔드포인트
-        type: 'POST',
-        data: formData,
-        processData: false,  // 필수: FormData를 query string으로 변환하지 않음
-        contentType: false,  // 필수: 파일 전송에는 multipart/form-data 형식이 필요
-        beforeSend: function( ) {
-            viewLoading()
-        },
-        complete: function( ) {
-            finishLoading();
-        },
-        success: function (data) {
-            finishLoading();
-            console.log(data)
-            toastOn(data);
-        },
-        error: function (error) {
-            console.error('Error uploading file:', error);
-            finishLoading();
-        }
-    });
+    iframe.contentWindow.sendFiles(false);
 }
 
 
@@ -362,7 +336,7 @@ function editShp(property, type) {
     // 맵에서 데이터를 가져옴
     var geoData = map.getSource(LINK_NODE_STATION_SOURCE_ID)._options.data.features;
     // 그리기 도구를 숨기고 표시
-    $('.mapboxgl-ctrl-group').show();
+    // $('.mapboxgl-ctrl-group').show();
     $('.mapboxgl-gl-draw_line, .mapboxgl-gl-draw_point, .mapboxgl-gl-draw_combine, .mapboxgl-gl-draw_uncombine').hide();
     if (draw.getAll().features.length > 0) {
         for (i = 0; i < draw.getAll().features.length; i++) {
@@ -668,18 +642,13 @@ function handleFeatureSelection(e) {
             if (property) {
                 editShp(property, targetId);
             }
-            // if (select === 'lineString' && featureType.indexOf("LineString") > -1) {
-            //     if (property) {
-            //         editShp(property, targetId);
-            //     }
+            if (select === 'lineString' && featureType === "MultiLineString") {
+                $("#link-btn-merge").show();
+            } else {
+                $("#link-btn-merge").hide();
+            }
             // } else if (select === 'point' && featureType === 'Point' && selectedShp.properties.SHP_TYPE === "node") {
-            //     if (property) {
-            //         editShp(property, targetId);
-            //     }
             // } else if (select === 'station' && selectedShp.properties.SHP_TYPE === "station") {
-            //     if (property) {
-            //         editShp(property, targetId);
-            //     }
             // }
         }
     } else {
@@ -1156,11 +1125,23 @@ function setSource(sourceId, features){
 }
 
 function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
+    map.addLayer({
+        'id': layerId + '-highlighted',
+        'type': 'circle',
+        'source': sourceId,
+        'paint': {
+            'circle-color': '#1aa3ff',
+            'circle-radius': 8,
+            'circle-stroke-color': '#1aa3ff',
+            'circle-stroke-width': 2
+        },
+        'filter': ['==', 'featureId', ''] // 초기 필터 비워두기
+    });
 
     if (layerId == "station-layer") {
         map.loadImage(symbolImage, function (error, image) {
             if (error) throw error;
-            map.addImage('icon-station', ICON_STATION_SRC);
+            map.addImage('icon-station', image);
 
             map.addLayer({
                 'id': layerId,
@@ -1174,6 +1155,8 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
                     'text-field':  ['get', 'label'],
                     'text-font': ['Open Sans Regular'],
                     'text-anchor': 'bottom',
+                    'text-halo-color': '#ffffff', // 테두리 색상
+                    'text-halo-width': 2, // 테두리 두께
                 },
                 'filter': ['==', 'featureId', featureId]
             });
@@ -1188,7 +1171,7 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
                 'type' : 'symbol',
                 'source' : sourceId,
                 'paint': {
-                    'icon-color' : '#001ab0'
+                    'icon-color' : '#282828'
                 },
                 'layout': {
                     'icon-image': 'icon-node',
@@ -1199,6 +1182,8 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
                     'text-font': ['Open Sans Regular'],
                     'text-anchor': 'bottom',
                     'text-offset': [0, -0.5],
+                    'text-halo-color': '#ffffff', // 테두리 색상
+                    'text-halo-width': 2, // 테두리 두께
                 },
                 'filter' : ['==', 'featureId', featureId]
             });
@@ -1207,6 +1192,13 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
 
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e);
+
+        var clickedFeature = e.features[0];
+        if (clickedFeature) {
+            let filterName = clickedFeature.properties.FILE_NAME
+            // 강조 레이어의 필터를 설정하여 선택된 포인트만 표시
+            map.setFilter(layerId + '-highlighted', ['==', filterName+"_ID", clickedFeature.properties[filterName+"_ID"]]);
+        }
     });
 
     map.on('mouseenter', layerId, () => {
@@ -1263,12 +1255,24 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+    // 선택된 레이어를 강조하기 위한 레이어 추가
+    map.addLayer({
+        'id': layerId + '-highlighted',
+        'type': 'line',
+        'source': sourceId,
+        'paint': {
+            'line-color': '#1aa3ff',
+            'line-width': 6
+        },
+        'filter': ['==', 'id', '']
+    });
+    // 기본 레이어
     map.addLayer({
         'id' : layerId,
         'type' : 'line',
         'source' : sourceId,
         'paint': {
-            'line-color': '#000',
+            'line-color': '#282828',
             'line-width': 2
         },
         'filter' : ['==', 'featureId', featureId]
@@ -1297,6 +1301,10 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
             console.log('Closest start point node:', startPointNode);
             console.log('Closest end point node:', endPointNode);
 
+            let filterName = clickedFeature.properties.FILE_NAME
+
+            // 선택된 피처를 강조하도록 필터 업데이트
+            map.setFilter(layerId + '-highlighted', ['==', filterName+"_ID", clickedFeature.properties[filterName+"_ID"]]);
         }
     });
 
@@ -1490,50 +1498,6 @@ function getClosestLinkId(pointPos){
     return closestId;
 }
 
-function findClosestFeature(clickedPoint) {
-    var closestDistance = Infinity;
-    var closestFeature = null;
-
-    // 맵 상의 모든 객체(레이어)를 반복하여 가장 가까운 객체 찾기
-    map.getStyle().layers.forEach(function(layer) {
-        if (layer.type === 'symbol' || layer.type === 'circle' || layer.type === 'line') {
-            var features = map.queryRenderedFeatures(clickedPoint, { layers: [layer.id] });
-            if (features.length > 0) {
-                features.forEach(function(feature) {
-                    var distance = turf.distance(turf.point([clickedPoint.lng, clickedPoint.lat]), turf.point(feature.geometry.coordinates));
-                    if (distance < closestDistance) {
-                        closestDistance = distance;
-                        closestFeature = feature;
-                    }
-                });
-            }
-        }
-    });
-
-    return closestFeature;
-}
-
-// 가장 가까운 피처 찾기 함수
-function findClosestFeatureFromFeature(features, lngLat) {
-    let minDistance = Infinity;
-    let closestFeature = null;
-
-    features.forEach(feature => {
-        feature.geometry.coordinates.forEach(coord => {
-            const distance = Math.sqrt(
-                Math.pow(coord[0] - lngLat.lng, 2) + Math.pow(coord[1] - lngLat.lat, 2)
-            );
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestFeature = feature;
-            }
-        });
-    });
-
-    return closestFeature;
-}
-
 function initBasicTileSet() {
     // 맵박스 초기화
     map = new mapboxgl.Map({
@@ -1669,11 +1633,7 @@ function setMapEvent() {
 
         map.on('contextmenu', (e) => {
             if (isEdit()) {
-                // const features = map.queryRenderedFeatures(e.point, {
-                //     layers: ['gl-draw-line.cold']
-                // });
                 const allFeatures = draw.getAll().features;
-                // const closestFeature = findClosestFeatureFromFeature(allFeatures, e.lngLat);
                 const closestFeature = allFeatures[0];
 
                 if (closestFeature) {
@@ -2154,17 +2114,19 @@ function splitLine() {
     // 기존 선택된 선 삭제
     draw.deleteAll();
 
-    // MapboxDraw에 새로운 선 추가
-    // draw.add(multiLineStringFeature);
+    // MapboxDraw에 새로운 선 추가와 동시에 선택
     const newFeatureIds = draw.add(multiLineStringFeature);
     draw.changeMode('simple_select', {
         featureIds: newFeatureIds.map(f => f)
     });
+
+    $("#link-btn-merge").show();
 }
 function hideAllTool() {
     $("#link-tools").hide();
     $("#node-tools").hide();
     $("#station-tools").hide();
+    $("#link-btn-merge").hide();
 }
 function showLinkTool() {
     hideAllTool();
@@ -2215,18 +2177,41 @@ function addHandle(feature, lngLat) {
         coordinates.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
         feature.geometry.coordinates = coordinates;
     } else {
-        let coordinates = feature.geometry.coordinates[0];
-        const closestIndex = findClosestSegmentIndex(coordinates, lngLat);
-        // 새로운 핸들 포인트를 추가
-        coordinates.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
-        feature.geometry.coordinates[0] = coordinates;
+        let lines = feature.geometry.coordinates;
+        let closestIndex = -1;
+        let closestLineIndex = -1;
+        let minDistance = Infinity;
+
+        // 모든 LineString을 순회하여 가장 가까운 선과 인덱스를 찾음
+        lines.forEach((line, lineIndex) => {
+            const index = findClosestSegmentIndex(line, lngLat);
+            const distance = pointToSegmentDistance(lngLat, [line[index], line[index + 1]]);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = index;
+                closestLineIndex = lineIndex;
+            }
+        });
+
+        // 가장 가까운 선에 새로운 핸들 포인트를 추가
+        let closestLine = lines[closestLineIndex];
+        closestLine.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
+        lines[closestLineIndex] = closestLine;
+        feature.geometry.coordinates = lines;
     }
 
     // Draw 객체에서 피처를 업데이트
     draw.delete(feature.id);
-    draw.add(feature);
+    // draw.add(feature);
+    const newFeatureIds = draw.add(feature);
 
-    realTimeUpdateToDB(feature)
+    // 링크 점 삭제 바로 반영되게 업데이트 요청 실행
+    realTimeUpdateToDB(feature);
+
+    draw.changeMode('simple_select', {
+        featureIds: newFeatureIds.map(f => f)
+    });
 }
 
 // 핸들 포인트 삭제 함수
@@ -2235,32 +2220,46 @@ function removeHandle(feature, lngLat) {
 
     if (shpType ==="LineString") {
         const coordinates = feature.geometry.coordinates;
-
         const closestIndex = findClosestPointIndex(coordinates, lngLat);
-
         // 가장 가까운 핸들 포인트를 삭제
         coordinates.splice(closestIndex, 1);
-
         feature.geometry.coordinates = coordinates;
     } else {
-        const coordinates = feature.geometry.coordinates[0];
+        const lines = feature.geometry.coordinates;
+        let closestIndex = -1;
+        let closestLineIndex = -1;
+        let minDistance = Infinity;
 
-        const closestIndex = findClosestPointIndex(coordinates, lngLat);
+        // 모든 LineString을 순회하여 가장 가까운 포인트와 인덱스를 찾음
+        lines.forEach((line, lineIndex) => {
+            const index = findClosestPointIndex(line, lngLat);
+            const distance = pointToSegmentDistance(lngLat, [line[index], line[index]]);
 
-        // 가장 가까운 핸들 포인트를 삭제
-        coordinates.splice(closestIndex, 1);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = index;
+                closestLineIndex = lineIndex;
+            }
+        });
 
-        feature.geometry.coordinates[0] = coordinates;
+        // 가장 가까운 선에서 핸들 포인트를 삭제
+        let closestLine = lines[closestLineIndex];
+        closestLine.splice(closestIndex, 1);
+        lines[closestLineIndex] = closestLine;
+        feature.geometry.coordinates = lines;
     }
 
     // Draw 객체에서 피처를 업데이트
     draw.delete(feature.id);
-    draw.add(feature);
+    // draw.add(feature);
+    const newFeatureIds = draw.add(feature);
     
-    // TODO 새로고쳐지고, 해당 feature 가 선택되게 변경해야함
-
     // 링크 점 삭제 바로 반영되게 업데이트 요청 실행
-    realTimeUpdateToDB(feature)
+    realTimeUpdateToDB(feature);
+
+    draw.changeMode('simple_select', {
+        featureIds: newFeatureIds.map(f => f)
+    });
 }
 
 // 가장 가까운 포인트 인덱스 찾기
@@ -2356,8 +2355,14 @@ function uploadShpTable() {
                 label: selectedLabel
             },
             success : function (result){
-                console.log(result)
                 toastOn(result.message);
+
+                // TODO 중복 파일 처리
+                if (parent.checkFile(fileName)) {
+                    hideModal('loadFile');
+                    $("#modal_shp").modal('show');
+                    return
+                }
 
                 let html = '<a href="#" onclick="getShpData(this)"><span>'+fileNm+'</span>' +
                     '<span class="option-selected" ' +
@@ -2572,4 +2577,73 @@ function checkFile(fileName) {
     }
 
     return isHasFile;
+}
+
+function mergeLines() {
+    const feature = draw.getAll().features[0];
+    const shpType = feature.geometry.type;
+
+    if (shpType === "MultiLineString") {
+        const lines = feature.geometry.coordinates;
+        let mergedCoordinates = [];
+
+        lines.forEach(line => {
+            mergedCoordinates = mergeClosePoints(mergedCoordinates.concat(line));
+        });
+
+        feature.geometry.type = "LineString";
+        feature.geometry.coordinates = mergedCoordinates;
+
+        // Draw 객체에서 피처를 업데이트
+        draw.delete(feature.id);
+        const newFeatureIds = draw.add(feature);
+
+        realTimeUpdateToDB(feature);
+
+        draw.changeMode('simple_select', {
+            featureIds: newFeatureIds.map(f => f)
+        });
+
+        $("#link-btn-merge").hide();
+    }
+}
+
+function mergeClosePoints(coordinates) {
+    const mergedCoordinates = [];
+
+    if (coordinates.length === 0) return mergedCoordinates;
+
+    mergedCoordinates.push(coordinates[0]);
+
+    for (let i = 1; i < coordinates.length; i++) {
+        const lastPoint = mergedCoordinates[mergedCoordinates.length - 1];
+        const currentPoint = coordinates[i];
+
+        const distance = pointToPointDistance(lastPoint, currentPoint);
+
+        if (distance > 10) {
+            mergedCoordinates.push(currentPoint);
+        }
+    }
+
+    return mergedCoordinates;
+}
+
+function pointToPointDistance(point1, point2) {
+    const [lng1, lat1] = point1;
+    const [lng2, lat2] = point2;
+
+    const R = 6371e3; // 지구 반지름 (미터)
+    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const distance = R * c; // in metres
+    return distance;
 }
