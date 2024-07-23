@@ -237,8 +237,8 @@ function getShpData(obj) {
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
     updateMapData();
 
-    // 선택된 파일을 TODO 멘트 생각
-    addToFileModal(fileName);
+    // 선택된 파일을
+    addToFileModal();
 }
 
 
@@ -660,7 +660,12 @@ function handleFeatureSelection(e) {
             const properties = e.features[0].properties;
             let propertyHtml = '<tbody>';
             for (const key in properties) {
-                propertyHtml += '<tr><td id='+e.features[0].id+'>' + key +'</td><td class="property-info">'+ properties[key] + '</td></tr>'; // 속성 정보
+                propertyHtml += '<tr><td id='+e.features[0].id+'>' + key +'</td>' +
+                    '<td class="property-info">' +
+                    '<span class="property-text">'+ properties[key] + '</span>' +
+                    '<input class="property-input" type="text" name="'+key+'" value="'+ properties[key] +'">' +
+                    '</td>' +
+                    '</tr>'; // 속성 정보
             }
 
             propertyHtml += '</tbody>';
@@ -850,8 +855,7 @@ function startViewerMode() {
 
 
 function startEditMode() {
-    // TODO 멘트 수정 필요
-    toastOn("편집모드로 전환되었습니다. 좌측하단의 툴을 이용해 지도 위에 그리기가 가능합니다.")
+    toastOn("편집모드로 전환되었습니다.")
 
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
@@ -901,10 +905,13 @@ function editCreate(e) {
 
 let properties = {};
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
+    // TODO 여기서 값으 제대로 가공해서 서버에 넘겨야 지도 표출이 원활하게 가능함
     properties = {};
-    var property = $('#newpolygon .modal-body table').find('input');
-    var proper = $('.property');
-    var isProperty = true;
+    let fileName = $('#fileName').val();
+    let property = $('#newpolygon .modal-body table').find('input');
+    let proper = $('.property');
+    let isProperty = true;
+    let defaultLabel = $("#label_"+fileName + " option:selected").val();
 
     for (let i = 0; i < proper.length; i++) { // 빈칸 여부 체크
         if (proper[i].value === '') {
@@ -933,8 +940,9 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
             draw.changeMode('draw_point');
         }
 
-        properties["FILE_NAME"] = $('#fileName').val();
+        properties["FILE_NAME"] = fileName;
         properties["SHP_TYPE"] = shpType;
+        properties["LABEL_COLUMN"] = defaultLabel;
 
         map.on('draw.create', function (e) {
             const featureId = e.features[0].id;
@@ -945,7 +953,6 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
                 feature.properties = properties; // 속성 업데이트
                 const featureType = feature.geometry.type;
 
-                properties["LABEL_COLUMN"] = shpType;
                 if (featureType.indexOf("LineString") > -1) {
                     properties["GEOMETRY"] = feature.geometry;
                     if (featureType === "MultiLineString") {
@@ -973,6 +980,36 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
             }
         });
 
+    }
+}
+
+function removeFeature() {
+    if (selectedShp === undefined) {
+        toastOn("선택된 객체가 없습니다. 객체 선택 후 진행해주세요.");
+    } else {
+        const fileName = selectedShp.properties.FILE_NAME;
+        const featureId = selectedShp.properties[fileName + "_ID"];
+
+        $.ajax({
+            url : '/api/deleteShpFeatureData',
+            type : 'POST',
+            data : {
+                fileName : fileName,
+                featureId : featureId
+            },
+            success : function (result){
+                if (result.result === "success") {
+                    toastOn("선택하신 객체를 삭제하였습니다.");
+                    // 성공 시 draw 내용을 비운다.
+                    draw.deleteAll();
+                } else {
+                    toastOn("객체 삭제를 실패하였습니다.");
+                }
+            },
+            error : function (error){
+                console.log(error)
+            }
+        })
     }
 }
 
@@ -1336,18 +1373,19 @@ function setLayerLinkDot(layerId, sourceId) {
 }
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
-function generatePoints(segmentLength) {
+function generatePoints(segmentLength, minDistance = 1) {
     let coordinates;
     const targetFeature = draw.getAll().features[0];
     const featureType = targetFeature.geometry.type;
 
+    // 선의 좌표 추출
     if (featureType === "MultiLineString") {
-        coordinates = draw.getAll().features[0].geometry.coordinates[0];
+        coordinates = targetFeature.geometry.coordinates;
     } else if (featureType === "LineString") {
-        coordinates = draw.getAll().features[0].geometry.coordinates;
+        coordinates = [targetFeature.geometry.coordinates]; // MultiLineString처럼 처리
     }
 
-    let points = [];
+    const newFeatures = [];
     const R = 6371000; // 지구의 반지름(미터 단위)
 
     // 도와 관련된 함수들
@@ -1376,61 +1414,95 @@ function generatePoints(segmentLength) {
         ];
     }
 
-    let currentPoint = coordinates[0];
-    let remainingDistance = segmentLength;
-    let accumulatedDistance = 0;
-    points.push(currentPoint); // 첫 번째 점 추가
+    function createPointsFromCoordinates(coords) {
+        let points = [];
+        let currentPoint = coords[0];
+        let remainingDistance = segmentLength;
+        let accumulatedDistance = 0;
+        points.push(currentPoint); // 첫 번째 점 추가
 
-    for (let i = 1; i < coordinates.length; i++) {
-        const nextPoint = coordinates[i];
-        let segmentDistance = haversineDistance(currentPoint, nextPoint);
+        for (let i = 1; i < coords.length; i++) {
+            const nextPoint = coords[i];
+            let segmentDistance = haversineDistance(currentPoint, nextPoint);
 
-        // 첫 점과 다음 점 사이의 변수의 거리만큼 점 추가
-        while (segmentDistance >= remainingDistance) {
-            const factor = remainingDistance / segmentDistance;
-            currentPoint = interpolatePoint(currentPoint, nextPoint, factor);
-            accumulatedDistance += remainingDistance;
-            points.push(currentPoint); // 새로 생성된 점 추가
-            segmentDistance -= remainingDistance;
-            remainingDistance = segmentLength;
+            // 첫 점과 다음 점 사이의 변수의 거리만큼 점 추가
+            while (segmentDistance >= remainingDistance) {
+                const factor = remainingDistance / segmentDistance;
+                let newPoint = interpolatePoint(currentPoint, nextPoint, factor);
+
+                // 새로 생성된 점과 마지막으로 추가된 점 간의 거리 체크
+                if (points.length === 0 || haversineDistance(points[points.length - 1], newPoint) > minDistance) {
+                    points.push(newPoint); // 새로 생성된 점 추가
+                }
+
+                accumulatedDistance += remainingDistance;
+                segmentDistance -= remainingDistance;
+                remainingDistance = segmentLength;
+                currentPoint = newPoint;
+            }
+
+            accumulatedDistance += segmentDistance;
+            remainingDistance -= segmentDistance;
+            currentPoint = nextPoint;
+            points.push(currentPoint); // 다음 원래의 점 추가
         }
 
-        accumulatedDistance += segmentDistance;
-        remainingDistance -= segmentDistance;
-        currentPoint = nextPoint;
-        points.push(currentPoint); // 다음 원래의 점 추가
+        // 마지막 점이 원래 선의 마지막 점과 일치하지 않으면 추가
+        if (points[points.length - 1][0] !== coords[coords.length - 1][0] ||
+            points[points.length - 1][1] !== coords[coords.length - 1][1]) {
+            points.push(coords[coords.length - 1]);
+        }
+
+        return points;
     }
 
-    // 마지막 점이 원래 선의 마지막 점과 일치하지 않으면 추가
-    if (points[points.length - 1][0] !== coordinates[coordinates.length - 1][0] ||
-        points[points.length - 1][1] !== coordinates[coordinates.length - 1][1]) {
-        points.push(coordinates[coordinates.length - 1]);
-    }
+    // 각 LineString에 대해 점을 생성
+    coordinates.forEach((lineCoords) => {
+        let points = createPointsFromCoordinates(lineCoords);
 
+        // 새로운 피처 객체 생성
+        const newFeature = {
+            type: 'Feature',
+            id: Date.now(), // 임시아이디 부여 (현재 시간 사용)
+            properties: { ...targetFeature.properties },
+            geometry: {
+                type: 'LineString',
+                coordinates: points
+            }
+        };
+
+        newFeatures.push(newFeature);
+    });
+
+    // MultiLineString 처리: 여러 LineString 피처를 하나의 MultiLineString으로 병합
     if (featureType === "MultiLineString") {
-        points = [points]
+        // 기존 MultiLineString 피처의 모든 선을 포함한 새로운 MultiLineString 피처 생성
+        const mergedFeature = {
+            type: 'Feature',
+            id: Date.now(), // 임시아이디 부여 (현재 시간 사용)
+            properties: { ...targetFeature.properties },
+            geometry: {
+                type: 'MultiLineString',
+                coordinates: newFeatures.map(f => f.geometry.coordinates)
+            }
+        };
+
+        newFeatures.length = 0; // 기존 피처 배열을 비우고 병합된 피처를 추가
+        newFeatures.push(mergedFeature);
     }
-    // 새로운 피처 객체 생성
-    const newFeature = {
-        type: 'Feature',
-        id : 1, // 임시아이디 부여
-        properties: { ...draw.getAll().features[0].properties },
-        geometry: {
-            type: featureType,
-            coordinates: points
-        }
-    };
 
-    // 기존 선택된 선을 삭제하고 새로운 선을 추가
+    // 기존 선택된 선을 삭제
     draw.deleteAll();
-    // 새로운 피처를 Draw에 추가
-    // draw.add(newFeature);
-    const newFeatureIds = draw.add(newFeature);
 
-    draw.changeMode('simple_select', {
-        featureIds: newFeatureIds.map(f => f)
+    // 새로운 피처를 Draw에 추가
+    newFeatures.forEach((feature) => {
+        const newFeatureIds = draw.add(feature);
+        draw.changeMode('simple_select', {
+            featureIds: newFeatureIds.map(f => f)
+        });
     });
 }
+
 
 function getClosestLinkId(pointPos){
     //점과 선의 거리 중에서 가장가까운 link Id 찾기
@@ -2339,7 +2411,10 @@ function pointToSegmentDistance(point, segment) {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-function uploadShpTable() {
+function uploadShpTable(flag) {
+    if (flag) {
+        isSaving = false;
+    }
     if (!isSaving) {
         isSaving = true;
         let selectedLabel = matchObj.label
@@ -2352,32 +2427,31 @@ function uploadShpTable() {
                 idxArr: JSON.stringify(shpDataIdxArr),
                 isAllChecked : isAllChecked,
                 shpType : shpType,
-                label: selectedLabel
+                label: selectedLabel,
+                confirmFlag : flag
             },
             success : function (result){
-                toastOn(result.message);
+                if (result.result === "success") {
+                    let html = '<a href="#" onclick="getShpData(this)"><span>'+fileNm+'</span>' +
+                        '<span class="option-selected" ' +
+                        'data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >' +
+                        '<i class="fas fa-check"></i></span></a>'
 
-                // TODO 중복 파일 처리
-                if (parent.checkFile(fileName)) {
-                    hideModal('loadFile');
-                    $("#modal_shp").modal('show');
-                    return
+                    $("body > header > div > div.custom-select > div.options").append(html);
+
+                    $("body > header > div > div.custom-select > div.options a:last-child").click();
+
+                    clearShpList();
+                } else if (result.message != "" || flag === false) {
+                    toastOn(result.message);
+                    $("#modal_confirmFile").modal('show');
                 }
-
-                let html = '<a href="#" onclick="getShpData(this)"><span>'+fileNm+'</span>' +
-                    '<span class="option-selected" ' +
-                    'data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >' +
-                    '<i class="fas fa-check"></i></span></a>'
-
-                $("body > header > div > div.custom-select > div.options").append(html);
-
-                $("body > header > div > div.custom-select > div.options a:last-child").click();
                 isSaving = false;
-
-                clearShpList()
             },
             error : function (error){
                 console.log(error)
+                toastOn("파일 업로드 중 오류가 발생했습니다.");
+                isSaving = false;
             }
         })
     } else {
@@ -2494,16 +2568,20 @@ function checkEditSelect() {
     }
 }
 
-function addToFileModal(fileName) {
+function addToFileModal() {
     const target = $(".shp-frm");
+    target.find("li").remove();
 
     let optionHtml = '</ul>';
-    optionHtml += '<li class="shp-item" id="shp_'+fileName+'" onclick="selectTargetShp(this);">'+fileName+'</li>';
+    for (let i = 0; i < tNameArr.length; i++) {
+        optionHtml += '<li class="shp-item" id="shp_'+tNameArr[i]+'" onclick="selectTargetShp(this);">'+tNameArr[i]+'</li>';
+    }
     optionHtml += '</ul>';
 
     target.append(optionHtml)
     $('.shp-frm').show()
 }
+
 function selectTargetShp(obj) {
     $(".shp-item").removeClass("selected2");
     $(obj).addClass("selected2");
@@ -2557,8 +2635,9 @@ function insertShpTable(data) {
         contentType: 'application/json',
         type : 'POST',
         success : function (data){
-            console.log(data)
-            toastOn("새 객체가 추가되었습니다.");
+            if (data.status === "success") {
+                toastOn("새 객체가 추가되었습니다.");
+            }
         },
         error : function (error){
             console.log(error)
@@ -2646,4 +2725,62 @@ function pointToPointDistance(point1, point2) {
 
     const distance = R * c; // in metres
     return distance;
+}
+
+function editProperties() {
+    $(".property-text").hide()
+    $(".property-input").show()
+
+    startEdit();
+}
+
+function startEdit() {
+    $("#tab-cancel").show()
+    $("#tab-save").show()
+
+    $("#tab-edit").hide();
+}
+
+function cancelEdit() {
+    $(".property-text").show()
+    $(".property-input").hide()
+
+    $("#tab-edit").show();
+
+    $("#tab-cancel").hide()
+    $("#tab-save").hide()
+}
+
+const propertyFilter = ["emptyLabel","featureId","iconId","label"]
+function saveProperties() {
+    let newData = {}
+    $(".property-list").find("input").each(function(index, item) {
+        let key = $(item).attr("name");
+        if (propertyFilter.indexOf(key) === -1) {
+            newData[key] = $(item).val();
+        }
+    });
+
+    $.ajax({
+        url : '/api/updateProperties',
+        type : 'POST',
+        async : true,
+        DataType : "JSON",
+        contentType: "application/json",
+        data : JSON.stringify(newData),
+        success : function (result){
+            // 정상 작동완료 시 처리 값을 최신화 시킴
+            $(".property-list").find("input").each(function(index, item) {
+                let key = $(item).attr("name");
+
+                $(item).siblings("span").text(newData[key]);
+            });
+            cancelEdit();
+
+            toastOn("속성이 정상적으로 변경되었습니다.");
+        },
+        error : function (error){
+            console.log(error)
+        }
+    })
 }

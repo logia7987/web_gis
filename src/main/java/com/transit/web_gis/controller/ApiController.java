@@ -60,6 +60,8 @@ public class ApiController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
     private static final File geoDir = new File("C:\\mapbox\\geoJson");
 
@@ -299,9 +301,27 @@ public class ApiController {
                                                 @RequestParam("idxArr") String idxArr,
                                                 @RequestParam("isAllChecked") boolean isAllChecked,
                                                 @RequestParam("shpType") String shpType,
-                                                @RequestParam("label") String label) {
+                                                @RequestParam("label") String label,
+                                                @RequestParam("confirmFlag") boolean confirmFlag) {
 
-        return shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType, label);
+        Map<String, Object> commandMap = new HashMap<>();
+        Map<String, Object> resultMap = new HashMap<>();
+
+        commandMap.put("fileName", tableName);
+        int hasShp = shapeService.checkHasShpFile(commandMap);
+
+        if (hasShp > 0 && !confirmFlag) {
+            resultMap.put("message", tableName + " 파일이 이미 존재합니다.");
+            return resultMap;
+        } else {
+            if (confirmFlag && hasShp > 0) {
+                shapeService.dropShpTable(commandMap);
+                resultMap = shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType, label);
+            } else {
+                return shapeService.saveSelectedFeatures(tableName, idxArr, isAllChecked, shpType, label);
+            }
+        }
+        return resultMap;
     }
 
     @ResponseBody
@@ -309,7 +329,6 @@ public class ApiController {
     public Map<String, Object> insertShpFileTable(@RequestBody Map<String, Object> params) {
         // 파라미터에서 properties와 geometry 추출
         Map<String, Object> properties = (Map<String, Object>) params.get("properties");
-        Map<String, Object> geometry = (Map<String, Object>) params.get("geometry");
 
         // 파일 이름 추출
         String fileName = (String) properties.get("FILE_NAME");
@@ -325,19 +344,31 @@ public class ApiController {
         StringJoiner values = new StringJoiner(", ");
 
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
-            columns.add("'"+entry.getKey() +"'");
+            columns.add("\""+entry.getKey() +"\"");
             Object value = entry.getValue();
-            if (value instanceof String) {
-                values.add("'" + value + "'");
-            } else if (value instanceof Number) {
-                values.add(value.toString());
+
+            if (entry.getKey().equals("GEOMETRY")) {
+                // Convert the GEOMETRY value to JSON string
+                try {
+                    String jsonValue = objectMapper.writeValueAsString(value);
+                    values.add("'" + jsonValue + "'");
+                } catch (Exception e) {
+                    // Handle exception
+                    e.printStackTrace();
+                }
             } else {
-                values.add("'" + value.toString() + "'");
+                if (value instanceof String) {
+                    values.add("'" + value + "'");
+                } else if (value instanceof Number) {
+                    values.add(value.toString());
+                } else {
+                    values.add("'" + value.toString() + "'");
+                }
             }
         }
 
         values.add(Integer.toString(newId));
-        columns.add("'"+fileName+"_ID'");
+        columns.add("\""+fileName+"_ID\"");
 
         String sql = String.format(
                 "INSERT INTO TRANSIT.%s (%s) VALUES (%s)",
@@ -345,8 +376,6 @@ public class ApiController {
                 columns.toString(),
                 values.toString()
         );
-
-        System.out.println(sql);
 
         // SQL 실행
         jdbcTemplate.update(sql);
@@ -400,6 +429,33 @@ public class ApiController {
         commandMap.put("featureId", featureId);
 
         if (shapeService.deleteShpFeatureData(commandMap) > 0) {
+            resultMap.put("result", "success");
+        } else {
+            resultMap.put("result", "fail");
+        }
+
+        return resultMap;
+    }
+
+    @ResponseBody
+    @RequestMapping(value = "/updateProperties", method = RequestMethod.POST)
+    public Map<String, Object> updateProperties(@RequestBody Map<String, Object> params) {
+        Map<String, Object> resultMap = new HashMap<>();
+
+        String fileName = (String) params.get("FILE_NAME");
+        String featureId = (String) params.get(fileName + "_ID");
+
+        params.remove("FILE_NAME");
+        params.remove(fileName + "_ID");
+
+        Map<String, Object> properties = new HashMap<>(params);
+
+        Map<String, Object> paramMap = new HashMap<>();
+        paramMap.put("FILE_NAME", fileName);
+        paramMap.put("featureId", featureId);
+        paramMap.put("properties", properties);
+
+        if (shapeService.updateProperties(paramMap) > 0) {
             resultMap.put("result", "success");
         } else {
             resultMap.put("result", "fail");

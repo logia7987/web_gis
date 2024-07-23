@@ -2,7 +2,6 @@ package com.transit.web_gis.service;
 
 import com.transit.web_gis.mapper.ShapeMapper;
 import com.transit.web_gis.vo.ShpVo;
-import oracle.sql.ARRAY;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.simple.SimpleFeatureCollection;
@@ -29,7 +28,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.sql.rowset.serial.SerialArray;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
@@ -68,6 +66,9 @@ public class ShapeService {
     public List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap) {
         return shapeMapper.getLinkShpData(commandMap);
     }
+    public int checkHasShpFile(Map<String, Object> commandMap) {
+        return shapeMapper.checkHasShpFile(commandMap);
+    }
     public int updateLabel(Map<String, Object> commandMap) {
         return shapeMapper.updateLabel(commandMap);
     }
@@ -83,13 +84,13 @@ public class ShapeService {
     public int insertShpTable(Map<String, Object> commandMap) {
         return shapeMapper.insertShpTable(commandMap);
     }
-
-    public boolean checkTableExists(String tableName) {
-        // Oracle에서는 테이블 이름을 대문자로 변환하여 쿼리합니다.
-        String sql = "SELECT COUNT(*) FROM all_tables WHERE table_name = ? AND owner = 'TRANSIT'";
-        Integer count = jdbcTemplate.queryForObject(sql, new Object[]{tableName.toUpperCase()}, Integer.class);
-        return count != null && count > 0;
+    public void dropShpTable(Map<String, Object> commandMap) {
+        shapeMapper.dropShpTable(commandMap);
     }
+    public int updateProperties(Map<String, Object> commandMap) {
+        return shapeMapper.updateProperties(commandMap);
+    }
+
 
     @Transactional
     public Map<String, Object> saveSelectedFeatures(String tableName, String idxArr, boolean isChecked, String shpType, String label) {

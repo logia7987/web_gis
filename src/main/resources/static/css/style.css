@@ -192,6 +192,33 @@
     margin: 0;
 }
 
+.tab-tool {
+    font-size: 0;
+}
+
+.property-input {
+    display: none;
+    margin-bottom: 5px;
+    width: 100%;
+}
+/*#tab-cancel,*/
+/*#tab-save {*/
+/*    display: none;*/
+/*}*/
+.tab-tool span.tab-btn {
+    font-size: 14px;
+    font-weight: normal;
+    margin: 5px 5px;
+    height: 30px;
+    display: inline-block;
+    border: 1px solid #c6c6c6;
+    padding: 5px 10px;
+}
+.tab-tool span.tab-btn:hover {
+    cursor: pointer;
+    background-color: #e4e4e4;
+}
+
 .layer-list {
     height: 96%;
 }
@@ -930,6 +957,8 @@ th, td {
     font-size: 16px;
     background-color: unset;
     border: 1px solid #c6c6c6;
+    height: 75px;
+    font-weight: 500;
 }
 
 .shpSaveBtn {

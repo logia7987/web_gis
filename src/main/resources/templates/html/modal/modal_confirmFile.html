@@ -8,28 +8,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-    <div class="modal-dialog basic-font" th:fragment="feature">
+    <div class="modal-dialog basic-font" th:fragment="confirmFile">
         <div class="modal-content" >
             <!-- Modal Header -->
             <div class="modal-header">
-                <h4 class="modal-title">새 객체 추가</h4>
+                <h4 class="modal-title">파일 관리</h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <!-- Modal body -->
             <div class="modal-body">
                 <div>
-                    새로운 정보를 추가할 대상 파일을 선택해주세요.
-                </div>
-                <div class="shp-frm layer-setting" id="shp-select">
+                    해당 파일명의 데이터가 이미 존재합니다.
+                    데이터를 삭제하여 업로드 하시겠습니까?
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary"
-                        data-bs-dismiss="modal"
-                        onclick="$('.selected2').removeClass('selected2');">취 소</button>
-                <button type="button" class="btn btn-primary"
-                        data-bs-dismiss="modal"
-                        onclick="setTargetShp()">완 료</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취 소</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="uploadShpTable(true);">덮어쓰기</button>
             </div>
         </div>
     </div>

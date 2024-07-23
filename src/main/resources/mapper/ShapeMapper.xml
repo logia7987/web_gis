@@ -45,6 +45,13 @@
         )
     </select>
 
+    <select id="checkHasShpFile" resultType="int" parameterType="map">
+        SELECT count(*) as hasCount
+        FROM all_tables
+        WHERE owner = 'TRANSIT'
+        AND table_name = #{fileName}
+    </select>
+
     <update id="updateLabel" parameterType="map">
         UPDATE TRANSIT.${fileName}
         SET LABEL_COLUMN = #{labelColumn}
@@ -61,6 +68,20 @@
         UPDATE TRANSIT.${fileName}
         SET    GEOMETRY = #{geometry}
         WHERE ${fileName}_ID = #{fileFeatureId}
+    </update>
+
+    <update id="dropShpTable" parameterType="map">
+        DROP TABLE ${fileName}
+    </update>
+
+    <update id="updateProperties" parameterType="map">
+        UPDATE TRANSIT.${FILE_NAME}
+        <set>
+            <foreach collection="properties" item="value" index="key" separator=",">
+                "${key}" = #{value}
+            </foreach>
+        </set>
+        WHERE ${FILE_NAME}_ID = #{featureId}
     </update>
 
     <delete id="deleteShpFeatureData" parameterType="map">
