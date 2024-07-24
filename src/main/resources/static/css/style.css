@@ -372,6 +372,13 @@
     border-bottom: none;
 }
 
+.custom-select .options a span:first-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 85%;
+    display: inline-block;
+}
 /* 드롭다운 옵션 호버 효과 */
 .custom-select .options a:hover {
     background-color: #f0f0f0;
