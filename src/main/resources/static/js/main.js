@@ -905,7 +905,6 @@ function editCreate(e) {
 
 let properties = {};
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
-    // TODO 여기서 값으 제대로 가공해서 서버에 넘겨야 지도 표출이 원활하게 가능함
     properties = {};
     let fileName = $('#fileName').val();
     let property = $('#newpolygon .modal-body table').find('input');
@@ -1774,11 +1773,11 @@ function addAttrList() {
             // 링크선 가운데 값 추출
             let lng, lat;
             if (aData.geometry.type === "MultiLineString") {
-                lng = aData.geometry.coordinates[0][Math.ceil(aData.geometry.coordinates[0].length / 2)][0]
-                lat = aData.geometry.coordinates[0][Math.ceil(aData.geometry.coordinates[0].length / 2)][1]
+                lng = aData.geometry.coordinates[0][Math.floor(aData.geometry.coordinates[0].length / 2)][0]
+                lat = aData.geometry.coordinates[0][Math.floor(aData.geometry.coordinates[0].length / 2)][1]
             } else if (aData.geometry.type === "LineString") {
-                lng = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][0]
-                lat = aData.geometry.coordinates[Math.ceil(aData.geometry.coordinates.length / 2)][1]
+                lng = aData.geometry.coordinates[Math.floor(aData.geometry.coordinates.length / 2)][0]
+                lat = aData.geometry.coordinates[Math.floor(aData.geometry.coordinates.length / 2)][1]
             }
             linkHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\'' + lng + ',' + lat + '\')">'
             linkHtml += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'

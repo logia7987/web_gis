@@ -948,7 +948,7 @@ th, td {
 }
 
 .selected2 {
-    background-color: #c6c6c6 !important;
+    background-color: #2699E6 !important;
     color: white;
 }
 
@@ -957,8 +957,13 @@ th, td {
     font-size: 16px;
     background-color: unset;
     border: 1px solid #c6c6c6;
+    border-right: none;
     height: 75px;
     font-weight: 500;
+}
+
+.shape-btn:last-child {
+    border-right: 1px solid #c6c6c6;
 }
 
 .shpSaveBtn {
