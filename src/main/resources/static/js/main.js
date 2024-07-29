@@ -983,8 +983,7 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
                     features: allFeatures
                 });
 
-                // 저장 이벤트로 넣게 변경
-                // insertShpTable(feature);
+                insertShpTable(feature);
             }
         });
 
@@ -1258,7 +1257,6 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
             }
         }
     });
-
 
     map.on('mouseenter', layerId, () => {
         map.getCanvas().style.cursor = 'pointer';
@@ -2133,35 +2131,42 @@ function saveToMatchObject() {
 function updateFeature() {
     // 변경된 features를 가져옵니다.
     let feature = draw.getAll().features[0];
+    if (feature === undefined) {
+        toastOn("선택된 객체가 없습니다. 객체 선택 후 다시 시도해주세요.")
+    } else {
+        // feature의 타입을 구분합니다.
+        let type = feature.properties.SHP_TYPE;
 
-    // feature의 타입을 구분합니다.
-    let type = feature.properties.SHP_TYPE;
+        // 서버로 전송할 데이터를 구성합니다.
+        const data = {
+            type: type,
+            feature: feature
+        };
 
-    // 서버로 전송할 데이터를 구성합니다.
-    const data = {
-        type: type,
-        feature: feature
-    };
+        $.ajax({
+            url : '/api/updateGeometry.do',
+            type : 'POST',
+            async : true,
+            DataType : "JSON",
+            contentType: "application/json",
+            data : JSON.stringify(data),
+            success : function (result){
+                console.log(result)
+                if (result.result == 'success') {
+                    // 정상 저장 후 화면 갱신
+                    draw.deleteAll();
+                    setLinkNodeStationFeature();
 
-    $.ajax({
-        url : '/api/updateGeometry.do',
-        type : 'POST',
-        async : true,
-        DataType : "JSON",
-        contentType: "application/json",
-        data : JSON.stringify(data),
-        success : function (result){
-            console.log(result)
-            if (result.result == 'success') {
-                toastOn("정상적으로 수정되었습니다.")
-            } else {
-                toastOn("정보 수정에 실패하였습니다.")
+                    toastOn("정상적으로 수정되었습니다.")
+                } else {
+                    toastOn("정보 수정에 실패하였습니다.")
+                }
+            },
+            error : function (error){
+                console.log(error)
             }
-        },
-        error : function (error){
-            console.log(error)
-        }
-    })
+        })
+    }
 }
 
 function splitLine() {
