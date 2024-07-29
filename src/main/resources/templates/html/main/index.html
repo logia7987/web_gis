@@ -76,14 +76,32 @@
                     <button class="top-btn" onclick="splitLine();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 분할" data-bs-original-title="링크 분할">선 분할</button>
                     <button class="top-btn" id="link-btn-merge" onclick="mergeLines();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 병합" data-bs-original-title="링크 병합" style="display: none">선 병합</button>
                     <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 삭제" data-bs-original-title="링크 삭제">링크 삭제</button>
+
+                    <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
+                        <i class="fas fa-undo-alt"></i>
+                        되돌리기
+                    </button>
+                    <button class="top-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
                 </div>
                 <div id="node-tools">
                     <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
                     <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="노드 삭제" data-bs-original-title="노드 삭제">노드 삭제</button>
+
+                    <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
+                        <i class="fas fa-undo-alt"></i>
+                        되돌리기
+                    </button>
+                    <button class="top-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
                 </div>
                 <div id="station-tools">
                     <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
                     <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="정류소 삭제" data-bs-original-title="정류소 삭제">정류소 삭제</button>
+
+                    <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
+                        <i class="fas fa-undo-alt"></i>
+                        되돌리기
+                    </button>
+                    <button class="top-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
                 </div>
             </div>
 <!--            <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_line top-btn mapbox-ctrl-btn" title="LineString tool (l)"></button>-->
@@ -309,6 +327,8 @@
     var tabcontent = document.getElementsByClassName("tab");
     var tablinks = document.getElementsByClassName("tab-links");
     var propertyArr = []
+    // undo 기능 스택저장
+    let historyStack = [];
     let draw= new MapboxDraw({
         styles: [
             // 선의 외곽 스타일

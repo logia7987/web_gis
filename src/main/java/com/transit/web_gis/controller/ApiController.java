@@ -62,8 +62,13 @@ public class ApiController {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
+    // 테스트 경로
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
     private static final File geoDir = new File("C:\\mapbox\\geoJson");
+
+    // 리눅스 경로
+//    private static final File tempDir = new File("/app/shapefile_temp");
+//    private static final File geoDir = new File("/app/geoJson");
 
     @PostMapping(value = "/uploadShapeFiles", consumes = "multipart/form-data", produces = "application/json; charset=UTF-8")
     @ResponseBody
@@ -71,63 +76,93 @@ public class ApiController {
         Map<String, Object> result = new HashMap<>();
 
         try {
-            FileUtils.forceMkdir(tempDir);
-            FileUtils.forceMkdir(geoDir);
-            for (MultipartFile aFile : files) {
-                Path filePath = new File(tempDir, Objects.requireNonNull(aFile.getOriginalFilename())).toPath();
-                Files.copy(aFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            }
+            prepareDirectories();
+            uploadFiles(files);
 
             File shpFile = shapeService.findFile(tempDir, ".shp");
-
-            if (shpFile != null) {
-                try {
-                    File prjFile = shapeService.findFile(tempDir, ".prj");
-                    if (prjFile != null) {
-                        String crs = String.valueOf(shapeService.extractCRS(prjFile));
-                        result.put("crs", crs);
-                    }
-
-                    CompletableFuture<String> jsonResultFuture = CompletableFuture.supplyAsync(() -> {
-                        try {
-                            return shapeService.convertShpToGeoJSON(shpFile, tempDir);
-                        } catch (IOException | FactoryException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-
-                    String jsonResult = String.valueOf(jsonResultFuture.join());
-
-                    System.out.println("JSON 넘어왔음");
-                    JSONParser jsonParser = new JSONParser();
-
-                    Object obj = jsonParser.parse(jsonResult);
-                    JSONObject jsonObj = (JSONObject) obj;
-
-                    System.out.println("데이터 준비");
-
-                    // JSON 데이터를 파일로 저장
-                    File jsonFile = new File(geoDir, shpFile.getName().replace(".shp", "") + ".json");
-                    try (FileWriter fileWriter = new FileWriter(jsonFile)) {
-                        fileWriter.write(jsonObj.toJSONString());
-                    }
-                    System.out.println("데이터 전송");
-                    // 파일 경로를 세션에 저장
-                    session.setAttribute("jsonFilePath", jsonFile.getAbsolutePath());
-                    // dataArr 에서 구분자로 사용할 파일명
-                    session.setAttribute("fileName", shpFile.getName().replace(".shp", ""));
-                    System.out.println("데이터 전송 완료");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    result.put("error", "Shp to GeoJSON 변환 중 오류 발생");
-                }
+            if (shpFile == null) {
+                result.put("error", "SHP 파일을 찾을 수 없습니다.");
+                return result;
             }
+
+            handleShpFile(shpFile, result, session);
+
         } catch (IOException e) {
             e.printStackTrace();
-            result.put("error", "파일 처리 중 오류 발생");
+            result.put("error", "파일 처리 중 오류 발생: " + e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("error", "예기치 않은 오류 발생: " + e.getMessage());
         }
 
         return result;
+    }
+
+    private void prepareDirectories() throws IOException {
+        FileUtils.forceMkdir(tempDir);
+        FileUtils.forceMkdir(geoDir);
+    }
+
+    private void uploadFiles(List<MultipartFile> files) throws IOException {
+        for (MultipartFile aFile : files) {
+            Path filePath = new File(tempDir, Objects.requireNonNull(aFile.getOriginalFilename())).toPath();
+            Files.copy(aFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private void handleShpFile(File shpFile, Map<String, Object> result, HttpSession session) {
+        try {
+            String crs = handlePrjFileOrDefault();
+            result.put("crs", crs);
+
+            CompletableFuture<String> jsonResultFuture = convertShpToGeoJSONAsync(shpFile);
+            String jsonResult = jsonResultFuture.join();
+
+            JSONObject jsonObj = parseJson(jsonResult);
+            saveJsonToFile(shpFile, jsonObj);
+            updateSessionAttributes(session, shpFile);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            result.put("error", "Shp to GeoJSON 변환 중 오류 발생: " + e.getMessage());
+        }
+    }
+
+    private String handlePrjFileOrDefault() throws IOException, FactoryException {
+        File prjFile = shapeService.findFile(tempDir, ".prj");
+        if (prjFile != null) {
+            return String.valueOf(shapeService.extractCRS(prjFile));
+        } else {
+            // 기본 좌표계 (WGS84)로 설정
+            return "EPSG:4326";
+        }
+    }
+
+    private CompletableFuture<String> convertShpToGeoJSONAsync(File shpFile) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return shapeService.convertShpToGeoJSON(shpFile, tempDir);
+            } catch (IOException | FactoryException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private JSONObject parseJson(String jsonResult) throws ParseException {
+        JSONParser jsonParser = new JSONParser();
+        return (JSONObject) jsonParser.parse(jsonResult);
+    }
+
+    private void saveJsonToFile(File shpFile, JSONObject jsonObj) throws IOException {
+        File jsonFile = new File(geoDir, shpFile.getName().replace(".shp", "") + ".json");
+        try (FileWriter fileWriter = new FileWriter(jsonFile)) {
+            fileWriter.write(jsonObj.toJSONString());
+        }
+    }
+
+    private void updateSessionAttributes(HttpSession session, File shpFile) {
+        session.setAttribute("jsonFilePath", new File(geoDir, shpFile.getName().replace(".shp", "") + ".json").getAbsolutePath());
+        session.setAttribute("fileName", shpFile.getName().replace(".shp", ""));
     }
 
     @PostMapping(value = "/getShp", produces = "application/json; charset=UTF-8")

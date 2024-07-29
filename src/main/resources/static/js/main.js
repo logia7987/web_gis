@@ -335,43 +335,43 @@ function removeLayer(key) {
 function editShp(property, type) {
     // 맵에서 데이터를 가져옴
     var geoData = map.getSource(LINK_NODE_STATION_SOURCE_ID)._options.data.features;
-    // 그리기 도구를 숨기고 표시
-    // $('.mapboxgl-ctrl-group').show();
-    $('.mapboxgl-gl-draw_line, .mapboxgl-gl-draw_point, .mapboxgl-gl-draw_combine, .mapboxgl-gl-draw_uncombine').hide();
-    if (draw.getAll().features.length > 0) {
-        for (i = 0; i < draw.getAll().features.length; i++) {
-            delete draw.getAll().features[i].id
-            geoData.push(draw.getAll().features[i])
-        }
-        draw.deleteAll()
-    }
-    // 현재 그려진 도형들을 가져와서 갱신
-    draw.getAll().features.forEach(function(drawElement) {
-        // 데이터 배열에서 해당 ID를 가진 도형을 찾아 갱신
-        for (var i = 0; i < geoData.length; i++) {
-            if (geoData[i].properties[type] === drawElement.properties[type]) {
-                geoData[i] = drawElement;
-                break;
-            }
-        }
-    });
 
-    // 주어진 속성의 ID와 일치하는 항목을 찾아 제거하고 새로운 속성 추가
+    // 기존 Draw 도형 숨기기
+    $('.mapboxgl-gl-draw_line, .mapboxgl-gl-draw_point, .mapboxgl-gl-draw_combine, .mapboxgl-gl-draw_uncombine').hide();
+
+    // Draw에 존재하는 도형을 geoData에 추가 후 Draw 비우기
+    if (draw.getAll().features.length > 0) {
+        draw.getAll().features.forEach(feature => {
+            delete feature.id; // ID 제거
+            geoData.push(feature);
+        });
+        draw.deleteAll();
+    }
+
+    // geoData 배열에서 주어진 속성의 ID와 일치하는 항목 제거
     for (var i = 0; i < geoData.length; i++) {
         if (geoData[i].properties[type] === property.properties[type]) {
-            // 해당 ID와 일치하는 도형을 제거하고 새로운 속성을 추가
-            geoData.splice(i, 1);
-            // 임시 아이디 부여
-            property.id = draw.getAll().features.length + 1;
-            draw.add(property);
-            break; // 해당 도형을 찾았으므로 더 이상 반복할 필요가 없음
+            geoData.splice(i, 1); // 도형 제거
+            break;
         }
     }
 
+    // 주어진 속성의 새로운 도형을 Draw에 추가
+    property.id = draw.getAll().features.length + 1; // 임시 ID 부여
+    const newFeatureIds = draw.add(property);
+
+    // 추가된 도형을 선택 상태로 변경
+    draw.changeMode('simple_select', {
+        featureIds: newFeatureIds.map(f => f)
+    });
+
+    // 맵의 소스 데이터 업데이트
     map.getSource(LINK_NODE_STATION_SOURCE_ID).setData({
         type: 'FeatureCollection',
         features: geoData
     });
+
+    saveState();
 }
 
 document.addEventListener('contextmenu', function (){
@@ -399,6 +399,9 @@ function changeEditMode() {
 
         // 수정 내용삭제
         draw.deleteAll();
+
+        // 히스토리 내역 초기화
+        historyStack = [];
 
         // 수정 내용삭제 후 지도 정보 재로딩
         setLinkNodeStationFeature();
@@ -681,22 +684,12 @@ function handleFeatureSelection(e, layerId) {
 
             $('.property-window > .property-list > table').append(propertyHtml);
         }
-
-        var clickedFeature = e.features[0];
-        if (clickedFeature) {
-            map.setFilter(layerId + '-highlighted', ['==', '', '']);
-
-            let filterName = clickedFeature.properties.FILE_NAME
-
-            // 선택된 피처를 강조하도록 필터 업데이트
-            map.setFilter(layerId + '-highlighted', ['==', filterName+"_ID", clickedFeature.properties[filterName+"_ID"]]);
-        }
-
     }
 }
 
 function closePropertyWindow() {
     $('.property-window').css('left', '-500px')
+    $("#tab-cancel").click();
 }
 
 function closeShpPropertyWindow() {
@@ -880,17 +873,12 @@ function startEditMode() {
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
     $('#type-select-box').css('display', 'block');
-    // var type = $(".selected").eq(0).attr("class");
     var type = $($(".selected").find("i")[0]).attr("class")
     loadProperty = dataArr
-
-    // $('.mapboxgl-ctrl-group').show()
 
     map.off('draw.create', drawDistance);
     map.off('draw.update', updateMeasurement);
     draw.changeMode('simple_select');
-    // 새 Feature 가 추가되는 걸 감지하는 부분
-    // map.on('draw.create', editCreate);
 }
 
 /// 편집으로 새로운거 추가되었을 때 이벤트 함수
@@ -995,7 +983,8 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
                     features: allFeatures
                 });
 
-                insertShpTable(feature);
+                // 저장 이벤트로 넣게 변경
+                // insertShpTable(feature);
             }
         });
 
@@ -1258,6 +1247,15 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
         if (features.length === 0) {
             // 없을 시 선택 취소
             map.setFilter(layerId + '-highlighted', ['==', '', '']);
+        } else {
+            var clickedFeature = features[0];
+            if (clickedFeature) {
+                let filterName = clickedFeature.properties.FILE_NAME;
+                // 선택된 피처를 강조하도록 필터 업데이트
+                if (map.getLayer(layerId + '-highlighted')) {
+                    map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                }
+            }
         }
     });
 
@@ -1342,10 +1340,9 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e, layerId);
 
+        // 노드 shp 이 있을 경우 지근거리의 노드를 찾아서 로그로 표출
         let clickedFeature = e.features[0];
         if (clickedFeature) {
-            map.setFilter(layerId + '-highlighted', ['==', '', '']);
-
             linkNodeStationFeatures.features.forEach(function (feature) {
                 if (feature.geometry.type === 'LineString' && feature.properties.linkId === clickedFeature.properties.linkId) {
                     selectedBasicLink = feature.geometry.coordinates;
@@ -1361,24 +1358,18 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
             var endPointNode = closestNodes.endPoint;
 
             // 시작 노드와 끝 노드 feature 추출 완료. 후 처리를 어떻게 하는지 못여쭈어봄;
-            console.log('Closest start point node:', startPointNode);
-            console.log('Closest end point node:', endPointNode);
+            // console.log('Closest start point node:', startPointNode);
+            // console.log('Closest end point node:', endPointNode);
 
-            let filterName = clickedFeature.properties.FILE_NAME
-
-            // 선택된 피처를 강조하도록 필터 업데이트
-            map.setFilter(layerId + '-highlighted', ['==', filterName+"_ID", clickedFeature.properties[filterName+"_ID"]]);
-        }
-    });
-
-    map.on('click', function(e) {
-        const features = map.queryRenderedFeatures(e.point, {
-            layers: [layerId]
-        });
-
-        if (features.length === 0) {
-            // 없을 시 선택 취소
-            map.setFilter(layerId + '-highlighted', ['==', '', '']);
+            if (clickedFeature) {
+                let filterName = clickedFeature.properties.FILE_NAME;
+                // 선택된 피처를 강조하도록 필터 업데이트
+                if (map.getLayer(layerId + '-highlighted')) {
+                    map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                }
+            } else {
+                map.setFilter(layerId + '-highlighted', ['==', '', '']);
+            }
         }
     });
 
@@ -1677,48 +1668,47 @@ function setMapEvent() {
                 let features;
                 // 일반 선택과 편집모드의 선택 구분 분할
                 if (isEdit()) {
-                    // 편집 모드일때 각 레이어 아이디 선택기능으로 변경
-                    let select = $('#type-select').val();
-                    if (select === 'lineString') {
-                        features = map.queryRenderedFeatures(e.point, {
-                            layers : [LINK_LAYER_ID]
-                        });
+                    // 편집 모드일 때 선택된 타입에 따라 처리
+                    const select = $('#type-select').val();
 
-                        if(features.length > 0) {
-                            return;
-                        }
-                        
-                        let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
-
-                        if(!pointPos){
-                            return;
-                        }
-
-                        map.fire('click', {
-                            lngLat : pointPos,
-                            point : map.project(pointPos)
-                        })
-                    } else if (select === 'station') {
-                        features = map.queryRenderedFeatures(e.point, {
-                            layers : [STATION_LAYER_ID]
-                        });
-
-                        if(features.length > 0) {
-                            return;
-                        }
-                    } else if (select === 'point') {
-                        features = map.queryRenderedFeatures(e.point, {
-                            layers : [NODE_LAYER_ID]
-                        });
-
-                        if(features.length > 0) {
-                            return;
-                        }
+                    // 선택된 레이어에서 클릭된 피처 쿼리
+                    switch (select) {
+                        case 'lineString':
+                            features = map.queryRenderedFeatures(e.point, { layers: [LINK_LAYER_ID] });
+                            break;
+                        case 'station':
+                            features = map.queryRenderedFeatures(e.point, { layers: [STATION_LAYER_ID] });
+                            break;
+                        case 'point':
+                            features = map.queryRenderedFeatures(e.point, { layers: [NODE_LAYER_ID] });
+                            break;
+                        default:
+                            features = [];
                     }
+
+                    // 클릭된 피처가 있을 경우 클릭 이벤트 처리 중지
+                    if (features.length > 0) {
+                        return;
+                    }
+
+                    // 클릭된 위치에서 가장 가까운 링크 찾기
+                    const pointPos = getClosestLinkId([e.lngLat.lng, e.lngLat.lat]);
+
+                    // 가장 가까운 링크가 없으면 종료
+                    if (!pointPos) {
+                        return;
+                    }
+
+                    // 가장 가까운 링크 위치에서 클릭 이벤트 트리거
+                    map.fire('click', {
+                        lngLat: pointPos,
+                        point: map.project(pointPos)
+                    });
+
                 } else {
                     // 일반모드일때 선택 최적화 적용
                     features = map.queryRenderedFeatures(e.point, {
-                        layers : [LINK_LAYER_ID, STATION_LAYER_ID, NODE_LAYER_ID]
+                        layers : [NODE_LAYER_ID, STATION_LAYER_ID, LINK_LAYER_ID, ]
                     });
 
                     if(features.length > 0) {
@@ -1730,6 +1720,7 @@ function setMapEvent() {
                     if(!pointPos){
                         return;
                     }
+
                     map.fire('click', {
                         lngLat : pointPos,
                         point : map.project(pointPos)
@@ -1780,7 +1771,10 @@ function setMapEvent() {
             }
         });
 
-        map.on('draw.update', realTimeUpdateToDB);
+        // map.on('draw.update', realTimeUpdateToDB);
+        map.on('draw.create', saveState);
+        map.on('draw.update', saveState);
+        map.on('draw.delete', saveState);
     })
 }
 
@@ -1821,7 +1815,7 @@ function addAttrList() {
                 lng = line[midIndex][0];
                 lat = line[midIndex][1];
             }
-            linkHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\'' + lng + ',' + lat + '\')">'
+            linkHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\'' + lng + ',' + lat + '\', \''+aData.properties.SHP_TYPE+'\')">'
             linkHtml += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
             linkHtml += '<div class="file-info">'
             linkHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
@@ -1829,7 +1823,7 @@ function addAttrList() {
             linkHtml += '</div>'
         } else if (aData.properties.SHP_TYPE === 'node') {
             // 노드 처리
-            nodeHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
+            nodeHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\', \''+aData.properties.SHP_TYPE+'\')">'
             nodeHtml += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
             nodeHtml += '<div class="file-info">'
             nodeHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
@@ -1837,7 +1831,7 @@ function addAttrList() {
             nodeHtml += '</div>'
         } else if (aData.properties.SHP_TYPE === 'station') {
             // 정류소 처리
-            stationHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\')">'
+            stationHtml += '<div class="layer-file basic-font" onclick="moveThenClick(\''+aData.geometry.coordinates[0]+","+aData.geometry.coordinates[1]+'\', \''+aData.properties.SHP_TYPE+'\')">'
             stationHtml += '<i class="fas fa-bus"></i>'
             stationHtml += '<div class="file-info">'
             stationHtml += '<div class="file-tit">' + aData.properties[aData.properties.LABEL_COLUMN] +'</div>'
@@ -2062,7 +2056,7 @@ function updatePagingUI() {
     });
 }
 
-function moveThenClick(geo) {
+function moveThenClick(geo, type) {
     geo = geo.split(",");
     let pointPos = {lng : geo[0], lat : geo[1]};
 
@@ -2130,19 +2124,15 @@ function saveToMatchObject() {
     $("#select_crossroad_nm").find("option").remove();
     $('#all-check').css('display', 'block')
     $('.layer-file-list').css('height', 'calc(100% - 150px)')
+    toastOn("정상적으로 불러왔습니다. 지도가 일정부분 확정되면 보이게 됩니다.")
 
     // 정보 매칭이 완료되었으면 SHP 리스트에 정보 표출
     addShpList()
 }
 
-function realTimeUpdateToDB(e) {
+function updateFeature() {
     // 변경된 features를 가져옵니다.
-    let feature;
-    if (e.features === undefined) {
-        feature = e;
-    } else {
-        feature = e.features[0];
-    }
+    let feature = draw.getAll().features[0];
 
     // feature의 타입을 구분합니다.
     let type = feature.properties.SHP_TYPE;
@@ -2162,6 +2152,11 @@ function realTimeUpdateToDB(e) {
         data : JSON.stringify(data),
         success : function (result){
             console.log(result)
+            if (result.result == 'success') {
+                toastOn("정상적으로 수정되었습니다.")
+            } else {
+                toastOn("정보 수정에 실패하였습니다.")
+            }
         },
         error : function (error){
             console.log(error)
@@ -2320,7 +2315,7 @@ function addHandle(feature, lngLat) {
     const newFeatureIds = draw.add(feature);
 
     // 링크 점 삭제 바로 반영되게 업데이트 요청 실행
-    realTimeUpdateToDB(feature);
+    // realTimeUpdateToDB(feature);
 
     draw.changeMode('simple_select', {
         featureIds: newFeatureIds.map(f => f)
@@ -2368,7 +2363,7 @@ function removeHandle(feature, lngLat) {
     const newFeatureIds = draw.add(feature);
     
     // 링크 점 삭제 바로 반영되게 업데이트 요청 실행
-    realTimeUpdateToDB(feature);
+    // realTimeUpdateToDB(feature);
 
     draw.changeMode('simple_select', {
         featureIds: newFeatureIds.map(f => f)
@@ -2719,7 +2714,7 @@ function mergeLines() {
         draw.delete(feature.id);
         const newFeatureIds = draw.add(feature);
 
-        realTimeUpdateToDB(feature);
+        // realTimeUpdateToDB(feature);
 
         draw.changeMode('simple_select', {
             featureIds: newFeatureIds.map(f => f)
@@ -2825,4 +2820,25 @@ function saveProperties() {
             console.log(error)
         }
     })
+}
+
+function saveState() {
+    const features = draw.getAll().features;
+    if (features.length > 0) {
+        historyStack.push(JSON.parse(JSON.stringify(features[0]))); // Save a deep copy of the current state
+    }
+}
+
+function undo() {
+    if (historyStack.length > 0) {
+        const previousState = historyStack.pop();
+        draw.deleteAll();
+
+        const newFeatureIds = draw.add(previousState);
+        draw.changeMode('simple_select', {
+            featureIds: newFeatureIds.map(f => f)
+        });
+
+        // draw.add(previousState);
+    }
 }

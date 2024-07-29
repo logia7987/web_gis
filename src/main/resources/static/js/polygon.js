@@ -70,7 +70,7 @@ function polygonDetail() {
 
         if (features.length > 0) {
             // 가장 가까운 링크에 대한 작업 수행
-            handleFeatureSelection(features[0]);
+            // handleFeatureSelection(features[0]);
         }
 
     }

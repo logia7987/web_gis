@@ -39,7 +39,7 @@ function drawNodePoint(data) {
 
             // 링크를 클릭했을 때의 이벤트 핸들러
             map.on('click', layerId, function (e) {
-                handleFeatureSelection(e);
+                // handleFeatureSelection(e);
             });
 
             resolve();
@@ -59,7 +59,7 @@ function getNodeDetail() {
 
             if (features.length > 0) {
                 // 가장 가까운 노드에 대한 작업 수행
-                handleFeatureSelection(features[0]);
+                // handleFeatureSelection(features[0]);
             }
         });
     }
