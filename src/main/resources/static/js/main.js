@@ -1236,6 +1236,8 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
 
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e, layerId);
+
+
     });
 
     map.on('click', function(e) {
@@ -1247,6 +1249,9 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
             // 없을 시 선택 취소
             map.setFilter(layerId + '-highlighted', ['==', '', '']);
         } else {
+            // 선택 외 객체 스타일 리셋
+            resetHighlightedLayerFilters()
+
             var clickedFeature = features[0];
             if (clickedFeature) {
                 let filterName = clickedFeature.properties.FILE_NAME;
@@ -1360,6 +1365,9 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
             // console.log('Closest end point node:', endPointNode);
 
             if (clickedFeature) {
+                // 선택 외 객체 스타일 리셋
+                resetHighlightedLayerFilters()
+
                 let filterName = clickedFeature.properties.FILE_NAME;
                 // 선택된 피처를 강조하도록 필터 업데이트
                 if (map.getLayer(layerId + '-highlighted')) {
@@ -1370,6 +1378,27 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
             }
         }
     });
+
+    // map.on('click', function(e) {
+    //     const features = map.queryRenderedFeatures(e.link, {
+    //         layers: [layerId]
+    //     });
+    //
+    //     if (features.length === 0) {
+    //         // 없을 시 선택 취소
+    //         map.setFilter(layerId + '-highlighted', ['==', '', '']);
+    //     } else {
+    //         resetHighlightedLayerFilters()
+    //         var clickedFeature = features[0];
+    //         if (clickedFeature) {
+    //             let filterName = clickedFeature.properties.FILE_NAME;
+    //             // 선택된 피처를 강조하도록 필터 업데이트
+    //             if (map.getLayer(layerId + '-highlighted')) {
+    //                 map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+    //             }
+    //         }
+    //     }
+    // });
 
     map.on('mouseenter', layerId, () => {
         map.getCanvas().style.cursor = 'pointer';
@@ -2846,4 +2875,12 @@ function undo() {
 
         // draw.add(previousState);
     }
+}
+
+// 선택 객체 스타일 모두 해제
+function resetHighlightedLayerFilters() {
+    const layers = map.getStyle().layers.filter(layer => layer.id.includes('highlighted'));
+    layers.forEach(layer => {
+        map.setFilter(layer.id, '-highlighted', ['==', '', '']);
+    });
 }
