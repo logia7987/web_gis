@@ -92,6 +92,8 @@ let tNameLabelArr = {};
 
 let isSaving = false;
 
+// 타입 배열
+let shpTypeArr = []
 
 // 메뉴 모드를 다크 모드 혹은 화이트 모드 바꾸는 함수
 function toggleWhiteMode() {
@@ -227,6 +229,7 @@ function getShpData(obj) {
         tNameArr = tNameArr.filter(function(item) {
             return item !== fileName;
         });
+        delete shpTypeArr[fileName]
         $(obj).find("span:eq(1)").hide();
         $("#TR_"+fileName).remove()
     }
@@ -236,9 +239,6 @@ function getShpData(obj) {
 
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
     updateMapData();
-
-    // 선택된 파일을
-    addToFileModal();
 }
 
 
@@ -1556,8 +1556,8 @@ function generatePoints(segmentLength, minDistance = 1) {
             featureIds: newFeatureIds.map(f => f)
         });
     });
-    
-    // TODO saveStatus 넣어주기
+
+    saveState();
 }
 
 
@@ -2267,7 +2267,7 @@ function splitLine() {
 
     $("#link-btn-merge").show();
 
-    // TODO saveStatus 넣어주기
+    saveState();
 }
 function hideAllTool() {
     $("#link-tools").hide();
@@ -2549,6 +2549,8 @@ function appendToLayerOption(fileName) {
             fileName : fileName
         },
         success : function (data){
+            shpTypeArr[fileName] = data.shpType
+
             const defaultLabel = data.labelColumn.LABEL_COLUMN
 
             let html = '<tr id="TR_'+fileName+'">'
@@ -2646,12 +2648,28 @@ function checkEditSelect() {
 function addToFileModal() {
     const target = $(".shp-frm");
     target.find("li").remove();
+    let type = $("#type-select").val()
 
     let optionHtml = '</ul>';
-    for (let i = 0; i < tNameArr.length; i++) {
-        optionHtml += '<li class="shp-item" id="shp_'+tNameArr[i]+'" onclick="selectTargetShp(this);">'+tNameArr[i]+'</li>';
+    if (type === 'point') {
+        for (let i = 0; i < tNameArr.length; i++) {
+            if (shpTypeArr[tNameArr[i]] === 'node') {
+                optionHtml += '<li class="shp-item"  id="shp_'+tNameArr[i]+'" onclick="selectTargetShp(this);">'+tNameArr[i]+'</li>';
+            }
+        }
+        optionHtml += '</ul>';
+    } else if (type === 'lineString') {
+        for (let i = 0; i < tNameArr.length; i++) {
+            if (shpTypeArr[tNameArr[i]] === 'link') {
+                optionHtml += '<li class="shp-item"  id="shp_'+tNameArr[i]+'" onclick="selectTargetShp(this);">'+tNameArr[i]+'</li>';
+            }
+        }
+        optionHtml += '</ul>';
+    } else {
+        for (let i = 0; i < tNameArr.length; i++) {
+            optionHtml += '<li class="shp-item"  id="shp_'+tNameArr[i]+'" onclick="selectTargetShp(this);">'+tNameArr[i]+'</li>';
+        }
     }
-    optionHtml += '</ul>';
 
     target.append(optionHtml)
     $('.shp-frm').show()
@@ -2673,7 +2691,6 @@ function setTargetShp() {
             fileName : targetShp
         },
         success : function (data){
-            if (data.shpType === 'link' && $("#type-select").val() === 'lineString' || data.shpType === 'node' && $("#type-select").val() === 'point') {
                 const targetTable = $('#newpolygon .modal-body table tbody');
                 targetTable.empty()
 
@@ -2690,11 +2707,7 @@ function setTargetShp() {
                     var html = "<tr><td><label class='polygon-label' title="+data.columnNames[i]+">"+data.columnNames[i]+"</label></td><td><input class='property' attr='"+data.columnNames[i]+"' type='text'></td></tr>"
                     targetTable.append(html)
                 }
-
                 $('#newpolygon').modal('show')
-            } else {
-                alert('알맞는 타입 및 파일을 선택 후 객체를 생성해주세요')
-            }
         },
         error : function (error){
             console.log(error)
@@ -2704,6 +2717,7 @@ function setTargetShp() {
 
 function openNewFeatureModal() {
     $('#modal_feature').modal('show');
+    addToFileModal();
 }
 
 function insertShpTable(data) {
@@ -2765,7 +2779,7 @@ function mergeLines() {
 
         $("#link-btn-merge").hide();
 
-        // TODO saveStatus 넣어주기
+        saveState();
     }
 }
 
