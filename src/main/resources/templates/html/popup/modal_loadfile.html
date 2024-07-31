@@ -34,9 +34,12 @@
         <div class="select-shape-area">
             <span class="radio-label">업로드할 파일의 형태를 선택을 해주세요</span>
             <div class="select-shape-btn">
-                <button class="shape-btn" id="shpType_station" onclick="clickSelectBtn(this)" style="margin-left: 0; border-radius: 10px 0 0 10px;">정류소</button>
-                <button class="shape-btn" id="shpType_node" onclick="clickSelectBtn(this)" >노드</button>
-                <button class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)" style="border-radius: 0 10px 10px 0;">링크</button>
+<!--                <button class="shape-btn" id="shpType_station" onclick="clickSelectBtn(this)" style="margin-left: 0; border-radius: 10px 0 0 10px;">정류소</button>-->
+<!--                <button class="shape-btn" id="shpType_node" onclick="clickSelectBtn(this)" >노드</button>-->
+<!--                <button class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)" style="border-radius: 0 10px 10px 0;">링크</button>-->
+                <button class="shape-btn" id="shpType_node" onclick="clickSelectBtn(this)" style="margin-left: 0; border-radius: 10px 0 0 10px;">점(노드)</button>
+                <button class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)" >선</button>
+                <button class="shape-btn" id="shpType_polygon" onclick="clickSelectBtn(this)" style="border-radius: 0 10px 10px 0;">면(폴리곤)</button>
             </div>
         </div>
         <button type="button" class="btn btn-primary btn-send" onclick="sendFiles(true)">전송</button>

@@ -154,9 +154,6 @@ public class ShapeService {
                     resultMap.put("message", "ShapeFile 을 읽는데 에러가 발생했습니다.");
                 }
             }
-        } else {
-            resultMap.put("result", "has");
-            resultMap.put("message", "업로드한 파일이 현재 DB에 있습니다. 명칭을 수정하여 다시 업로드해주세요.");
         }
 
         return resultMap;
@@ -271,7 +268,7 @@ public class ShapeService {
 
                 int parameterIndex = 1;
                 for (Object key : properties.keySet()) {
-                    ps.setString(parameterIndex++, (String) properties.get(key));
+                    ps.setString(parameterIndex++, String.valueOf(properties.get(key)));
                 }
 
                 JSONArray coordinates = (JSONArray) geometry.get("coordinates");

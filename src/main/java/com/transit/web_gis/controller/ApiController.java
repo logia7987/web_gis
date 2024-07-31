@@ -44,6 +44,8 @@ public class ApiController {
     private static final String NODE_ICON_ID = "node-icon";
     private static final String NODE_FEATURE_ID = "node-feature";
 
+    private static final String POLYGON_ICON_ID = "polygon-icon";
+    private static final String POLYGON_FEATURE_ID = "polygon-feature";
 
     @Autowired
     private ShpService shpService;
@@ -257,6 +259,9 @@ public class ApiController {
                 break;
             case "link" :
                 resultMap.put(fileName + "_data", getGeoJsonLink(shapeService.getLinkShpData(commandMap)));
+                break;
+            case "polygon" :
+                resultMap.put(fileName + "_data", getGeoJsonPolygon(shapeService.getLinkShpData(commandMap)));
                 break;
 //                case "station" -> resultMap.put(aFileName + "_data", getGeoJsonStation(shapeService.getShpData(commandMap)));
         }
@@ -653,6 +658,62 @@ public class ApiController {
         return geojson.toJSONString();
     }
 
+    public String getGeoJsonPolygon(List<Map<String, Object>> datas) throws Exception{
+        JSONObject geojson = new JSONObject();
+        JSONArray features = new JSONArray();
+
+        geojson.put("type", "FeatureCollection");
+        geojson.put("features", features);
+
+        for(Map<String, Object> data : datas){
+            JSONObject feature = new JSONObject();
+            JSONObject properties = new JSONObject();
+            JSONObject geometry = new JSONObject();
+            JSONArray coordinates = new JSONArray();
+
+            //feature 틀 생성
+            feature.put("type", "Feature");
+            feature.put("properties", properties);
+            feature.put("geometry", geometry);
+            geometry.put("type", "");
+            geometry.put("coordinates", coordinates);
+
+            //properties 정류소 CSS 정보 데이터 삽입
+            properties.put("featureId", POLYGON_FEATURE_ID);
+            properties.put("label", "");
+            properties.put("emptyLabel", "");
+
+            //properties 정류소 속성 정보 데이터 삽입
+            for( Map.Entry<String, Object> entry : data.entrySet() ){
+                String strKey = entry.getKey();
+                Object value = entry.getValue();
+
+                if (strKey.equals("GEOMETRY")) {
+                    String geometryString = clobToString((Clob) entry.getValue());
+
+                    JSONArray coordArray = (JSONArray) ((JSONObject) new JSONParser().parse(geometryString)).get("coordinates");
+
+                    String geoDataType = (String) ((JSONObject) new JSONParser().parse(geometryString)).get("type");
+                    if (geometry.get("type").equals("")) {
+                        geometry.put("type", geoDataType);
+                    }
+
+                    geometry.put("coordinates", coordArray);
+                } else {
+                    if (value instanceof Number) {
+                        properties.put(strKey, value.toString());
+                    } else if (value instanceof String) {
+                        properties.put(strKey, (String) value);
+                    }
+                }
+            }
+
+            features.add(feature);
+        }
+
+        return geojson.toJSONString();
+    }
+
     public String getGeoJsonStation(List<Map<String, Object>> datas) {
         JSONObject geojson = new JSONObject();
         JSONArray features = new JSONArray();
@@ -749,6 +810,8 @@ public class ApiController {
 
         return geojson.toJSONString();
     }
+
+
 
     private String clobToString(Clob clob) throws Exception {
         StringBuilder sb = new StringBuilder();

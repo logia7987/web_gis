@@ -2153,7 +2153,7 @@ function saveToMatchObject() {
     $("#select_crossroad_nm").find("option").remove();
     $('#all-check').css('display', 'block')
     $('.layer-file-list').css('height', 'calc(100% - 150px)')
-    toastOn("정상적으로 불러왔습니다. 지도가 일정부분 확정되면 보이게 됩니다.")
+    toastOn("정상적으로 불러왔습니다.")
 
     // 정보 매칭이 완료되었으면 SHP 리스트에 정보 표출
     addShpList()
@@ -2487,9 +2487,7 @@ function pointToSegmentDistance(point, segment) {
 }
 
 function uploadShpTable(flag) {
-    if (flag) {
-        isSaving = false;
-    }
+
     if (!isSaving) {
         isSaving = true;
         let selectedLabel = matchObj.label
@@ -2906,6 +2904,12 @@ function undo() {
 function resetHighlightedLayerFilters() {
     const layers = map.getStyle().layers.filter(layer => layer.id.includes('highlighted'));
     layers.forEach(layer => {
-        map.setFilter(layer.id, '-highlighted', ['==', '', '']);
+        map.setFilter(layer.id, ['==', '', '']);
     });
+}
+
+function cancelLoadFile() {
+    fileNm = ""
+    loadData = {}
+    dataArr = {}
 }
