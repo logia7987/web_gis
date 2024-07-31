@@ -34,13 +34,14 @@
         <div class="select-shape-area">
             <span class="radio-label">업로드할 파일의 형태를 선택을 해주세요</span>
             <div class="select-shape-btn">
-                <button class="shape-btn" id="shpType_station" onclick="clickSelectBtn(this)" style="margin-left: 0">정류소</button>
+                <button class="shape-btn" id="shpType_station" onclick="clickSelectBtn(this)" style="margin-left: 0; border-radius: 10px 0 0 10px;">정류소</button>
                 <button class="shape-btn" id="shpType_node" onclick="clickSelectBtn(this)" >노드</button>
-                <button class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)">링크</button>
+                <button class="shape-btn" id="shpType_link" onclick="clickSelectBtn(this)" style="border-radius: 0 10px 10px 0;">링크</button>
             </div>
         </div>
         <button type="button" class="btn btn-primary btn-send" onclick="sendFiles(true)">전송</button>
     </div>
+</div>
 </body>
 <script th:inline="javascript">
     var fileName = /*[[${fileName}]]*/ "";
@@ -184,6 +185,7 @@
 
     function deleteFileList(e) { // 업로드 및 드래그 앤 드랍 파일 삭제 하는 함수
         e.parentElement.remove()
+        // 파일 선택 input 요소 비활성화
         const dataTransfer = new DataTransfer(); // 빈 파일 생성
         var files = $('#shpData')[0].files
         var fileArray = Array.from(files)
@@ -203,8 +205,21 @@
             $('.comment').show()
             $('.drag-data').css('display', 'none')
             $('#file_intro').css('align-items', 'center')
+            $('#shpData').unbind('click')
+            $("#lbShpData").unbind('click')
+        } else {
+            // 파일 선택 input 요소 비활성화
+            $('#shpData').on('click', function(event){
+                event.preventDefault();
+            });
+            $("#lbShpData").on('click', function(event){
+                event.preventDefault();
+            });
         }
     }
+
+
+
 
     document.getElementById('shpData').addEventListener('change', function(event) { // 업로드 된 파일들 html로 표출하는 함수
         var files = $('#shpData')[0].files
@@ -271,6 +286,11 @@
         }
 
     }
-
+    function cancelFile() {
+        $('.shape-btn').removeClass('selected2')
+        resetFrmFile()
+        $('#shpData').unbind('click')
+        $("#lbShpData").unbind('click')
+    }
 </script>
 </html>

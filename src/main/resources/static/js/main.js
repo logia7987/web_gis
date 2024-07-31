@@ -1527,6 +1527,8 @@ function generatePoints(segmentLength, minDistance = 1) {
             featureIds: newFeatureIds.map(f => f)
         });
     });
+    
+    // TODO saveStatus 넣어주기
 }
 
 
@@ -2155,6 +2157,7 @@ function updateFeature() {
                 if (result.result == 'success') {
                     // 정상 저장 후 화면 갱신
                     draw.deleteAll();
+                    // TODO 저장관련해서 선이 두개 생성되는 경우가 있음
                     setLinkNodeStationFeature();
 
                     toastOn("정상적으로 수정되었습니다.")
@@ -2234,6 +2237,8 @@ function splitLine() {
     });
 
     $("#link-btn-merge").show();
+
+    // TODO saveStatus 넣어주기
 }
 function hideAllTool() {
     $("#link-tools").hide();
@@ -2639,24 +2644,28 @@ function setTargetShp() {
             fileName : targetShp
         },
         success : function (data){
-            const targetTable = $('#newpolygon .modal-body table tbody');
-            targetTable.empty()
+            if (data.shpType === 'link' && $("#type-select").val() === 'lineString' || data.shpType === 'node' && $("#type-select").val() === 'point') {
+                const targetTable = $('#newpolygon .modal-body table tbody');
+                targetTable.empty()
 
-            let columnLength;
-            $("#shpType").val(data.shpType)
-            $("#fileName").val(targetShp)
-            if (data.shpType === "link") {
-                columnLength = data.columnNames.length - 9;
-            } else if (data.shpType === "node" || data.shpType === "station") {
-                columnLength = data.columnNames.length - 6;
+                let columnLength;
+                $("#shpType").val(data.shpType)
+                $("#fileName").val(targetShp)
+                if (data.shpType === "link") {
+                    columnLength = data.columnNames.length - 9;
+                } else if (data.shpType === "node" || data.shpType === "station") {
+                    columnLength = data.columnNames.length - 6;
+                }
+
+                for (let i = 0; i < columnLength; i++) {
+                    var html = "<tr><td><label class='polygon-label' title="+data.columnNames[i]+">"+data.columnNames[i]+"</label></td><td><input class='property' attr='"+data.columnNames[i]+"' type='text'></td></tr>"
+                    targetTable.append(html)
+                }
+
+                $('#newpolygon').modal('show')
+            } else {
+                alert('알맞는 타입 및 파일을 선택 후 객체를 생성해주세요')
             }
-
-            for (let i = 0; i < columnLength; i++) {
-                var html = "<tr><td><label class='polygon-label' title="+data.columnNames[i]+">"+data.columnNames[i]+"</label></td><td><input class='property' attr='"+data.columnNames[i]+"' type='text'></td></tr>"
-                targetTable.append(html)
-            }
-
-            $('#newpolygon').modal('show')
         },
         error : function (error){
             console.log(error)
@@ -2726,6 +2735,8 @@ function mergeLines() {
         });
 
         $("#link-btn-merge").hide();
+
+        // TODO saveStatus 넣어주기
     }
 }
 

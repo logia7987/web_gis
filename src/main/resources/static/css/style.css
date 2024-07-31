@@ -9,8 +9,9 @@
 }
 
 #frmFile {
+    border-radius: 10px;
     overflow: auto;
-    border: 1px dashed #4d4d4d;
+    border: 1px solid #c6c6c6;
     height: 200px;
     margin: auto;
     /*box-shadow: 0 0.625rem 1.25rem #0000001a;*/
@@ -47,6 +48,7 @@
 }
 
 .comment {
+    color : #a2a2a2;
     font-size: .75rem;
     opacity: .5;
 }
@@ -960,6 +962,7 @@ th, td {
 }
 
 .shape-btn {
+    font-family: "Noto Sans KR", sans-serif;
     width: 33.3%;
     font-size: 16px;
     background-color: unset;
