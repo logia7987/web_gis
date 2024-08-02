@@ -43,11 +43,11 @@
 <body>
     <header style="height: 45px;border-bottom: 1px solid #e6e6e6;">
         <div class="top-nav">
-            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="불러오기">
-                <i class="fa-solid fa-floppy-disk"></i>불러오기
+            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="업로드">
+                <i class="fa-solid fa-floppy-disk"></i>업로드
             </button>
             <div class="custom-select">
-                <div class="select-display">이전 파일 불러오기</div>
+                <div class="select-display">파일 불러오기</div>
                 <div class="options">
                     <a href="#" th:each="shp : ${shpList}" th:attr="data-table-name=${shp.table_name}" onclick="getShpData(this)">
                         <span th:text="${shp.table_name}"></span>
