@@ -575,9 +575,10 @@ public class ShapeService {
     }
 
     // 좌표 변환을 수행하는 메서드
-    private SimpleFeatureCollection transformFeatureCollection(SimpleFeatureCollection featureCollection, CoordinateReferenceSystem sourceCRS) {
+    private SimpleFeatureCollection transformFeatureCollection(SimpleFeatureCollection featureCollection, CoordinateReferenceSystem sourceCRS) throws FactoryException {
         // 타겟 좌표계 (WGS84)
-        CoordinateReferenceSystem targetCRS = DefaultGeographicCRS.WGS84;
+//        CoordinateReferenceSystem targetCRS = DefaultGeographicCRS.WGS84;
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326");
 
         // 변환을 위한 MathTransform 생성
         MathTransform transform;
@@ -623,6 +624,6 @@ public class ShapeService {
         // 기본 한국 korea 2000 TM 좌표계 설정 EPSG:5186 (Web Mercator)를 사용합니다.
 //        return CRS.decode("EPSG:5186");
         // 기본 UTM 좌표계 설정 EPSG:32648 (Web Mercator)를 사용합니다.
-        return CRS.decode("EPSG:5179");
+        return CRS.decode("EPSG:3857");
     }
 }
