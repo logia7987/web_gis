@@ -297,6 +297,10 @@
     <div id="toast_popup">
         <p id="toast_text"></p>
     </div>
+
+    <div id="mouse_info">
+
+    </div>
 </body>
 <script th:inline="javascript">
     mapboxgl.accessToken = /*[[${mapboxAccessToken}]]*/ '';
@@ -329,6 +333,7 @@
     var propertyArr = []
     // undo 기능 스택저장
     let historyStack = [];
+    let initialState = null;
     let draw= new MapboxDraw({
         styles: [
             // 선의 외곽 스타일

@@ -1011,3 +1011,11 @@ th, td {
     max-height: 65vh;
     overflow-y: auto;
 }
+
+#mouse_info {
+    position: absolute;
+    bottom: 0;
+    right: 395px;
+    background-color: #fff;
+    padding: 5px;
+}

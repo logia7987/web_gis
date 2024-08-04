@@ -6,6 +6,10 @@ let linkNodeStationFeatures = {
     type : "FeatureCollection",
     features : []
 };
+let polygonFeatures = {
+    type : "FeatureCollection",
+    features : []
+};
 let meterDotFeatures = {
     type : "FeatureCollection",
     features : []
@@ -75,6 +79,10 @@ const LINK_LABEL_LAYER_ID = 'link-label-layer';
 const NODE_ICON_ID = 'node-icon';
 const NODE_FEATURE_ID = 'node-feature';
 const NODE_LAYER_ID = 'node-layer';
+
+// 폴리곤
+const POLYGON_FEATURE_ID = 'polygon-feature';
+const POLYGON_LAYER_ID = 'polygon-layer';
 
 // 링크 미터당 점 레이어
 const METER_DOT_LAYER_ID = 'link-meter';
@@ -225,6 +233,8 @@ function getShpData(obj) {
         $(obj).find("span:eq(1)").show();
 
         appendToLayerOption(fileName)
+
+        toastOn("DB에서 "+ fileName + " 을(를) 불러옵니다.")
     } else {
         tNameArr = tNameArr.filter(function(item) {
             return item !== fileName;
@@ -232,10 +242,14 @@ function getShpData(obj) {
         delete shpTypeArr[fileName]
         $(obj).find("span:eq(1)").hide();
         $("#TR_"+fileName).remove()
+
+        toastOn("DB에서 "+ fileName + " 을(를) 숨깁니다.")
     }
 
     // 기본 라벨 정의 key : value 로 임시 값 부여
     tNameLabelArr[fileName] = "";
+
+    map.setZoom(14);
 
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
     updateMapData();
@@ -627,11 +641,15 @@ function getBoundingBox(coordinates, type) {
 // "moveend" 이벤트와 "zoomend" 이벤트에 대한 이벤트 핸들러 등록
 
 // map.on('zoomend', renderDataOnMapViewport);
-
+// TODO 스타일 보정 기능 넣기
 function handleFeatureSelection(e, layerId) {
     // 편집모드 클릭과 일반클릭을 분리
+    // TODO 맵 클릭 시 링크 선 선택 해제 추가
     if (isEdit()) {
         if (e.features !== undefined) {
+            // 이전 객체에 대한 히스토리 내역 초기화
+            historyStack = [];
+
             // hideAllTool()
             let select = $('#type-select').val()
             selectedShp = e.features[0];
@@ -1140,7 +1158,7 @@ function setLinkNodeStationFeature() {
 
             // 데이터 소스에 features 업데이트
             map.getSource(LINK_NODE_STATION_SOURCE_ID).setData(linkNodeStationFeatures);
-            addAttrList();
+            // addAttrList();
 
             // 레이어가 없을 때만 추가
             if (!map.getLayer(LINK_LAYER_ID) && !map.getLayer(METER_DOT_LAYER_ID)) {
@@ -1641,6 +1659,21 @@ function initBasicTileSet() {
     map.addControl(language);
     map.addControl(draw, 'bottom-left');
 
+    var info = document.getElementById('mouse_info');
+    // 마우스 이동 이벤트 리스너
+    map.on('mousemove', function(e) {
+        var coords = e.lngLat;
+        var zoom = map.getZoom().toFixed(2);
+        info.innerHTML = '위도: ' + coords.lat.toFixed(4) + '<br>경도: ' + coords.lng.toFixed(4) + '<br>줌 레벨: ' + zoom;
+    });
+
+    // 줌 이벤트 리스너
+    map.on('zoom', function() {
+        var coords = map.getCenter();
+        var zoom = map.getZoom().toFixed(2);
+        info.innerHTML = '위도: ' + coords.lat.toFixed(4) + '<br>경도: ' + coords.lng.toFixed(4) + '<br>줌 레벨: ' + zoom;
+    });
+
     setMapEvent();
 }
 
@@ -1683,6 +1716,7 @@ function getVworldTilesSet(){
 function setMapEvent() {
     map.on('load', function () {
         setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
+        setSource(POLYGON_FEATURE_ID, polygonFeatures);
         setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
 
         map.on('moveend', ()=>{
@@ -1890,6 +1924,11 @@ function addShpList() {
     target.find("div.layer-file").remove()
     target.find(".empty-layer").hide()
 
+    // 속성 전체 리스트 선택값 초기화
+    if ($('#all-check').text() !== '전체 선택') {
+        shpListAllChecked()
+    }
+
     // 현재 페이지의 시작 인덱스와 끝 인덱스 계산
     let startIdx = pageIdx * itemsPerPage;
     let endIdx = startIdx + itemsPerPage;
@@ -1912,9 +1951,9 @@ function addShpList() {
         const type = aData.geometry.type
 
         // 타입별 데이터 표출 분류
+        html += '<div class="layer-file basic-font" >'
         if (type.indexOf('LineString') > -1) {
             // 링크 처리
-            html += '<div class="layer-file basic-font" >'
             if (aData.properties.isChecked === true || isAllChecked === true && !notChecked.includes(i)) {
                 html += '<input class="isCheck'+i+'" type="checkbox" name="selected_link" onchange="shpPropertyCheck('+i+')" checked>'
             } else {
@@ -1925,15 +1964,26 @@ function addShpList() {
             html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchObj.label] + '</div>'
             html += '</div>'
             html += '</div>'
-        } else {
+        } else if (type.indexOf('Point') > -1) {
             // 노드 처리
-            html += '<div class="layer-file basic-font" >'
             if (aData.properties.isChecked === true || isAllChecked === true && !notChecked.includes(i)) {
                 html += '<input class="isCheck'+i+'" type="checkbox" name="selected_node" onchange="shpPropertyCheck('+i+')" checked>'
             } else {
                 html += '<input class="isCheck'+i+'" type="checkbox" name="selected_node"  onchange="shpPropertyCheck('+i+')">'
             }
             html += '<i class="fa-brands fa-hashnode" aria-hidden="true"></i>'
+            html += '<div class="file-info">'
+            html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchObj.label] +'</div>'
+            html += '</div>'
+            html += '</div>'
+        } else {
+            // 폴리곤 처리
+            if (aData.properties.isChecked === true || isAllChecked === true && !notChecked.includes(i)) {
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_polygon" onchange="shpPropertyCheck('+i+')" checked>'
+            } else {
+                html += '<input class="isCheck'+i+'" type="checkbox" name="selected_polygon"  onchange="shpPropertyCheck('+i+')">'
+            }
+            html += '<i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>'
             html += '<div class="file-info">'
             html += '<div class="file-tit" onclick="shpPropertyDetail('+i+')">' + aData.properties[matchObj.label] +'</div>'
             html += '</div>'
@@ -2346,6 +2396,8 @@ function addHandle(feature, lngLat) {
         closestLine.splice(closestIndex + 1, 0, [lngLat.lng, lngLat.lat]);
         lines[closestLineIndex] = closestLine;
         feature.geometry.coordinates = lines;
+
+        saveState()
     }
 
     // Draw 객체에서 피처를 업데이트
@@ -2407,6 +2459,8 @@ function removeHandle(feature, lngLat) {
     draw.changeMode('simple_select', {
         featureIds: newFeatureIds.map(f => f)
     });
+
+    saveState()
 }
 
 // 가장 가까운 포인트 인덱스 찾기
@@ -2895,8 +2949,8 @@ function undo() {
         draw.changeMode('simple_select', {
             featureIds: newFeatureIds.map(f => f)
         });
-
-        // draw.add(previousState);
+    } else {
+        toastOn("초기상태입니다. 되돌릴 수 없습니다.")
     }
 }
 
@@ -2913,3 +2967,4 @@ function cancelLoadFile() {
     loadData = {}
     dataArr = {}
 }
+

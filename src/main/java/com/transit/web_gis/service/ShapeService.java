@@ -66,6 +66,9 @@ public class ShapeService {
     public List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap) {
         return shapeMapper.getLinkShpData(commandMap);
     }
+    public List<Map<String, Object>> getPolygonShpData(Map<String, Object> commandMap) {
+        return shapeMapper.getPolygonShpData(commandMap);
+    }
     public int checkHasShpFile(Map<String, Object> commandMap) {
         return shapeMapper.checkHasShpFile(commandMap);
     }
@@ -141,6 +144,17 @@ public class ShapeService {
                                 // 일부 선택 - 전달받은 index 를 추출하여 저장한다.
                                 saveNode(tableName, features, shpType, bArr, label);
                             }
+                        } else {
+                            System.out.println("폴리곤 타입");
+                            if (isChecked) {
+                                // 전체 선택 - 모든 Feature 를 저장한다.
+                                System.out.println("전체 입력 수행 중");
+                                savePolygon(tableName, features, shpType, null, label);
+                                System.out.println("전체 입력 수행 완료");
+                            } else {
+                                // 일부 선택 - 전달받은 index 를 추출하여 저장한다.
+                                savePolygon(tableName, features, shpType, bArr, label);
+                            }
                         }
                     } catch (ParseException e) {
                         throw new RuntimeException(e);
@@ -206,6 +220,8 @@ public class ShapeService {
                 } else if (typeString.equals("Point")) {
                     createTableSql.append(", \"LNG\" VARCHAR2(100)");
                     createTableSql.append(", \"LAT\" VARCHAR2(100)");
+                } else if (typeString.equals("Polygon")) {
+                    createTableSql.append(", \"GEOMETRY\" CLOB");
                 }
             }
 
@@ -379,6 +395,99 @@ public class ShapeService {
         });
     }
 
+    private void savePolygon(String tableName, List<JSONObject> features, String shpType, String[] bArr, String label) {
+        Set<Integer> indicesToSave = new HashSet<>();
+        if (bArr != null) {
+            for (String index : bArr) {
+                try {
+                    indicesToSave.add(Integer.parseInt(index));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        JSONObject sampleFeature = features.get(0);
+        JSONObject properties = (JSONObject) sampleFeature.get("properties");
+
+        StringBuilder insertSql = new StringBuilder("INSERT INTO " + tableName + " (");
+        StringBuilder valuesSql = new StringBuilder("VALUES (");
+        boolean firstColumn = true;
+
+        for (Object key : properties.keySet()) {
+            if (!firstColumn) {
+                insertSql.append(", ");
+                valuesSql.append(", ");
+            }
+            insertSql.append("\"" + key + "\"");
+            valuesSql.append("?");
+            firstColumn = false;
+        }
+
+        insertSql.append(", \"").append(tableName).append("_ID\"");
+        insertSql.append(", \"FILE_NAME\"");
+        insertSql.append(", \"SHP_TYPE\"");
+        insertSql.append(", \"GEOMETRY\"");
+//        insertSql.append(", \"F_LNG\"");
+//        insertSql.append(", \"F_LAT\"");
+//        insertSql.append(", \"T_LNG\"");
+//        insertSql.append(", \"T_LAT\"");
+        insertSql.append(", \"LABEL_COLUMN\"");
+        insertSql.append(")");
+
+//      valuesSql.append(", ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        valuesSql.append(", ?, ?, ?, ?, ?)");
+
+        String sql = insertSql + " " + valuesSql;
+
+        // insert 실행
+        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                int actualIndex = (bArr == null) ? i : (int) indicesToSave.toArray()[i];
+                JSONObject feature = features.get(actualIndex);
+                JSONObject properties = (JSONObject) feature.get("properties");
+                JSONObject geometry = (JSONObject) feature.get("geometry");
+
+                // MultiLineString 과 LineString 을 구분하여 입력하기 위한 타입 구분
+                String shpType = (String) geometry.get("type");
+                JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+                if (shpType.equals("Polygon")) {
+                    coordinates = (JSONArray) (geometry.get("coordinates"));
+                } else if (shpType.equals("MultiPolygon")) {
+                    coordinates = (JSONArray) ((JSONArray) geometry.get("coordinates")).get(0);
+                }
+
+                int parameterIndex = 1;
+                for (Object key : properties.keySet()) {
+                    ps.setString(parameterIndex++, String.valueOf(properties.get(key)));
+                }
+
+                ps.setInt(parameterIndex++, i+1);
+                ps.setString(parameterIndex++, tableName);
+                ps.setString(parameterIndex++, "polygon");
+                ps.setString(parameterIndex++, geometry.toString());
+
+//                JSONArray fromCoordinate = (JSONArray) coordinates.get(0);
+//                JSONArray toCoordinate = (JSONArray) coordinates.get(coordinates.size()-1);
+//                // F_LNG
+//                ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
+//                // F_LAT
+//                ps.setString(parameterIndex++, fromCoordinate.get(1).toString());
+//                // T_LNG
+//                ps.setString(parameterIndex++, toCoordinate.get(0).toString());
+//                // T_LAT
+//                ps.setString(parameterIndex++, toCoordinate.get(1).toString());
+                // 기본 라벨
+                ps.setString(parameterIndex, label);
+            }
+
+            @Override
+            public int getBatchSize() {
+                return (bArr == null) ? features.size() : indicesToSave.size();
+            }
+        });
+    }
+
     private String checkFeatureType(JSONObject geometry) {
         String typeString = (String) geometry.get("type");
 
@@ -386,6 +495,8 @@ public class ShapeService {
             return "Link";
         } else if (typeString.contains("Point")) {
             return "Point";
+        } else if (typeString.contains("Polygon")) {
+            return "Polygon";
         }
 
         return "";
@@ -406,7 +517,8 @@ public class ShapeService {
     public String convertShpToGeoJSON(File shpFile, File outputDir) throws IOException, FactoryException {
         File prjFile = findFile(outputDir, ".prj");
 
-        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : null;
+//        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : null;
+        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : getDefaultTMCRS();
 
         return getString(shpFile, sourceCRS);
     }
@@ -502,5 +614,15 @@ public class ShapeService {
             // 변환된 FeatureCollection 반환
             return DataUtilities.collection(transformedFeatures);
         }
+    }
+
+    // TM 테스트 좌표계 임시 정의
+    private CoordinateReferenceSystem getDefaultTMCRS() throws FactoryException {
+        // 기본 TM 좌표계 설정 EPSG:3857 (Web Mercator)를 사용합니다.
+//        return CRS.decode("EPSG:3857");
+        // 기본 한국 korea 2000 TM 좌표계 설정 EPSG:5186 (Web Mercator)를 사용합니다.
+//        return CRS.decode("EPSG:5186");
+        // 기본 UTM 좌표계 설정 EPSG:32648 (Web Mercator)를 사용합니다.
+        return CRS.decode("EPSG:5179");
     }
 }

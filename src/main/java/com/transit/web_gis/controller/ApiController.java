@@ -253,6 +253,7 @@ public class ApiController {
 
         String sc_MODE = (String) shapeService.checkShpType(commandMap).get("SHP_TYPE");
         commandMap.put("sc_MODE", sc_MODE);
+
         switch (sc_MODE) {
             case "node" :
                 resultMap.put(fileName + "_data", getGeoJsonNode(shapeService.getNodeShpData(commandMap)));
@@ -260,9 +261,11 @@ public class ApiController {
             case "link" :
                 resultMap.put(fileName + "_data", getGeoJsonLink(shapeService.getLinkShpData(commandMap)));
                 break;
-            case "polygon" :
-                resultMap.put(fileName + "_data", getGeoJsonPolygon(shapeService.getLinkShpData(commandMap)));
-                break;
+                //TODO 폴리곤은 비동기 통신으로 전체를 한번에 부르게 변경
+//            case "polygon" :
+//                System.out.println("sc_MODE : " + sc_MODE);
+//                resultMap.put(fileName + "_data", getGeoJsonPolygon(shapeService.getPolygonShpData(commandMap)));
+//                break;
 //                case "station" -> resultMap.put(aFileName + "_data", getGeoJsonStation(shapeService.getShpData(commandMap)));
         }
 
@@ -350,6 +353,7 @@ public class ApiController {
         commandMap.put("fileName", tableName);
         int hasShp = shapeService.checkHasShpFile(commandMap);
 
+        // TODO 멘트 조정 필요 처리 후, 처리 중
         if (hasShp > 0 && !confirmFlag) {
             resultMap.put("message", tableName + " 파일이 이미 존재합니다.");
             return resultMap;

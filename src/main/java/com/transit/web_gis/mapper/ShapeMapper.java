@@ -14,6 +14,7 @@ public interface ShapeMapper {
     Map<String, Object> checkShpType(Map<String, Object> commandMap);
     List<Map<String, Object>> getNodeShpData(Map<String, Object> commandMap);
     List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap);
+    List<Map<String, Object>> getPolygonShpData(Map<String, Object> commandMap);
     int checkHasShpFile(Map<String, Object> commandMap);
     int updateLabel(Map<String, Object> commandMap);
     int updateNodeStationShpData(Map<String, Object> commandMap);

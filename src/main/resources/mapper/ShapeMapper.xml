@@ -45,6 +45,12 @@
         )
     </select>
 
+    <select id="getPolygonShpData" resultType="map" parameterType="map">
+        SELECT *
+        FROM TRANSIT.${fileName}
+        WHERE 1 = 1
+    </select>
+
     <select id="checkHasShpFile" resultType="int" parameterType="map">
         SELECT count(*) as hasCount
         FROM all_tables
