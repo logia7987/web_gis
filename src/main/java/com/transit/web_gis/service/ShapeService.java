@@ -517,8 +517,8 @@ public class ShapeService {
     public String convertShpToGeoJSON(File shpFile, File outputDir) throws IOException, FactoryException {
         File prjFile = findFile(outputDir, ".prj");
 
-//        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : null;
-        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : getDefaultTMCRS();
+        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : null;
+//        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : getDefaultTMCRS();
 
         return getString(shpFile, sourceCRS);
     }
@@ -577,7 +577,6 @@ public class ShapeService {
     // 좌표 변환을 수행하는 메서드
     private SimpleFeatureCollection transformFeatureCollection(SimpleFeatureCollection featureCollection, CoordinateReferenceSystem sourceCRS) throws FactoryException {
         // 타겟 좌표계 (WGS84)
-//        CoordinateReferenceSystem targetCRS = DefaultGeographicCRS.WGS84;
         CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326");
 
         // 변환을 위한 MathTransform 생성
@@ -619,11 +618,21 @@ public class ShapeService {
 
     // TM 테스트 좌표계 임시 정의
     private CoordinateReferenceSystem getDefaultTMCRS() throws FactoryException {
-        // 기본 TM 좌표계 설정 EPSG:3857 (Web Mercator)를 사용합니다.
-//        return CRS.decode("EPSG:3857");
         // 기본 한국 korea 2000 TM 좌표계 설정 EPSG:5186 (Web Mercator)를 사용합니다.
-//        return CRS.decode("EPSG:5186");
-        // 기본 UTM 좌표계 설정 EPSG:32648 (Web Mercator)를 사용합니다.
-        return CRS.decode("EPSG:3857");
+        return CRS.decode("EPSG:5186");
+//        String wkt = "PROJCS[\"TM_Jeju\", " +
+//                "GEOGCS[\"WGS 84\", " +
+//                "DATUM[\"WGS_1984\", " +
+//                "SPHEROID[\"WGS 84\",6378137,298.257223563]], " +
+//                "PRIMEM[\"Greenwich\",0], " +
+//                "UNIT[\"degree\",0.0174532925199433]], " +
+//                "PROJECTION[\"Transverse_Mercator\"], " +
+//                "PARAMETER[\"latitude_of_origin\",38], " +
+//                "PARAMETER[\"central_meridian\",127], " +
+//                "PARAMETER[\"scale_factor\",1], " +
+//                "PARAMETER[\"false_easting\",200000], " +
+//                "PARAMETER[\"false_northing\",500000], " +
+//                "UNIT[\"meter\",1]]";
+//        return CRS.parseWKT(wkt);
     }
 }

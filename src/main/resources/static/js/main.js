@@ -249,8 +249,6 @@ function getShpData(obj) {
     // 기본 라벨 정의 key : value 로 임시 값 부여
     tNameLabelArr[fileName] = "";
 
-    map.setZoom(14);
-
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
     updateMapData();
 }
@@ -2569,9 +2567,12 @@ function uploadShpTable(flag) {
                     $("body > header > div > div.custom-select > div.options a:last-child").click();
 
                     clearShpList();
+
+                    toastOn("성공적으로 저장되었습니다.");
                 } else if (result.message != "" || flag === false) {
                     toastOn(result.message);
                     $("#modal_confirmFile").modal('show');
+                    toastOn("저장실패했습니다.");
                 }
                 isSaving = false;
             },

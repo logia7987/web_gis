@@ -4,14 +4,23 @@ import com.transit.web_gis.service.ShapeService;
 import com.transit.web_gis.service.ShpService;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.geotools.geometry.jts.JTS;
+import org.geotools.referencing.CRS;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.File;
 import java.io.FileReader;
@@ -70,6 +79,37 @@ public class MainController {
             FileUtils.deleteDirectory(tempDir);
         }
         return "html/popup/modal_loadfile";
+    }
+
+    @RequestMapping("/test")
+    @ResponseBody
+    public static void main(String[] args) {
+        double x = 361815.423;
+        double y = 475092.0824;
+
+        try {
+            Point targetPoint = transformCoordinates(x, y);
+            System.out.println("WGS84 좌표: 위도 " + targetPoint.getY() + ", 경도 " + targetPoint.getX());
+        } catch (Exception e) {
+            System.err.println("좌표 변환 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static Point transformCoordinates(double x, double y) throws Exception {
+        // Source and target CRS definitions
+        CoordinateReferenceSystem sourceCRS = CRS.decode("EPSG:5186");
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:5181");
+        MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
+
+        // Create a source point
+        Coordinate sourceCoordinate = new Coordinate(x, y);
+        GeometryFactory geometryFactory = new GeometryFactory();
+        Point sourcePoint = geometryFactory.createPoint(sourceCoordinate);
+
+        // Transform the source point to target CRS
+        Point targetPoint = (Point) JTS.transform(sourcePoint, transform);
+        return targetPoint;
     }
 
 }
