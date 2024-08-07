@@ -7,6 +7,12 @@
         WHERE owner = 'TRANSIT'
     </select>
 
+    <select id="getShpType" resultType="String" parameterType="String">
+        SELECT SHP_TYPE
+        FROM ${fileName}
+        WHERE ROWNUM = 1
+    </select>
+
     <select id="getShpColumnNames" resultType="String" parameterType="String">
         SELECT COLUMN_NAME
         FROM ALL_TAB_COLUMNS

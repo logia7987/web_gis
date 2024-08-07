@@ -9,6 +9,7 @@ import java.util.Map;
 @Mapper
 public interface ShapeMapper {
     List<ShpVo> selectShpList();
+    String getShpType(String fileName);
     List<String> getShpColumnNames(String fileName);
     Map<String, Object> getDefaultLabel(String fileName);
     Map<String, Object> checkShpType(Map<String, Object> commandMap);

@@ -273,6 +273,21 @@ public class ApiController {
     }
 
     @ResponseBody
+    @RequestMapping(value="/getPolygonData", method=RequestMethod.POST)
+    public HashMap<String, Object> getPolygonData(@RequestBody Map<String, Object> params) throws Exception {
+        HashMap<String, Object> resultMap = new HashMap<>();
+        HashMap<String, Object> commandMap = new HashMap<>();
+
+        String fileName = (String) params.get("fileName");
+
+        commandMap.put("fileName", fileName);
+
+        resultMap.put(fileName + "_data", getGeoJsonPolygon(shapeService.getPolygonShpData(commandMap)));
+
+        return resultMap;
+    }
+
+    @ResponseBody
     @RequestMapping(value="/updateGeometry.do", method=RequestMethod.POST)
     public HashMap<String, Object> updateGeometry(@RequestBody Map<String, Object> params) throws JsonProcessingException {
         HashMap<String, Object> resultMap = new HashMap<>();
@@ -353,7 +368,6 @@ public class ApiController {
         commandMap.put("fileName", tableName);
         int hasShp = shapeService.checkHasShpFile(commandMap);
 
-        // TODO 멘트 조정 필요 처리 후, 처리 중
         if (hasShp > 0 && !confirmFlag) {
             resultMap.put("message", tableName + " 파일이 이미 존재합니다.");
             return resultMap;

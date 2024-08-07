@@ -83,6 +83,7 @@ const NODE_LAYER_ID = 'node-layer';
 // 폴리곤
 const POLYGON_FEATURE_ID = 'polygon-feature';
 const POLYGON_LAYER_ID = 'polygon-layer';
+const POLYGON_SOURCE_ID= 'polygon-source';
 
 // 링크 미터당 점 레이어
 const METER_DOT_LAYER_ID = 'link-meter';
@@ -251,6 +252,66 @@ function getShpData(obj) {
 
     // 불러올 DB TABLE 을 선택. 지도 레벨이 일정 수준이 될때 정보를 표출
     updateMapData();
+}
+
+function getPolygonData(obj) {
+    // 레이어가 없을 때만 추가
+    if (!map.getLayer(POLYGON_LAYER_ID)) {
+        // 기본 Feature 추가
+        setSource(POLYGON_SOURCE_ID, polygonFeatures);
+        // 폴리곤 레이어 추가
+        setLayerTypePolygon(POLYGON_LAYER_ID, POLYGON_SOURCE_ID);
+    }
+
+    let fileName = $(obj).find("span:eq(0)").text();
+
+    let targetObj = $(obj).find("span:eq(1)");
+
+    if (targetObj.is(":visible")) {
+        // 선택 해제
+        // 소스에서 제거 필요
+        polygonFeatures.features = [];
+        map.getSource(POLYGON_SOURCE_ID).setData(polygonFeatures);
+
+        targetObj.hide();
+    } else {
+        // 선택
+        // 소스에서 추가하여 보이게
+        let data = {
+            fileName : fileName,
+        }
+        $.ajax({
+            url : '/api/getPolygonData',
+            type : 'POST',
+            data : JSON.stringify(data),
+            dataType: "json",
+            contentType: 'application/json',
+            success : function (result){
+                console.log(result);
+                Object.entries(result).forEach(([key, value]) => {
+                    if (key !== "message") {
+                        let geoJson = JSON.parse(result[key]);
+                        geoJson.features.forEach(function(feature) {
+                            if ($("#isShow_"+feature.properties.FILE_NAME).is(":checked")) {
+                                feature.properties.label = feature.properties[feature.properties.LABEL_COLUMN];
+                            } else {
+                                feature.properties.label = "";
+                            }
+
+                            polygonFeatures.features.push(feature);
+                        });
+
+                        map.getSource(POLYGON_SOURCE_ID).setData(polygonFeatures);
+                    }
+                });
+
+                targetObj.show();
+            },
+            error : function (error){
+                console.log(error)
+            }
+        })
+    }
 }
 
 
@@ -1443,6 +1504,28 @@ function setLayerLinkDot(layerId, sourceId) {
     });
 }
 
+function setLayerTypePolygon(layerId, sourceId) {
+    // map.addLayer({
+    //     'id' : layerId,
+    //     'type' : 'fill',
+    //     'source' : sourceId,
+    //     'paint': {
+    //         'fill-color': polygonColor,
+    //         'fill-opacity': 0.5
+    //     }
+    // });
+    map.addLayer({
+        'id': layerId,
+        'type': 'line',
+        'source': sourceId,
+        'layout': {},
+        'paint': {
+            'line-color': '#000',
+            'line-width': 2,
+        }
+    });
+}
+
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
 function generatePoints(segmentLength, minDistance = 1) {
     let coordinates;
@@ -1714,7 +1797,6 @@ function getVworldTilesSet(){
 function setMapEvent() {
     map.on('load', function () {
         setSource(LINK_NODE_STATION_SOURCE_ID, linkNodeStationFeatures);
-        setSource(POLYGON_FEATURE_ID, polygonFeatures);
         setSource(METER_DOT_SOURCE_ID, meterDotFeatures);
 
         map.on('moveend', ()=>{
@@ -2572,7 +2654,6 @@ function uploadShpTable(flag) {
                 } else if (result.message != "" || flag === false) {
                     toastOn(result.message);
                     $("#modal_confirmFile").modal('show');
-                    // toastOn("저장실패했습니다.");
                 }
                 isSaving = false;
             },

@@ -49,7 +49,9 @@
             <div class="custom-select">
                 <div class="select-display">파일 불러오기</div>
                 <div class="options">
-                    <a href="#" th:each="shp : ${shpList}" th:attr="data-table-name=${shp.table_name}" onclick="getShpData(this)">
+                    <a href="#" th:each="shp : ${shpList}"
+                       th:attr="data-table-name=${shp.table_name},
+                       onclick=${shp.shpType == 'polygon' ? 'getPolygonData(this)' : 'getShpData(this)'}">
                         <span th:text="${shp.table_name}"></span>
                         <span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >
                             <i class="fas fa-check"></i>

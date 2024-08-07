@@ -2,6 +2,7 @@ package com.transit.web_gis.controller;
 
 import com.transit.web_gis.service.ShapeService;
 import com.transit.web_gis.service.ShpService;
+import com.transit.web_gis.vo.ShpVo;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.geotools.geometry.jts.JTS;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.List;
 
 @Controller
 public class MainController {
@@ -42,8 +44,17 @@ public class MainController {
 
     @GetMapping("/")
     public String mainView(Model model) {
+
+        List<ShpVo> list = shapeService.selectShpList();
+        for (int i = 0; i < list.size(); i++) {
+            ShpVo aVo = list.get(i);
+
+            String type = shapeService.getShpType(aVo.getTable_name());
+            aVo.setShpType(type);
+        }
+
         model.addAttribute("mapboxAccessToken", mapboxAccessToken);
-        model.addAttribute("shpList", shapeService.selectShpList());
+        model.addAttribute("shpList", list);
         return "html/main/index";
     }
 

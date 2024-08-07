@@ -35,4 +35,5 @@ public class ShpVo {
     }
 
     private String table_name;
+    private String shpType;
 }

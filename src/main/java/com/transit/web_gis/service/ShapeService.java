@@ -11,7 +11,7 @@ import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.geojson.feature.FeatureJSON;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.referencing.CRS;
-import org.geotools.referencing.crs.DefaultGeographicCRS;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -50,6 +50,9 @@ public class ShapeService {
     }
     public List<ShpVo> selectShpList() {
         return shapeMapper.selectShpList();
+    }
+    public String getShpType(String fileName) {
+        return shapeMapper.getShpType(fileName);
     }
     public List<String> getShpColumnNames(String fileName) {
         return shapeMapper.getShpColumnNames(fileName);
@@ -262,8 +265,8 @@ public class ShapeService {
         }
 
         insertSql.append(", \"").append(tableName).append("_ID\"");
-        insertSql.append(", \"LNG\"");
         insertSql.append(", \"LAT\"");
+        insertSql.append(", \"LNG\"");
         insertSql.append(", \"FILE_NAME\"");
         insertSql.append(", \"SHP_TYPE\"");
         insertSql.append(", \"LABEL_COLUMN\"");
@@ -271,7 +274,7 @@ public class ShapeService {
 
         valuesSql.append(",? , ?, ?, ?, ?, ?)");
 
-        String sql = insertSql.toString() + " " + valuesSql.toString();
+        String sql = insertSql + " " + valuesSql;
 
         // insert 실행
         jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
@@ -335,10 +338,10 @@ public class ShapeService {
         insertSql.append(", \"FILE_NAME\"");
         insertSql.append(", \"SHP_TYPE\"");
         insertSql.append(", \"GEOMETRY\"");
-        insertSql.append(", \"F_LNG\"");
         insertSql.append(", \"F_LAT\"");
-        insertSql.append(", \"T_LNG\"");
+        insertSql.append(", \"F_LNG\"");
         insertSql.append(", \"T_LAT\"");
+        insertSql.append(", \"T_LNG\"");
         insertSql.append(", \"LABEL_COLUMN\"");
         insertSql.append(")");
 
@@ -376,13 +379,13 @@ public class ShapeService {
 
                 JSONArray fromCoordinate = (JSONArray) coordinates.get(0);
                 JSONArray toCoordinate = (JSONArray) coordinates.get(coordinates.size()-1);
-                // F_LNG
-                ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
                 // F_LAT
+                ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
+                // F_LNG
                 ps.setString(parameterIndex++, fromCoordinate.get(1).toString());
-                // T_LNG
-                ps.setString(parameterIndex++, toCoordinate.get(0).toString());
                 // T_LAT
+                ps.setString(parameterIndex++, toCoordinate.get(0).toString());
+                // T_LNG
                 ps.setString(parameterIndex++, toCoordinate.get(1).toString());
                 // 기본 라벨
                 ps.setString(parameterIndex, label);
@@ -517,7 +520,15 @@ public class ShapeService {
     public String convertShpToGeoJSON(File shpFile, File outputDir) throws IOException, FactoryException {
         File prjFile = findFile(outputDir, ".prj");
 
-        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : null;
+        CoordinateReferenceSystem sourceCRS;
+        if (prjFile != null ) {
+            sourceCRS = extractCRS(prjFile);
+            System.out.println(sourceCRS.getName());
+        } else {
+            System.out.println("PRJ 없음");
+            sourceCRS = getDefaultTMCRS();
+        }
+//        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : null;
 //        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : getDefaultTMCRS();
 
         return getString(shpFile, sourceCRS);
@@ -619,6 +630,35 @@ public class ShapeService {
     // TM 테스트 좌표계 임시 정의
     private CoordinateReferenceSystem getDefaultTMCRS() throws FactoryException {
         // 기본 한국 korea 2000 TM 좌표계 설정 EPSG:5186 (Web Mercator)를 사용합니다.
-        return CRS.decode("EPSG:5179");
+//        return CRS.decode("EPSG:5186");
+        // WKT 표현을 사용하여 좌표계 정의
+        String wkt = "PROJCS[\"ITRF2000_Central_Belt_60\", " +
+                "GEOGCS[\"ITRF2000\", " +
+                "DATUM[\"ITRF2000\", " +
+                "SPHEROID[\"WGS 84\", 6378137, 298.257223563, " +
+                "AUTHORITY[\"EPSG\", \"7030\"]], " +
+                "AUTHORITY[\"EPSG\", \"6326\"]], " +
+                "PRIMEM[\"Greenwich\", 0, " +
+                "AUTHORITY[\"EPSG\", \"8901\"]], " +
+                "UNIT[\"degree\", 0.0174532925199433, " +
+                "AUTHORITY[\"EPSG\", \"9122\"]], " +
+                "AUTHORITY[\"EPSG\", \"4326\"]], " +
+                "PROJECTION[\"Transverse Mercator\"], " +
+                "PARAMETER[\"false_easting\", 500000], " +
+                "PARAMETER[\"false_northing\", 0], " +
+                "PARAMETER[\"central_meridian\", 15], " +
+                "PARAMETER[\"scale_factor\", 0.9996], " +
+                "PARAMETER[\"latitude_of_origin\", 0], " +
+                "UNIT[\"meter\", 1, " +
+                "AUTHORITY[\"EPSG\", \"9001\"]], " +
+                "AUTHORITY[\"EPSG\", \"4326\"]]";
+
+        // WKT 문자열을 CoordinateReferenceSystem으로 변환
+        try {
+            return CRS.parseWKT(wkt);
+        } catch (FactoryException e) {
+            System.err.println("Error parsing WKT to CRS: " + e.getMessage());
+            throw e;
+        }
     }
 }
