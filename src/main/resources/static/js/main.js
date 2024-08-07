@@ -2572,7 +2572,7 @@ function uploadShpTable(flag) {
                 } else if (result.message != "" || flag === false) {
                     toastOn(result.message);
                     $("#modal_confirmFile").modal('show');
-                    toastOn("저장실패했습니다.");
+                    // toastOn("저장실패했습니다.");
                 }
                 isSaving = false;
             },

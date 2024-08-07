@@ -619,20 +619,6 @@ public class ShapeService {
     // TM 테스트 좌표계 임시 정의
     private CoordinateReferenceSystem getDefaultTMCRS() throws FactoryException {
         // 기본 한국 korea 2000 TM 좌표계 설정 EPSG:5186 (Web Mercator)를 사용합니다.
-        return CRS.decode("EPSG:5186");
-//        String wkt = "PROJCS[\"TM_Jeju\", " +
-//                "GEOGCS[\"WGS 84\", " +
-//                "DATUM[\"WGS_1984\", " +
-//                "SPHEROID[\"WGS 84\",6378137,298.257223563]], " +
-//                "PRIMEM[\"Greenwich\",0], " +
-//                "UNIT[\"degree\",0.0174532925199433]], " +
-//                "PROJECTION[\"Transverse_Mercator\"], " +
-//                "PARAMETER[\"latitude_of_origin\",38], " +
-//                "PARAMETER[\"central_meridian\",127], " +
-//                "PARAMETER[\"scale_factor\",1], " +
-//                "PARAMETER[\"false_easting\",200000], " +
-//                "PARAMETER[\"false_northing\",500000], " +
-//                "UNIT[\"meter\",1]]";
-//        return CRS.parseWKT(wkt);
+        return CRS.decode("EPSG:5179");
     }
 }
