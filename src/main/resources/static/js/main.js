@@ -275,6 +275,7 @@ function getPolygonData(obj) {
 
         targetObj.hide();
     } else {
+        viewLoading()
         // 선택
         // 소스에서 추가하여 보이게
         let data = {
@@ -306,6 +307,8 @@ function getPolygonData(obj) {
                 });
 
                 targetObj.show();
+
+                finishLoading()
             },
             error : function (error){
                 console.log(error)
@@ -1411,7 +1414,7 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         'type' : 'line',
         'source' : sourceId,
         'paint': {
-            'line-color': '#282828',
+            'line-color': '#c3161c',
             'line-width': 2
         },
         'filter' : ['==', 'featureId', featureId]

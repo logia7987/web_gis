@@ -2,11 +2,13 @@ package com.transit.web_gis.service;
 
 import com.transit.web_gis.mapper.ShapeMapper;
 import com.transit.web_gis.vo.ShpVo;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.feature.simple.SimpleFeature;
+import org.geotools.api.referencing.FactoryException;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.simple.SimpleFeatureCollection;
 import org.geotools.data.simple.SimpleFeatureIterator;
-import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.geojson.feature.FeatureJSON;
 import org.geotools.geometry.jts.JTS;
@@ -16,12 +18,13 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.locationtech.jts.geom.Geometry;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-import org.opengis.referencing.operation.MathTransform;
-import org.opengis.referencing.operation.TransformException;
+import org.locationtech.jts.geom.*;
+import org.locationtech.proj4j.CRSFactory;
+import org.locationtech.proj4j.CoordinateTransform;
+import org.locationtech.proj4j.CoordinateTransformFactory;
+
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.locationtech.proj4j.ProjCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,6 +41,12 @@ public class ShapeService {
 
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
     private static final File geoDir = new File("C:\\mapbox\\geoJson");
+
+    // EPSG:2097 (Korean Transverse Mercator) PROJ 문자열 정의
+    private static final String PROJ_KTM = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=500000 +ellps=bessel +units=m +no_defs +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43";
+
+    // EPSG:4326 (WGS 84) PROJ 문자열 정의
+    private static final String PROJ_WGS84 = "+proj=longlat +datum=WGS84 +no_defs";
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -265,8 +274,8 @@ public class ShapeService {
         }
 
         insertSql.append(", \"").append(tableName).append("_ID\"");
-        insertSql.append(", \"LAT\"");
         insertSql.append(", \"LNG\"");
+        insertSql.append(", \"LAT\"");
         insertSql.append(", \"FILE_NAME\"");
         insertSql.append(", \"SHP_TYPE\"");
         insertSql.append(", \"LABEL_COLUMN\"");
@@ -338,10 +347,10 @@ public class ShapeService {
         insertSql.append(", \"FILE_NAME\"");
         insertSql.append(", \"SHP_TYPE\"");
         insertSql.append(", \"GEOMETRY\"");
-        insertSql.append(", \"F_LAT\"");
         insertSql.append(", \"F_LNG\"");
-        insertSql.append(", \"T_LAT\"");
+        insertSql.append(", \"F_LAT\"");
         insertSql.append(", \"T_LNG\"");
+        insertSql.append(", \"T_LAT\"");
         insertSql.append(", \"LABEL_COLUMN\"");
         insertSql.append(")");
 
@@ -379,13 +388,13 @@ public class ShapeService {
 
                 JSONArray fromCoordinate = (JSONArray) coordinates.get(0);
                 JSONArray toCoordinate = (JSONArray) coordinates.get(coordinates.size()-1);
-                // F_LAT
-                ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
                 // F_LNG
+                ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
+                // F_LAT
                 ps.setString(parameterIndex++, fromCoordinate.get(1).toString());
-                // T_LAT
-                ps.setString(parameterIndex++, toCoordinate.get(0).toString());
                 // T_LNG
+                ps.setString(parameterIndex++, toCoordinate.get(0).toString());
+                // T_LAT
                 ps.setString(parameterIndex++, toCoordinate.get(1).toString());
                 // 기본 라벨
                 ps.setString(parameterIndex, label);
@@ -528,8 +537,6 @@ public class ShapeService {
             System.out.println("PRJ 없음");
             sourceCRS = getDefaultTMCRS();
         }
-//        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : null;
-//        CoordinateReferenceSystem sourceCRS = prjFile != null ? extractCRS(prjFile) : getDefaultTMCRS();
 
         return getString(shpFile, sourceCRS);
     }
@@ -588,15 +595,15 @@ public class ShapeService {
     // 좌표 변환을 수행하는 메서드
     private SimpleFeatureCollection transformFeatureCollection(SimpleFeatureCollection featureCollection, CoordinateReferenceSystem sourceCRS) throws FactoryException {
         // 타겟 좌표계 (WGS84)
-        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326");
+        CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
+        CRSFactory crsFactory = new CRSFactory();
 
-        // 변환을 위한 MathTransform 생성
-        MathTransform transform;
-        try {
-            transform = CRS.findMathTransform(sourceCRS, targetCRS, true);
-        } catch (FactoryException e) {
-            throw new RuntimeException("좌표 변환을 위한 MathTransform을 생성하는 동안 오류가 발생했습니다.", e);
-        }
+        // 좌표계 정의
+        org.locationtech.proj4j.CoordinateReferenceSystem sourceProjection = crsFactory.createFromParameters("source", PROJ_KTM);
+        org.locationtech.proj4j.CoordinateReferenceSystem targetProjection = crsFactory.createFromParameters("target", PROJ_WGS84);
+
+        // 좌표계 변환 객체 생성
+        CoordinateTransform transform = ctFactory.createTransform(sourceProjection, targetProjection);
 
         // FeatureCollection의 각 Geometry를 변환
         List<SimpleFeature> transformedFeatures = new ArrayList<>();
@@ -609,15 +616,15 @@ public class ShapeService {
                 Geometry transformedGeometry;
                 try {
                     // 좌표 변환 적용
-                    transformedGeometry = JTS.transform(geometry, transform);
-                } catch (TransformException e) {
+                    transformedGeometry = transformGeometry(geometry, transform);
+                } catch (Exception e) {
                     throw new RuntimeException("Geometry를 변환하는 동안 오류가 발생했습니다.", e);
                 }
 
                 // 변환된 Geometry로 SimpleFeature를 업데이트
                 SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(feature.getFeatureType());
                 featureBuilder.addAll(feature.getAttributes());
-                featureBuilder.set(feature.getDefaultGeometryProperty().getName(), transformedGeometry);
+                featureBuilder.set(String.valueOf(feature.getDefaultGeometryProperty().getName()), transformedGeometry);
                 SimpleFeature transformedFeature = featureBuilder.buildFeature(String.valueOf(id));
                 transformedFeatures.add(transformedFeature);
                 id++;
@@ -627,38 +634,120 @@ public class ShapeService {
         }
     }
 
+    // Geometry 변환을 위한 메소드
+    private Geometry transformGeometry(Geometry geometry, CoordinateTransform transform) {
+        // 좌표 배열을 가져옴
+        Coordinate[] coords = geometry.getCoordinates();
+        ProjCoordinate srcCoord = new ProjCoordinate();
+        ProjCoordinate destCoord = new ProjCoordinate();
+
+        // 좌표 변환 적용
+        for (int i = 0; i < coords.length; i++) {
+            srcCoord.x = coords[i].x;
+            srcCoord.y = coords[i].y;
+            transform.transform(srcCoord, destCoord);
+            coords[i].x = destCoord.x;
+            coords[i].y = destCoord.y;
+        }
+
+        // 변환된 좌표 배열로 새 Geometry 객체 생성
+        return geometryFactory.createGeometry(geometry);
+    }
+
     // TM 테스트 좌표계 임시 정의
     private CoordinateReferenceSystem getDefaultTMCRS() throws FactoryException {
-        // 기본 한국 korea 2000 TM 좌표계 설정 EPSG:5186 (Web Mercator)를 사용합니다.
-//        return CRS.decode("EPSG:5186");
-        // WKT 표현을 사용하여 좌표계 정의
-        String wkt = "PROJCS[\"ITRF2000_Central_Belt_60\", " +
-                "GEOGCS[\"ITRF2000\", " +
-                "DATUM[\"ITRF2000\", " +
-                "SPHEROID[\"WGS 84\", 6378137, 298.257223563, " +
-                "AUTHORITY[\"EPSG\", \"7030\"]], " +
-                "AUTHORITY[\"EPSG\", \"6326\"]], " +
-                "PRIMEM[\"Greenwich\", 0, " +
-                "AUTHORITY[\"EPSG\", \"8901\"]], " +
-                "UNIT[\"degree\", 0.0174532925199433, " +
-                "AUTHORITY[\"EPSG\", \"9122\"]], " +
-                "AUTHORITY[\"EPSG\", \"4326\"]], " +
-                "PROJECTION[\"Transverse Mercator\"], " +
-                "PARAMETER[\"false_easting\", 500000], " +
-                "PARAMETER[\"false_northing\", 0], " +
-                "PARAMETER[\"central_meridian\", 15], " +
-                "PARAMETER[\"scale_factor\", 0.9996], " +
-                "PARAMETER[\"latitude_of_origin\", 0], " +
-                "UNIT[\"meter\", 1, " +
-                "AUTHORITY[\"EPSG\", \"9001\"]], " +
-                "AUTHORITY[\"EPSG\", \"4326\"]]";
+        return CRS.decode("EPSG:2097");
+    }
 
-        // WKT 문자열을 CoordinateReferenceSystem으로 변환
-        try {
-            return CRS.parseWKT(wkt);
-        } catch (FactoryException e) {
-            System.err.println("Error parsing WKT to CRS: " + e.getMessage());
-            throw e;
+    private static GeometryFactory geometryFactory = new GeometryFactory();
+
+    // 좌표 순서를 확인하고 변환이 필요한 경우 변환하는 메서드
+    private static Geometry correctCoordinates(Geometry geometry) {
+        Coordinate[] coords = geometry.getCoordinates();
+
+        if (coords.length > 0 && isLatitude(coords[0].x) && isLongitude(coords[0].y)) {
+            return switchCoordinates(geometry);
+        }
+        return geometry; // 이미 올바른 좌표 순서인 경우 변경하지 않음
+    }
+    // 주어진 값이 위도인지 확인하는 메서드
+    private static boolean isLatitude(double value) {
+        return value >= -90 && value <= 90;
+    }
+
+    // 주어진 값이 경도인지 확인하는 메서드
+    private static boolean isLongitude(double value) {
+        return value >= -180 && value <= 180;
+    }
+    // 좌표 순서를 변환하는 메서드 (모든 Geometry 유형에 대해 처리)
+    private static Geometry switchCoordinates(Geometry geometry) {
+        if (geometry instanceof Point) {
+            return switchPointCoordinates((Point) geometry);
+        } else if (geometry instanceof LineString) {
+            return switchLineStringCoordinates((LineString) geometry);
+        } else if (geometry instanceof Polygon) {
+            return switchPolygonCoordinates((Polygon) geometry);
+        } else if (geometry instanceof MultiPoint) {
+            return switchMultiPointCoordinates((MultiPoint) geometry);
+        } else if (geometry instanceof MultiLineString) {
+            return switchMultiLineStringCoordinates((MultiLineString) geometry);
+        } else if (geometry instanceof MultiPolygon) {
+            return switchMultiPolygonCoordinates((MultiPolygon) geometry);
+        } else {
+            throw new IllegalArgumentException("지원되지 않는 Geometry 유형입니다: " + geometry.getGeometryType());
         }
     }
+
+    private static Point switchPointCoordinates(Point point) {
+        return geometryFactory.createPoint(switchCoordinate(point.getCoordinate()));
+    }
+
+    private static LineString switchLineStringCoordinates(LineString lineString) {
+        return geometryFactory.createLineString(switchCoordinates(lineString.getCoordinates()));
+    }
+
+    private static Polygon switchPolygonCoordinates(Polygon polygon) {
+        LinearRing shell = geometryFactory.createLinearRing(switchCoordinates(polygon.getExteriorRing().getCoordinates()));
+        LinearRing[] holes = new LinearRing[polygon.getNumInteriorRing()];
+        for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+            holes[i] = geometryFactory.createLinearRing(switchCoordinates(polygon.getInteriorRingN(i).getCoordinates()));
+        }
+        return geometryFactory.createPolygon(shell, holes);
+    }
+
+    private static MultiPoint switchMultiPointCoordinates(MultiPoint multiPoint) {
+        return geometryFactory.createMultiPoint(switchCoordinates(multiPoint.getCoordinates()));
+    }
+
+    private static MultiLineString switchMultiLineStringCoordinates(MultiLineString multiLineString) {
+        LineString[] lineStrings = new LineString[multiLineString.getNumGeometries()];
+        for (int i = 0; i < multiLineString.getNumGeometries(); i++) {
+            lineStrings[i] = switchLineStringCoordinates((LineString) multiLineString.getGeometryN(i));
+        }
+        return geometryFactory.createMultiLineString(lineStrings);
+    }
+
+    private static MultiPolygon switchMultiPolygonCoordinates(MultiPolygon multiPolygon) {
+        Polygon[] polygons = new Polygon[multiPolygon.getNumGeometries()];
+        for (int i = 0; i < multiPolygon.getNumGeometries(); i++) {
+            polygons[i] = switchPolygonCoordinates((Polygon) multiPolygon.getGeometryN(i));
+        }
+        return geometryFactory.createMultiPolygon(polygons);
+    }
+
+    private static Coordinate[] switchCoordinates(Coordinate[] coordinates) {
+        for (Coordinate coord : coordinates) {
+            switchCoordinate(coord);
+        }
+        return coordinates;
+    }
+
+    private static Coordinate switchCoordinate(Coordinate coord) {
+        double temp = coord.x;
+        coord.x = coord.y;
+        coord.y = temp;
+        return coord;
+    }
+
+
 }
