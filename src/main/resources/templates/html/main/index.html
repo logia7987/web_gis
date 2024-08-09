@@ -117,40 +117,40 @@
 
 <!--    <div id="mode-change-btn" onclick="toggleWhiteMode()"><i class="fas fa-solid fa-moon" id="mdicon"></i></div>-->
     <div class="tab-menu">
-        <div class="tab-links active" onclick="openTab(this, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성">
-            <i class="fa-solid fa-list"></i>
-        </div>
+<!--        <div class="tab-links active" onclick="openTab(this, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성">-->
+<!--            <i class="fa-solid fa-list"></i>-->
+<!--        </div>-->
 
-        <div class="tab-links " onclick="openTab(this, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="SHP">
+        <div class="tab-links " onclick="openTab(this, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="SHP">
             <i class="fa-solid fa-layer-group"></i>
         </div>
 
-        <div class="tab-links" onclick="openTab(this, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구">
+        <div class="tab-links" onclick="openTab(this, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구">
             <i class="fa-solid fa-screwdriver-wrench"></i>
         </div>
     </div>
 
-    <div id="tab1" class="tab" style="display: block;">
-        <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
-            <!-- 히스토리로 변경예정 -->
-            <h5>속성</h5>
-        </div>
-        <div class="attr-tab">
-            <ul class="attr_tab_bar">
-                <li class="active" onclick="openAttrTab(this, 'node_list')">노드</li>
-                <li onclick="openAttrTab(this, 'link_list')">링크</li>
-                <li onclick="openAttrTab(this, 'station_list')">정류소</li>
-            </ul>
-        </div>
+<!--    <div id="tab1" class="tab" style="display: block;">-->
+<!--        <div class="tab-title padding-10 basic-font" style="border-radius: 0;">-->
+<!--            &lt;!&ndash; 히스토리로 변경예정 &ndash;&gt;-->
+<!--            <h5>속성</h5>-->
+<!--        </div>-->
+<!--        <div class="attr-tab">-->
+<!--            <ul class="attr_tab_bar">-->
+<!--                <li class="active" onclick="openAttrTab(this, 'node_list')">노드</li>-->
+<!--                <li onclick="openAttrTab(this, 'link_list')">링크</li>-->
+<!--                <li onclick="openAttrTab(this, 'station_list')">정류소</li>-->
+<!--            </ul>-->
+<!--        </div>-->
 
-        <!-- 속성 탭 나누기 -->
-        <div class="attr-list basic-font" id="node_list" style=""></div>
-        <div class="attr-list basic-font" id="link_list" style="display: none;"></div>
-        <div class="attr-list basic-font" id="station_list" style="display: none;"></div>
+<!--        &lt;!&ndash; 속성 탭 나누기 &ndash;&gt;-->
+<!--        <div class="attr-list basic-font" id="node_list" style=""></div>-->
+<!--        <div class="attr-list basic-font" id="link_list" style="display: none;"></div>-->
 <!--        <div class="attr-list basic-font" id="station_list" style="display: none;"></div>-->
-    </div>
+<!--&lt;!&ndash;        <div class="attr-list basic-font" id="station_list" style="display: none;"></div>&ndash;&gt;-->
+<!--    </div>-->
 
-    <div id="tab2" class="tab">
+    <div id="tab1" class="tab" style="display: block;">
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>SHP</h5>
             <h5 class="shpSaveBtn" onclick="uploadShpTable(false)">저장</h5>
@@ -158,12 +158,11 @@
         <div id="all-check" onclick="shpListAllChecked()">전체 선택</div>
         <div class="layer-file-list basic-font">
             <span class="empty-layer">
-                <!-- TODO 스타일 수정 필요-->
                 불러온 SHP 파일이 없습니다.
                 <br><br>
-                좌측 상단의 불러오기 또는
+                좌측 상단의 업로드 또는
                 <br><br>
-                이전 파일 불러오기를
+                파일 불러오기를
                 <br><br>
                 진행해주세요.
             </span>
@@ -171,7 +170,7 @@
         <div class="paging-container sp-cf"></div>
     </div>
 
-    <div id="tab3" class="tab">
+    <div id="tab2" class="tab">
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>도구</h5>
         </div>

@@ -5,6 +5,8 @@ import com.transit.web_gis.vo.ShpVo;
 import org.geotools.api.data.SimpleFeatureSource;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.referencing.FactoryException;
+import org.geotools.api.referencing.operation.MathTransform;
+import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.simple.SimpleFeatureCollection;
@@ -19,12 +21,9 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.locationtech.jts.geom.*;
-import org.locationtech.proj4j.CRSFactory;
-import org.locationtech.proj4j.CoordinateTransform;
-import org.locationtech.proj4j.CoordinateTransformFactory;
+import org.locationtech.proj4j.*;
 
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
-import org.locationtech.proj4j.ProjCoordinate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -526,7 +525,7 @@ public class ShapeService {
         }
     }
 
-    public String convertShpToGeoJSON(File shpFile, File outputDir) throws IOException, FactoryException {
+    public String convertShpToGeoJSON(File shpFile, File outputDir) throws IOException, FactoryException, TransformException {
         File prjFile = findFile(outputDir, ".prj");
 
         CoordinateReferenceSystem sourceCRS;
@@ -541,7 +540,7 @@ public class ShapeService {
         return getString(shpFile, sourceCRS);
     }
 
-    private String getString(File shpFile, CoordinateReferenceSystem sourceCRS) throws IOException, FactoryException {
+    private String getString(File shpFile, CoordinateReferenceSystem sourceCRS) throws IOException, FactoryException, TransformException {
         String geoJson;
         ShapefileDataStore store = new ShapefileDataStore(shpFile.toURI().toURL());
         SimpleFeatureSource source = store.getFeatureSource();
@@ -593,19 +592,10 @@ public class ShapeService {
     }
 
     // 좌표 변환을 수행하는 메서드
-    private SimpleFeatureCollection transformFeatureCollection(SimpleFeatureCollection featureCollection, CoordinateReferenceSystem sourceCRS) throws FactoryException {
+    private SimpleFeatureCollection transformFeatureCollection(SimpleFeatureCollection featureCollection, CoordinateReferenceSystem sourceCRS) throws FactoryException, TransformException {
         // 타겟 좌표계 (WGS84)
-        CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
-        CRSFactory crsFactory = new CRSFactory();
+        CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:4326");
 
-        // 좌표계 정의
-        org.locationtech.proj4j.CoordinateReferenceSystem sourceProjection = crsFactory.createFromParameters("source", PROJ_KTM);
-        org.locationtech.proj4j.CoordinateReferenceSystem targetProjection = crsFactory.createFromParameters("target", PROJ_WGS84);
-
-        // 좌표계 변환 객체 생성
-        CoordinateTransform transform = ctFactory.createTransform(sourceProjection, targetProjection);
-
-        // FeatureCollection의 각 Geometry를 변환
         List<SimpleFeature> transformedFeatures = new ArrayList<>();
         try (SimpleFeatureIterator iterator = featureCollection.features()) {
             int id = 1;
@@ -613,25 +603,80 @@ public class ShapeService {
                 SimpleFeature feature = iterator.next();
                 Geometry geometry = (Geometry) feature.getDefaultGeometry();
 
-                Geometry transformedGeometry;
+                Geometry transformedGeometry = null;
                 try {
-                    // 좌표 변환 적용
-                    transformedGeometry = transformGeometry(geometry, transform);
-                } catch (Exception e) {
-                    throw new RuntimeException("Geometry를 변환하는 동안 오류가 발생했습니다.", e);
+                    // 1단계: Proj4j를 사용한 좌표 변환 시도
+                    transformedGeometry = transformGeometryWithProj4j(geometry, sourceCRS, targetCRS);
+                } catch (UnsupportedParameterException | IllegalArgumentException e) {
+                    // 2단계: Proj4j 변환 실패 시 GeoTools로 대체
+                    transformedGeometry = transformGeometryWithGeoTools(geometry, sourceCRS, targetCRS);
                 }
 
                 // 변환된 Geometry로 SimpleFeature를 업데이트
                 SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(feature.getFeatureType());
                 featureBuilder.addAll(feature.getAttributes());
-                featureBuilder.set(String.valueOf(feature.getDefaultGeometryProperty().getName()), transformedGeometry);
+                featureBuilder.set(feature.getDefaultGeometryProperty().getName(), transformedGeometry);
                 SimpleFeature transformedFeature = featureBuilder.buildFeature(String.valueOf(id));
                 transformedFeatures.add(transformedFeature);
                 id++;
             }
-            // 변환된 FeatureCollection 반환
-            return DataUtilities.collection(transformedFeatures);
         }
+
+        // 변환된 FeatureCollection 반환
+        return DataUtilities.collection(transformedFeatures);
+    }
+
+    // Proj4j로 변환 시도
+    private Geometry transformGeometryWithProj4j(Geometry geometry, CoordinateReferenceSystem sourceCRS, CoordinateReferenceSystem targetCRS) {
+        CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
+        CRSFactory crsFactory = new CRSFactory();
+
+        // 좌표계 정의
+        org.locationtech.proj4j.CoordinateReferenceSystem sourceProjection = crsFactory.createFromParameters("source", sourceCRS.toWKT());
+        org.locationtech.proj4j.CoordinateReferenceSystem targetProjection = crsFactory.createFromParameters("target", targetCRS.toWKT());
+
+        // 좌표계 변환 객체 생성
+        CoordinateTransform transform = ctFactory.createTransform(sourceProjection, targetProjection);
+
+        // 변환 수행
+        return applyTransform(geometry, transform);
+    }
+
+    // GeoTools로 변환 시도
+    private Geometry transformGeometryWithGeoTools(Geometry geometry, CoordinateReferenceSystem sourceCRS, CoordinateReferenceSystem targetCRS) throws FactoryException, TransformException, TransformException {
+        boolean lenient = true; // 자동 매개변수 변환을 허용
+        MathTransform transform = CRS.findMathTransform(sourceCRS, targetCRS, lenient);
+
+        // Geometry 변환
+        Geometry transformedGeometry = JTS.transform(geometry, transform);
+
+        // 변환된 좌표 가져오기
+        Coordinate[] coords = transformedGeometry.getCoordinates();
+
+        // 좌표가 올바른지 확인하고 필요시 x와 y를 교환
+        if (!isValidLatitude(coords[0].y)) {
+            swapCoordinates(coords);
+            transformedGeometry = geometryFactory.createGeometry(transformedGeometry);
+        }
+
+        return transformedGeometry;
+    }
+
+    // 변환 적용 (Proj4j)
+    private Geometry applyTransform(Geometry geometry, CoordinateTransform transform) {
+        Coordinate[] coords = geometry.getCoordinates();
+        ProjCoordinate srcCoord = new ProjCoordinate();
+        ProjCoordinate destCoord = new ProjCoordinate();
+
+        for (int i = 0; i < coords.length; i++) {
+            srcCoord.x = coords[i].x;
+            srcCoord.y = coords[i].y;
+            transform.transform(srcCoord, destCoord);
+            coords[i].x = destCoord.x;
+            coords[i].y = destCoord.y;
+        }
+
+        return geometryFactory.createGeometry(geometry);
     }
 
     // Geometry 변환을 위한 메소드
@@ -646,10 +691,7 @@ public class ShapeService {
             srcCoord.x = coords[i].x;
             srcCoord.y = coords[i].y;
             transform.transform(srcCoord, destCoord);
-            coords[i].x = destCoord.x;
-            coords[i].y = destCoord.y;
         }
-
         // 변환된 좌표 배열로 새 Geometry 객체 생성
         return geometryFactory.createGeometry(geometry);
     }
@@ -660,6 +702,10 @@ public class ShapeService {
     }
 
     private static GeometryFactory geometryFactory = new GeometryFactory();
+
+    private boolean isValidLatitude(double value) {
+        return value >= -90.0 && value <= 90.0;
+    }
 
     // 좌표 순서를 확인하고 변환이 필요한 경우 변환하는 메서드
     private static Geometry correctCoordinates(Geometry geometry) {
@@ -749,5 +795,11 @@ public class ShapeService {
         return coord;
     }
 
-
+    private void swapCoordinates(Coordinate[] coords) {
+        for (Coordinate coord : coords) {
+            double temp = coord.x;
+            coord.x = coord.y;
+            coord.y = temp;
+        }
+    }
 }

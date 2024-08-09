@@ -180,18 +180,38 @@ function saveShp(filename) {
             shpName : filename
         },
         success : function (result){
-            console.log(result)
             var shpId = result.shpId;
 
+            // $('.options').find()
             for (var i = 0; i < dataArr[filename].data.features.length; i++) {
                 saveFeature(shpId, dataArr[filename].data.features[i], (i+1));
             }
 
             var html = ""
-            html = "<a href='#' onclick='getShpData("+shpId+")'>"+filename+"</a>"
+            html = "<a href='#' data-table-name=\""+filename+"\" onclick='getShpData("+shpId+")'>"+filename+
+                '<span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" style="display: inline;"><i class="fas fa-check" aria-hidden="true"></i></span>'+
+                "</a>"
             $('.options').append(html)
 
-            toastOn("레이어가 DB에 저장되었습니다.")
+            toastOn("레이어가 DB에 저장되었습니다.");
+
+            if (!tNameArr.includes(fileName)) {
+                tNameArr.push(fileName);
+                $(obj).find("span:eq(1)").show();
+
+                appendToLayerOption(fileName)
+
+                toastOn("DB에서 "+ fileName + " 을(를) 불러옵니다.")
+            } else {
+                tNameArr = tNameArr.filter(function(item) {
+                    return item !== fileName;
+                });
+                delete shpTypeArr[fileName]
+                $(obj).find("span:eq(1)").hide();
+                $("#TR_"+fileName).remove()
+
+                toastOn("지도에서 "+ fileName + " 을(를) 숨깁니다.")
+            }
         },
         error : function (error){
             console.log(error)
@@ -402,6 +422,11 @@ function removeLayer(key) {
 
     if ($(".layer-file").length === 0) {
         $(".file-info-item").remove();
+
+        $(".empty-layer").show();
+
+        $("#all-check").hide();
+        $(".paging-container").hide();
     }
 
     isEmptyLayerList()
@@ -1414,7 +1439,7 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         'type' : 'line',
         'source' : sourceId,
         'paint': {
-            'line-color': '#c3161c',
+            'line-color': '#888888',
             'line-width': 2
         },
         'filter' : ['==', 'featureId', featureId]
@@ -2079,7 +2104,7 @@ function addShpList() {
     // 페이징 UI 업데이트
     updatePagingUI();
 
-    $(".tab-links:eq(1)").click()
+    $(".tab-links:eq(0)").click()
 }
 
 function shpPropertyAllChecked() {
@@ -2624,6 +2649,12 @@ function pointToSegmentDistance(point, segment) {
 }
 
 function uploadShpTable(flag) {
+    viewLoading();
+
+    if (loadData === undefined) {
+        toastOn("불러온 SHP 파일이 없습니다!")
+        return;
+    }
 
     if (!isSaving) {
         isSaving = true;
@@ -2642,23 +2673,30 @@ function uploadShpTable(flag) {
             },
             success : function (result){
                 if (result.result === "success") {
-                    let html = '<a href="#" onclick="getShpData(this)"><span>'+fileNm+'</span>' +
+                    let html = '<a href="#" data-table-name="'+fileNm+'" onclick="getShpData(this)"><span>'+fileNm+'</span>' +
                         '<span class="option-selected" ' +
                         'data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >' +
                         '<i class="fas fa-check"></i></span></a>'
 
-                    $("body > header > div > div.custom-select > div.options").append(html);
-
-                    $("body > header > div > div.custom-select > div.options a:last-child").click();
-
                     clearShpList();
+
+                    if ($("[data-table-name='"+fileNm+"']").length === 0) {
+                        $("body > header > div > div.custom-select > div.options").append(html);
+                        $("body > header > div > div.custom-select > div.options a:last-child").click();
+                    } else {
+                        if (!$("[data-table-name='"+fileNm+"']").find(".option-selected").is(":visible")) {
+                            $("[data-table-name='"+fileNm+"']").click();
+                        }
+                    }
 
                     toastOn("성공적으로 저장되었습니다.");
                 } else if (result.message != "" || flag === false) {
-                    toastOn(result.message);
+                    // toastOn(result.message);
                     $("#modal_confirmFile").modal('show');
                 }
                 isSaving = false;
+
+                finishLoading()
             },
             error : function (error){
                 console.log(error)
@@ -2674,6 +2712,11 @@ function uploadShpTable(flag) {
 // ShapeFile 업로드 후 리스트를 비우는 로직
 function clearShpList() {
     $(".layer-file-list").find(".layer-file").remove();
+
+    $(".empty-layer").show();
+
+    $("#all-check").hide();
+    $(".paging-container").hide();
 
     isAllChecked = false
 }
@@ -3053,3 +3096,6 @@ function cancelLoadFile() {
     dataArr = {}
 }
 
+function appendNewFile() {
+
+}

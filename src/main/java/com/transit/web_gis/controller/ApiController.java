@@ -9,6 +9,7 @@ import com.transit.web_gis.vo.GeometryVo;
 import com.transit.web_gis.vo.ShpVo;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.geotools.api.referencing.operation.TransformException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -146,6 +147,8 @@ public class ApiController {
                 return shapeService.convertShpToGeoJSON(shpFile, tempDir);
             } catch (IOException | FactoryException e) {
                 throw new RuntimeException(e);
+            } catch (TransformException e) {
+                throw new RuntimeException(e);
             }
         });
     }
@@ -261,12 +264,6 @@ public class ApiController {
             case "link" :
                 resultMap.put(fileName + "_data", getGeoJsonLink(shapeService.getLinkShpData(commandMap)));
                 break;
-                //TODO 폴리곤은 비동기 통신으로 전체를 한번에 부르게 변경
-//            case "polygon" :
-//                System.out.println("sc_MODE : " + sc_MODE);
-//                resultMap.put(fileName + "_data", getGeoJsonPolygon(shapeService.getPolygonShpData(commandMap)));
-//                break;
-//                case "station" -> resultMap.put(aFileName + "_data", getGeoJsonStation(shapeService.getShpData(commandMap)));
         }
 
         return resultMap;

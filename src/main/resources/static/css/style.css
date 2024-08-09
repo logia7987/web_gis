@@ -1018,4 +1018,5 @@ th, td {
     right: 395px;
     background-color: #fff;
     padding: 5px;
+    z-index: 100;
 }

@@ -132,9 +132,6 @@
             let fileName = files[i].name.split(".")[0]
             if (isCheck) {
                 if (parent.checkFile(fileName)) {
-                    // TODO 중복 파일 처리
-                    // parent.toastOn("이미 해당 파일 테이블이 존재합니다.");
-                    // 이미 파일이 존재할 경우, 아래 모달을 띄움
                     parent.hideModal('loadFile');
                     parent.$("#modal_shp").modal('show');
 
