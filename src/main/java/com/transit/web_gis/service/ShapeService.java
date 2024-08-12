@@ -47,6 +47,10 @@ public class ShapeService {
     // EPSG:4326 (WGS 84) PROJ 문자열 정의
     private static final String PROJ_WGS84 = "+proj=longlat +datum=WGS84 +no_defs";
 
+    // 리눅스 경로
+//    private static final File tempDir = new File("/app/shapefile_temp");
+//    private static final File geoDir = new File("/app/geoJson");
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -219,6 +223,12 @@ public class ShapeService {
                 createTableSql.append(", \"FILE_NAME\" VARCHAR2(100)");
                 createTableSql.append(", \"SHP_TYPE\" VARCHAR2(100)");
                 createTableSql.append(", \"LABEL_COLUMN\" VARCHAR2(100)");
+                // Feature 디자인 컬럼
+                createTableSql.append(", \"WEIGHT\" VARCHAR2(100)");
+                createTableSql.append(", \"COLOR\" VARCHAR2(100)");
+                createTableSql.append(", \"FONT_SIZE\" VARCHAR2(100)");
+                createTableSql.append(", \"FONT_COLOR\" VARCHAR2(100)");
+
 
                 JSONObject geometry = (JSONObject) firstFeature.get("geometry");
                 String typeString = checkFeatureType(geometry);
@@ -278,9 +288,14 @@ public class ShapeService {
         insertSql.append(", \"FILE_NAME\"");
         insertSql.append(", \"SHP_TYPE\"");
         insertSql.append(", \"LABEL_COLUMN\"");
+        insertSql.append(", \"WEIGHT\"");
+        insertSql.append(", \"COLOR\"");
+        insertSql.append(", \"FONT_SIZE\"");
+        insertSql.append(", \"FONT_COLOR\"");
+
         insertSql.append(")");
 
-        valuesSql.append(",? , ?, ?, ?, ?, ?)");
+        valuesSql.append(",? ,? ,? ,? ,? ,? , '8' ,'#1aa3ff' ,'12' ,'#000')");
 
         String sql = insertSql + " " + valuesSql;
 
@@ -351,9 +366,15 @@ public class ShapeService {
         insertSql.append(", \"T_LNG\"");
         insertSql.append(", \"T_LAT\"");
         insertSql.append(", \"LABEL_COLUMN\"");
+
+        insertSql.append(", \"WEIGHT\"");
+        insertSql.append(", \"COLOR\"");
+        insertSql.append(", \"FONT_SIZE\"");
+        insertSql.append(", \"FONT_COLOR\"");
+
         insertSql.append(")");
 
-        valuesSql.append(", ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        valuesSql.append(",? ,? ,? ,? ,? ,? ,? ,? ,? ,'2' ,'#888' ,'12' ,'#000')");
 
         String sql = insertSql + " " + valuesSql;
 
@@ -438,15 +459,15 @@ public class ShapeService {
         insertSql.append(", \"FILE_NAME\"");
         insertSql.append(", \"SHP_TYPE\"");
         insertSql.append(", \"GEOMETRY\"");
-//        insertSql.append(", \"F_LNG\"");
-//        insertSql.append(", \"F_LAT\"");
-//        insertSql.append(", \"T_LNG\"");
-//        insertSql.append(", \"T_LAT\"");
         insertSql.append(", \"LABEL_COLUMN\"");
+        insertSql.append(", \"WEIGHT\"");
+        insertSql.append(", \"COLOR\"");
+        insertSql.append(", \"FONT_SIZE\"");
+        insertSql.append(", \"FONT_COLOR\"");
         insertSql.append(")");
 
 //      valuesSql.append(", ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        valuesSql.append(", ?, ?, ?, ?, ?)");
+        valuesSql.append(",? ,? ,? ,? ,? ,'2.5' ,'#000' ,'12' ,'#000')");
 
         String sql = insertSql + " " + valuesSql;
 
@@ -478,16 +499,6 @@ public class ShapeService {
                 ps.setString(parameterIndex++, "polygon");
                 ps.setString(parameterIndex++, geometry.toString());
 
-//                JSONArray fromCoordinate = (JSONArray) coordinates.get(0);
-//                JSONArray toCoordinate = (JSONArray) coordinates.get(coordinates.size()-1);
-//                // F_LNG
-//                ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
-//                // F_LAT
-//                ps.setString(parameterIndex++, fromCoordinate.get(1).toString());
-//                // T_LNG
-//                ps.setString(parameterIndex++, toCoordinate.get(0).toString());
-//                // T_LAT
-//                ps.setString(parameterIndex++, toCoordinate.get(1).toString());
                 // 기본 라벨
                 ps.setString(parameterIndex, label);
             }
@@ -604,10 +615,10 @@ public class ShapeService {
                 Geometry geometry = (Geometry) feature.getDefaultGeometry();
 
                 Geometry transformedGeometry = null;
-                try {
+                if (sourceCRS.getName().toString().indexOf("EPSG:Korean 1985") > -1) {
                     // 1단계: Proj4j를 사용한 좌표 변환 시도
                     transformedGeometry = transformGeometryWithProj4j(geometry, sourceCRS, targetCRS);
-                } catch (UnsupportedParameterException | IllegalArgumentException e) {
+                } else {
                     // 2단계: Proj4j 변환 실패 시 GeoTools로 대체
                     transformedGeometry = transformGeometryWithGeoTools(geometry, sourceCRS, targetCRS);
                 }
@@ -632,14 +643,14 @@ public class ShapeService {
         CRSFactory crsFactory = new CRSFactory();
 
         // 좌표계 정의
-        org.locationtech.proj4j.CoordinateReferenceSystem sourceProjection = crsFactory.createFromParameters("source", sourceCRS.toWKT());
-        org.locationtech.proj4j.CoordinateReferenceSystem targetProjection = crsFactory.createFromParameters("target", targetCRS.toWKT());
+        org.locationtech.proj4j.CoordinateReferenceSystem sourceProjection = crsFactory.createFromParameters("source", PROJ_KTM);
+        org.locationtech.proj4j.CoordinateReferenceSystem targetProjection = crsFactory.createFromParameters("target", PROJ_WGS84);
 
         // 좌표계 변환 객체 생성
         CoordinateTransform transform = ctFactory.createTransform(sourceProjection, targetProjection);
 
-        // 변환 수행
-        return applyTransform(geometry, transform);
+        // 변환 수행 (거리값이 일치하지 않기 때문에 조절 함수로 대체)
+        return transformGeometry(geometry, transform);
     }
 
     // GeoTools로 변환 시도
@@ -662,36 +673,27 @@ public class ShapeService {
         return transformedGeometry;
     }
 
-    // 변환 적용 (Proj4j)
-    private Geometry applyTransform(Geometry geometry, CoordinateTransform transform) {
-        Coordinate[] coords = geometry.getCoordinates();
-        ProjCoordinate srcCoord = new ProjCoordinate();
-        ProjCoordinate destCoord = new ProjCoordinate();
-
-        for (int i = 0; i < coords.length; i++) {
-            srcCoord.x = coords[i].x;
-            srcCoord.y = coords[i].y;
-            transform.transform(srcCoord, destCoord);
-            coords[i].x = destCoord.x;
-            coords[i].y = destCoord.y;
-        }
-
-        return geometryFactory.createGeometry(geometry);
-    }
-
-    // Geometry 변환을 위한 메소드
+    // Geometry 변환을 위한 메소드 (Proj4j)
     private Geometry transformGeometry(Geometry geometry, CoordinateTransform transform) {
         // 좌표 배열을 가져옴
         Coordinate[] coords = geometry.getCoordinates();
         ProjCoordinate srcCoord = new ProjCoordinate();
         ProjCoordinate destCoord = new ProjCoordinate();
 
+        // X축 방향의 오프셋 값
+        double xOffset = 0.00285; // X축 오프셋 대략 280M
+        double yOffset = 0;     // Y축 오프셋 0
+
         // 좌표 변환 적용
         for (int i = 0; i < coords.length; i++) {
             srcCoord.x = coords[i].x;
             srcCoord.y = coords[i].y;
             transform.transform(srcCoord, destCoord);
+            // 변환된 좌표에 오프셋 적용
+            coords[i].x = destCoord.x + xOffset;
+            coords[i].y = destCoord.y + yOffset;
         }
+
         // 변환된 좌표 배열로 새 Geometry 객체 생성
         return geometryFactory.createGeometry(geometry);
     }
