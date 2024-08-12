@@ -59,7 +59,6 @@
                     </a>
                 </div>
             </div>
-            <button class="top-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i>거리측정</button>
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>레이어 설정</button>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <div id="type-select-box">
@@ -73,10 +72,6 @@
             <div id="top-tool-box">
                 <div id="link-tools">
                     <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
-                    <button class="top-btn" onclick="generatePoints(5);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="5M" data-bs-original-title="5M 간격 점생성">5M</button>
-                    <button class="top-btn" onclick="generatePoints(10);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="10M" data-bs-original-title="10M 간격 점생성">10M</button>
-                    <button class="top-btn" onclick="splitLine();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 분할" data-bs-original-title="링크 분할">선 분할</button>
-                    <button class="top-btn" id="link-btn-merge" onclick="mergeLines();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 병합" data-bs-original-title="링크 병합" style="display: none">선 병합</button>
                     <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 삭제" data-bs-original-title="링크 삭제">링크 삭제</button>
 
                     <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
@@ -115,7 +110,7 @@
 
     <div id="map" style="width: calc(100% - 45px); height: calc(100vh - 45px)"></div>
 
-<!--    <div id="mode-change-btn" onclick="toggleWhiteMode()"><i class="fas fa-solid fa-moon" id="mdicon"></i></div>-->
+    <!--    <div id="mode-change-btn" onclick="toggleWhiteMode()"><i class="fas fa-solid fa-moon" id="mdicon"></i></div>-->
     <div class="tab-menu">
 <!--        <div class="tab-links active" onclick="openTab(this, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성">-->
 <!--            <i class="fa-solid fa-list"></i>-->
@@ -174,35 +169,13 @@
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>도구</h5>
         </div>
-
-        <div class="colors-plan padding-10 polygon-style" style="display: none">
-            <div class="colors-item">
-                <label class="select-label" data-bs-placement="bottom" data-bs-toggle="tooltip" title="폴리곤"><i class="fa-solid fa-draw-polygon"></i></label>
-                <div data-bs-placement="bottom" data-bs-toggle="tooltip" title="폴리곤 내부 색상">
-                    <input type="text" id="polygon-color" onchange="changePolygonColor()" >
-                </div>
-                <div class="polygon-line" data-bs-placement="bottom" data-bs-toggle="tooltip" title="폴리곤 선 색상">
-                    <input type="text" id="polylineColor" onchange="changePolyLineColor()">
-                </div>
-                <input type="number" id="poly-line-width" onchange="changePolyLineThickness()" value="2.5" data-bs-placement="bottom" data-bs-toggle="tooltip" title="선 굵기">
-            </div>
+        <div class="tab2-content">
+            <button id="distance-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal" style="margin-right: 5px"></i>거리측정</button>
         </div>
-        <div class="colors-plan padding-10 node-style" style="display: none">
-            <div class="colors-item">
-                <label class="select-label" data-bs-placement="bottom" data-bs-toggle="tooltip" title="노드"><i class="fa-brands fa-hashnode"></i></label>
-                <div data-bs-placement="bottom" data-bs-toggle="tooltip" title="노드 색상">
-                    <input type="text" id="node-color" onchange="changeNodeColor()" >
-                </div>
-            </div>
-        </div>
-        <div class="colors-plan padding-10 link-style" style="display: none">
-            <div class="colors-item">
-                <label class="select-label" data-bs-placement="bottom" data-bs-toggle="tooltip" title="링크"><i class="fa-solid fa-share-nodes"></i></label>
-                <div data-bs-placement="bottom" data-bs-toggle="tooltip" title="링크 색상">
-                    <input type="text" id="link-color" onchange="changeLinkColor()">
-                </div>
-            </div>
-        </div>
+<!--        <button class="top-btn" onclick="generatePoints(5);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="5M" data-bs-original-title="5M 간격 점생성">5M</button>-->
+<!--        <button class="top-btn" onclick="generatePoints(10);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="10M" data-bs-original-title="10M 간격 점생성">10M</button>-->
+<!--        <button class="top-btn" onclick="splitLine();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 분할" data-bs-original-title="링크 분할">선 분할</button>-->
+<!--        <button class="top-btn" id="link-btn-merge" onclick="mergeLines();" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 병합" data-bs-original-title="링크 병합" style="display: none">선 병합</button>-->
     </div>
 
 

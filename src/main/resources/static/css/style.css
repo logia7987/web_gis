@@ -1020,3 +1020,11 @@ th, td {
     padding: 5px;
     z-index: 100;
 }
+
+.tab2-content {
+    padding: 10px;
+}
+
+#distance-btn {
+    border : 0;
+}

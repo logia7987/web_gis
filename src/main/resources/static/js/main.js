@@ -14,6 +14,19 @@ let meterDotFeatures = {
     type : "FeatureCollection",
     features : []
 };
+
+let geojson = {
+    'type': 'FeatureCollection',
+    'features': []
+};
+
+let distanceLine = {
+    'type': 'Feature',
+    'geometry': {
+        'type': 'LineString',
+        'coordinates': []
+    }
+};
 // let shpLoadFeatures = {
 //     type : "FeatureCollection",
 //     features : []
@@ -831,82 +844,147 @@ function checkHasSource(sourceId, layerId) {
 }
 
 function checkDistance() {
-    if ($('#btn-status').text() === '편집 모드') {
-        hideAllTool();
-        startViewerMode()
-        map.off('draw.create', editCreate);
-        draw.deleteAll();
-        // 수정 내용삭제 후 지도 정보 재로딩
-        setLinkNodeStationFeature();
-    }
+    map.addSource('geojson', {
+        'type': 'geojson',
+        'data': geojson
+    });
+    map.addLayer({
+        id: 'measure-points',
+        type: 'circle',
+        source: 'geojson',
+        paint: {
+            'circle-radius': 5,
+            'circle-color': '#000'
+        },
+        filter: ['in', '$type', 'Point']
+    });
+    map.addLayer({
+        id: 'measure-lines',
+        type: 'line',
+        source: 'geojson',
+        layout: {
+            'line-cap': 'round',
+            'line-join': 'round'
+        },
+        paint: {
+            'line-color': '#000',
+            'line-width': 2.5
+        },
+        filter: ['in', '$type', 'LineString']
+    });
 
-    draw.changeMode('draw_line_string');
+    map.on('click', (e) => {
+        drawDistance(e)
+    });
 
-    map.on('draw.create', drawDistance);
-    map.on('draw.update', updateMeasurement);
+    map.on('dblclick', (e) => {
+        updateMeasurement(e)
+
+    })
 }
 
 // 거리 측정을 그리는 함수
 function drawDistance(e) {
-    updateMeasurement(e)
-    distanceId = e.features[0].id; // 선의 ID 저장
-}
-
-var distancePopup = null
-var distanceId = null;
-function updateMeasurement(e) {
-    var features = e.features;
-    var totalDistance = 0;
-    var lastCoord;
-
-    features.forEach(function(feature) {
-        if (feature.geometry.type === 'LineString') {
-            var coordinates = feature.geometry.coordinates;
-
-            for (var i = 0; i < coordinates.length - 1; i++) {
-                totalDistance += calculateDistance(coordinates[i], coordinates[i + 1]);
-            }
-
-            lastCoord = coordinates[coordinates.length - 1];
-        }
+    const features = map.queryRenderedFeatures(e.point, {
+        layers: ['measure-points']
     });
 
-    if (lastCoord) {
-        // 거리를 조건에 따라 km 또는 m 단위로 표시
-        var distanceText = totalDistance >= 1
-            ? totalDistance.toFixed(2) + ' km'
-            : (totalDistance * 1000).toFixed(2) + ' m';
+    // 포인트 컬렉션을 기반으로 라인 스트링을 새로 그리기 위해 기존의 라인 스트링 제거
+    if (geojson.features.length > 1) geojson.features.pop();
 
-        console.log('Creating popup at', lastCoord, 'with distance', distanceText);
+    // 거리 컨테이너를 초기화하여 새 값으로 채우기
+    $('#distance').innerHTML = '';
 
-        // 기존 팝업 제거
-        if (distancePopup) {
-            distancePopup.remove();
-        }
-
-        var popupOptions = {
-            closeOnClick: false, // 클릭 시 닫히지 않음
-            closeButton: true // 닫기 버튼 표시
+    // 클릭된 피처가 있다면 맵에서 제거
+    if (features.length) {
+        const id = features[0].properties.id;
+        geojson.features = geojson.features.filter(
+            (point) => point.properties.id !== id
+        );
+    } else {
+        const point = {
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': [e.lngLat.lng, e.lngLat.lat]
+            },
+            'properties': {
+                'id': String(new Date().getTime())
+            }
         };
-        // 새로운 팝업 생성
-        distancePopup = new mapboxgl.Popup(popupOptions)
-            .setLngLat(lastCoord)
-            .setHTML('총 거리 : ' + distanceText + '<br><button onclick="endMeasurement()">종료</button>')
-            .addTo(map);
+
+        geojson.features.push(point);
     }
+
+    if (geojson.features.length > 1) {
+        distanceLine.geometry.coordinates = geojson.features.map(
+            (point) => point.geometry.coordinates
+        );
+
+        geojson.features.push(distanceLine);
+
+        // 거리 컨테이너에 총 거리 표시
+        let value = document.createElement('pre');
+        $('#distance').append(value);
+    }
+    map.getSource('geojson').setData(geojson);
+}
+
+function updateMeasurement(e) {
+    map.off('click', (e) => {drawDistance(e)});
+
+    const coordinates = [e.lngLat.lng, e.lngLat.lat];
+
+    // 거리를 조건에 따라 km 또는 m 단위로 표시
+    let distance = turf.length(distanceLine);
+
+    var popupOptions = {
+        closeOnClick: false, // 클릭 시 닫히지 않음
+        closeButton: true // 닫기 버튼 표시
+    };
+    // 새로운 팝업 생성
+    distancePopup = new mapboxgl.Popup(popupOptions)
+        .setLngLat(coordinates)
+        .setHTML('총 거리 : ' + distance + '<br><button onclick="endMeasurement()">종료</button>')
+        .addTo(map);
 }
 
 function endMeasurement() {
-    if (distanceId) {
-        // 그려진 선 삭제
-        draw.delete(distanceId);
-        distanceId = null; // 저장된 선 ID 초기화
+    // 팝업 제거
+    distancePopup.remove();
+    // geojson 객체 초기화
+    geojson = {
+        'type': 'FeatureCollection',
+        'features': []
+    };
+
+    // distanceLine 초기화
+    distanceLine = {
+        'type': 'Feature',
+        'geometry': {
+            'type': 'LineString',
+            'coordinates': []
+        }
+    };
+
+    // 맵에서 레이어 제거
+    map.removeLayer('measure-points');
+    map.removeLayer('measure-lines');
+    map.removeSource('geojson');
+
+    // 레이어가 존재하면 제거
+    if (map.getLayer('measure-points')) {
+        map.removeLayer('measure-points');
     }
 
-    if (distancePopup) {
-        distancePopup.remove();
+    if (map.getLayer('measure-lines')) {
+        map.removeLayer('measure-lines');
     }
-    draw.changeMode('simple_select'); // 측정 모드 종료
+
+    // geojson 소스가 존재하면 제거
+    if (map.getSource('geojson')) {
+        map.removeSource('geojson');
+    }
 }
 
 function calculateDistance(coord1, coord2) {
@@ -944,6 +1022,7 @@ function findProperty(id, type) {
 
 function startViewerMode() {
     toastOn("보기 모드로 전환되었습니다.")
+    $('#distance-btn').show()
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
     $('#type-select-box').css('display', 'none');
@@ -974,15 +1053,14 @@ function startViewerMode() {
 
 function startEditMode() {
     toastOn("편집모드로 전환되었습니다.")
-
+    $('#distance-btn').hide()
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
     $('#type-select-box').css('display', 'block');
     var type = $($(".selected").find("i")[0]).attr("class")
     loadProperty = dataArr
 
-    map.off('draw.create', drawDistance);
-    map.off('draw.update', updateMeasurement);
+
     draw.changeMode('simple_select');
 }
 
@@ -1444,6 +1522,22 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         },
         'filter' : ['==', 'featureId', featureId]
     });
+
+    map.addLayer({
+        'id': layerId+'label',
+        'type': 'symbol',
+        'source': sourceId,
+        'layout': {
+            'symbol-placement': 'line',
+            'text-field': ['get', 'label'],
+            'text-size': 12,
+            'text-offset': [0, 0.5]
+        },
+        'paint': {
+            'text-color': '#000000'
+        }
+    });
+
 
     map.on('click', layerId, function (e) {
         handleFeatureSelection(e, layerId);
