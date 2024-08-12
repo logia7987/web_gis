@@ -1760,7 +1760,7 @@ function initBasicTileSet() {
         container: "map",
         style: 'mapbox://styles/mapbox/streets-v12',
         center: [126.88271541564299, 37.48151056694073],
-        zoom: 11,
+        zoom: 14,
     });
     map.dragRotate.disable();
     map.touchZoomRotate.disableRotation();
@@ -2649,12 +2649,12 @@ function pointToSegmentDistance(point, segment) {
 }
 
 function uploadShpTable(flag) {
-    viewLoading();
-
     if (loadData === undefined) {
         toastOn("불러온 SHP 파일이 없습니다!")
         return;
     }
+
+    viewLoading();
 
     if (!isSaving) {
         isSaving = true;
