@@ -71,6 +71,7 @@ let matchObj = {}
 let pageIdx = 0;
 const itemsPerPage = 100; // 페이지당 항목 수
 let totalPages = 0
+let isAddNew = false
 
 let pointPopup = new mapboxgl.Popup({
     closeButton: false,
@@ -1096,6 +1097,7 @@ function editCreate(e) {
 
 let properties = {};
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
+    isAddNew = true;
     properties = {};
     let fileName = $('#fileName').val();
     let property = $('#newpolygon .modal-body table').find('input');
@@ -1103,13 +1105,13 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
     let isProperty = true;
     let defaultLabel = $("#label_"+fileName + " option:selected").val();
 
-    for (let i = 0; i < proper.length; i++) { // 빈칸 여부 체크
-        if (proper[i].value === '') {
-            toastOn("빈칸을 채워주세요.")
-            isProperty = false;
-            break;
-        }
-    }
+    // for (let i = 0; i < proper.length; i++) { // 빈칸 여부 체크
+    //     if (proper[i].value === '') {
+    //         toastOn("빈칸을 채워주세요.")
+    //         isProperty = false;
+    //         break;
+    //     }
+    // }
 
     if (isProperty) {
         for (let i = 0; i < property.length; i++) {
@@ -1418,9 +1420,11 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
     }
 
     map.on('click', layerId, function (e) {
-        handleFeatureSelection(e, layerId);
-
-
+        if (!isAddNew) {
+            handleFeatureSelection(e, layerId);
+        } else {
+            // TODO 스넵 넣기
+        }
     });
 
     map.on('click', function(e) {
@@ -1538,42 +1542,43 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         }
     });
 
-
     map.on('click', layerId, function (e) {
-        handleFeatureSelection(e, layerId);
+        if (!isAddNew) {
+            handleFeatureSelection(e, layerId);
 
-        // 노드 shp 이 있을 경우 지근거리의 노드를 찾아서 로그로 표출
-        let clickedFeature = e.features[0];
-        if (clickedFeature) {
-            linkNodeStationFeatures.features.forEach(function (feature) {
-                if (feature.geometry.type === 'LineString' && feature.properties.linkId === clickedFeature.properties.linkId) {
-                    selectedBasicLink = feature.geometry.coordinates;
-                }
-            });
-
-            // 클릭된 링크의 좌표 가져오기
-            var linkCoordinates = clickedFeature.geometry.coordinates;
-
-            // 링크의 첫 번째 점과 마지막 점에 가까운 노드 찾기
-            var closestNodes = findClosestNodesToLinkEnds(linkCoordinates);
-            var startPointNode = closestNodes.startPoint;
-            var endPointNode = closestNodes.endPoint;
-
-            // 시작 노드와 끝 노드 feature 추출 완료. 후 처리를 어떻게 하는지 못여쭈어봄;
-            // console.log('Closest start point node:', startPointNode);
-            // console.log('Closest end point node:', endPointNode);
-
+            // 노드 shp 이 있을 경우 지근거리의 노드를 찾아서 로그로 표출
+            let clickedFeature = e.features[0];
             if (clickedFeature) {
-                // 선택 외 객체 스타일 리셋
-                resetHighlightedLayerFilters()
+                linkNodeStationFeatures.features.forEach(function (feature) {
+                    if (feature.geometry.type === 'LineString' && feature.properties.linkId === clickedFeature.properties.linkId) {
+                        selectedBasicLink = feature.geometry.coordinates;
+                    }
+                });
 
-                let filterName = clickedFeature.properties.FILE_NAME;
-                // 선택된 피처를 강조하도록 필터 업데이트
-                if (map.getLayer(layerId + '-highlighted')) {
-                    map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                // 클릭된 링크의 좌표 가져오기
+                var linkCoordinates = clickedFeature.geometry.coordinates;
+
+                // 링크의 첫 번째 점과 마지막 점에 가까운 노드 찾기
+                var closestNodes = findClosestNodesToLinkEnds(linkCoordinates);
+                var startPointNode = closestNodes.startPoint;
+                var endPointNode = closestNodes.endPoint;
+
+                // 시작 노드와 끝 노드 feature 추출 완료. 후 처리를 어떻게 하는지 못여쭈어봄;
+                // console.log('Closest start point node:', startPointNode);
+                // console.log('Closest end point node:', endPointNode);
+
+                if (clickedFeature) {
+                    // 선택 외 객체 스타일 리셋
+                    resetHighlightedLayerFilters()
+
+                    let filterName = clickedFeature.properties.FILE_NAME;
+                    // 선택된 피처를 강조하도록 필터 업데이트
+                    if (map.getLayer(layerId + '-highlighted')) {
+                        map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                    }
+                } else {
+                    map.setFilter(layerId + '-highlighted', ['==', '', '']);
                 }
-            } else {
-                map.setFilter(layerId + '-highlighted', ['==', '', '']);
             }
         }
     });
@@ -3004,7 +3009,8 @@ function insertShpTable(data) {
         success : function (data){
             if (data.status === "success") {
                 toastOn("새 객체가 추가되었습니다.");
-                changeEditMode()
+                // changeEditMode()
+                isAddNew = false;
             }
         },
         error : function (error){
@@ -3190,6 +3196,42 @@ function cancelLoadFile() {
     dataArr = {}
 }
 
-function appendNewFile() {
+function updateSnapping(e) {
+    const features = draw.getAll().features;
 
+    features.forEach(feature => {
+        const coordinates = feature.geometry.coordinates;
+        const snappedCoordinates = snapToClosestNode(coordinates);
+        draw.set(feature.id, {
+            ...feature,
+            geometry: {
+                ...feature.geometry,
+                coordinates: snappedCoordinates
+            }
+        });
+    });
+}
+
+// 주어진 좌표를 가장 가까운 노드로 스냅시키는 함수
+function snapToClosestNode(coordinates) {
+    const snapThreshold = 0.001; // 스냅할 거리 임계값 (단위: degrees)
+    const snappedCoordinates = coordinates.map(coord => {
+        let closestNode = coord;
+        let closestDistance = Infinity;
+
+        // 다른 노드와의 거리 계산 및 스냅
+        map.queryRenderedFeatures({ layers: ['drawn-layer'] }).forEach(feature => {
+            feature.geometry.coordinates.forEach(node => {
+                const distance = turf.distance(coord, node, { units: 'degrees' });
+                if (distance < closestDistance && distance < snapThreshold) {
+                    closestDistance = distance;
+                    closestNode = node;
+                }
+            });
+        });
+
+        return closestNode;
+    });
+
+    return snappedCoordinates;
 }

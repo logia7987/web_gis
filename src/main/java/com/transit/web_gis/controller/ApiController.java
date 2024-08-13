@@ -399,37 +399,40 @@ public class ApiController {
         StringJoiner values = new StringJoiner(", ");
 
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
-            columns.add("\""+entry.getKey() +"\"");
-            Object value = entry.getValue();
+            String key = entry.getKey();
+            if (!key.equals(idColumn)) { // 이미 ID 열이 properties에 있다면 제외
+                columns.add("\""+entry.getKey() +"\"");
+                Object value = entry.getValue();
 
-            if (entry.getKey().equals("GEOMETRY")) {
-                // Convert the GEOMETRY value to JSON string
-                try {
-                    String jsonValue = objectMapper.writeValueAsString(value);
-                    values.add("'" + jsonValue + "'");
-                } catch (Exception e) {
-                    // Handle exception
-                    e.printStackTrace();
-                }
-            } else {
-                if (value instanceof String) {
-                    values.add("'" + value + "'");
-                } else if (value instanceof Number) {
-                    values.add(value.toString());
+                if (entry.getKey().equals("GEOMETRY")) {
+                    // Convert the GEOMETRY value to JSON string
+                    try {
+                        String jsonValue = objectMapper.writeValueAsString(value);
+                        values.add("'" + jsonValue + "'");
+                    } catch (Exception e) {
+                        // Handle exception
+                        e.printStackTrace();
+                    }
                 } else {
-                    values.add("'" + value.toString() + "'");
+                    if (value instanceof String) {
+                        values.add("'" + value + "'");
+                    } else if (value instanceof Number) {
+                        values.add(value.toString());
+                    } else {
+                        values.add("'" + value.toString() + "'");
+                    }
                 }
             }
         }
 
+        columns.add("\"" + idColumn + "\"");
         values.add(Integer.toString(newId));
-        columns.add("\""+fileName+"_ID\"");
 
         String sql = String.format(
                 "INSERT INTO TRANSIT.%s (%s) VALUES (%s)",
                 fileName,
-                columns.toString(),
-                values.toString()
+                columns,
+                values
         );
 
         // SQL 실행

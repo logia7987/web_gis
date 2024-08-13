@@ -46,19 +46,6 @@
             <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#loadFile' title="업로드">
                 <i class="fa-solid fa-floppy-disk"></i>업로드
             </button>
-            <div class="custom-select">
-                <div class="select-display">파일 불러오기</div>
-                <div class="options">
-                    <a href="#" th:each="shp : ${shpList}"
-                       th:attr="data-table-name=${shp.table_name},
-                       onclick=${shp.shpType == 'polygon' ? 'getPolygonData(this)' : 'getShpData(this)'}">
-                        <span th:text="${shp.table_name}"></span>
-                        <span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >
-                            <i class="fas fa-check"></i>
-                        </span>
-                    </a>
-                </div>
-            </div>
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>레이어 설정</button>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <div id="type-select-box">
@@ -112,20 +99,55 @@
 
     <!--    <div id="mode-change-btn" onclick="toggleWhiteMode()"><i class="fas fa-solid fa-moon" id="mdicon"></i></div>-->
     <div class="tab-menu">
-<!--        <div class="tab-links active" onclick="openTab(this, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="속성">-->
-<!--            <i class="fa-solid fa-list"></i>-->
-<!--        </div>-->
+        <div class="tab-links active" onclick="openTab(this, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="DB 조회">
+            <i class="fas fa-database"></i>
+        </div>
 
-        <div class="tab-links " onclick="openTab(this, 'tab1')" data-bs-placement="left" data-bs-toggle="tooltip" title="SHP">
+        <div class="tab-links " onclick="openTab(this, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="SHP">
             <i class="fa-solid fa-layer-group"></i>
         </div>
 
-        <div class="tab-links" onclick="openTab(this, 'tab2')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구">
+        <div class="tab-links" onclick="openTab(this, 'tab3')" data-bs-placement="left" data-bs-toggle="tooltip" title="도구">
             <i class="fa-solid fa-screwdriver-wrench"></i>
         </div>
     </div>
 
-    <div id="tab1" class="tab" style="display: block;">
+        <div id="tab1" class="tab" style="display: block;">
+            <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
+                <h5>DB 조회</h5>
+            </div>
+
+            <div class="attr-list basic-font" id="" style="">
+                <div class="table-div" th:each="shp : ${shpList}"
+                     th:attr="data-table-name=${shp.table_name},
+                     onclick=${shp.shpType == 'polygon' ? 'getPolygonData(this)' : 'getShpData(this)'}">
+
+                    <i th:if="${shp.shpType == 'polygon'}" class="fa-solid fa-draw-polygon" aria-hidden="true"></i>
+                    <i th:if="${shp.shpType == 'node'}" class="fa-brands fa-hashnode" aria-hidden="true"></i>
+                    <i th:if="${shp.shpType == 'link'}" class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+
+                    <span class="table-name" th:text="${shp.table_name}"></span>
+                    <span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >
+                        <i class="fas fa-check"></i>
+                    </span>
+                    <div class="table-row"></div>
+                </div>
+            </div>
+<!--            <div class="attr-tab">-->
+<!--                <ul class="attr_tab_bar">-->
+<!--                    <li class="active" onclick="openAttrTab(this, 'node_list')">노드</li>-->
+<!--                    <li onclick="openAttrTab(this, 'link_list')">링크</li>-->
+<!--                    <li onclick="openAttrTab(this, 'station_list')">정류소</li>-->
+<!--                </ul>-->
+<!--            </div>-->
+
+            <!-- 속성 탭 나누기 -->
+<!--            <div class="attr-list basic-font" id="node_list" style=""></div>-->
+<!--            <div class="attr-list basic-font" id="link_list" style="display: none;"></div>-->
+<!--            <div class="attr-list basic-font" id="station_list" style="display: none;"></div>-->
+        </div>
+
+    <div id="tab2" class="tab" style="display: none;">
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>SHP</h5>
             <h5 class="shpSaveBtn" onclick="uploadShpTable(false)">저장</h5>
@@ -145,7 +167,7 @@
         <div class="paging-container sp-cf"></div>
     </div>
 
-    <div id="tab2" class="tab">
+    <div id="tab3" class="tab">
         <div class="tab-title padding-10 basic-font" style="border-radius: 0;">
             <h5>도구</h5>
         </div>

@@ -1028,3 +1028,30 @@ th, td {
 #distance-btn {
     border : 0;
 }
+
+.table-div {
+    padding: 8px;
+    border-radius: 5px;
+    background-color: #d9f0f0;
+    margin: 5px;
+}
+
+.table-div:last-child {
+    margin-bottom: 0px;
+}
+
+.table-div:hover {
+    cursor: pointer;
+}
+
+.table-div span {
+    color: #020202;
+}
+
+.table-name {
+    font-size: 14px;
+}
+
+.table-row {
+    display: none;
+}
