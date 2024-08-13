@@ -27,6 +27,10 @@ let distanceLine = {
         'coordinates': []
     }
 };
+
+let distance = 0;
+
+let distancePopup;
 // let shpLoadFeatures = {
 //     type : "FeatureCollection",
 //     features : []
@@ -844,6 +848,9 @@ function checkHasSource(sourceId, layerId) {
 }
 
 function checkDistance() {
+
+    distance = 0
+
     map.addSource('geojson', {
         'type': 'geojson',
         'data': geojson
@@ -854,7 +861,7 @@ function checkDistance() {
         source: 'geojson',
         paint: {
             'circle-radius': 5,
-            'circle-color': '#000'
+            'circle-color': 'rgb(255, 0, 142)'
         },
         filter: ['in', '$type', 'Point']
     });
@@ -867,7 +874,7 @@ function checkDistance() {
             'line-join': 'round'
         },
         paint: {
-            'line-color': '#000',
+            'line-color': 'rgb(255, 0, 142)',
             'line-width': 2.5
         },
         filter: ['in', '$type', 'LineString']
@@ -877,9 +884,8 @@ function checkDistance() {
         drawDistance(e)
     });
 
-    map.on('dblclick', (e) => {
+    map.on('contextmenu', (e) => {
         updateMeasurement(e)
-
     })
 }
 
@@ -891,9 +897,6 @@ function drawDistance(e) {
 
     // 포인트 컬렉션을 기반으로 라인 스트링을 새로 그리기 위해 기존의 라인 스트링 제거
     if (geojson.features.length > 1) geojson.features.pop();
-
-    // 거리 컨테이너를 초기화하여 새 값으로 채우기
-    $('#distance').innerHTML = '';
 
     // 클릭된 피처가 있다면 맵에서 제거
     if (features.length) {
@@ -907,9 +910,6 @@ function drawDistance(e) {
             'geometry': {
                 'type': 'Point',
                 'coordinates': [e.lngLat.lng, e.lngLat.lat]
-            },
-            'properties': {
-                'id': String(new Date().getTime())
             }
         };
 
@@ -923,68 +923,47 @@ function drawDistance(e) {
 
         geojson.features.push(distanceLine);
 
-        // 거리 컨테이너에 총 거리 표시
-        let value = document.createElement('pre');
-        $('#distance').append(value);
+        distance += turf.length(distanceLine);
     }
     map.getSource('geojson').setData(geojson);
 }
 
 function updateMeasurement(e) {
-    map.off('click', (e) => {drawDistance(e)});
 
     const coordinates = [e.lngLat.lng, e.lngLat.lat];
 
-    // 거리를 조건에 따라 km 또는 m 단위로 표시
-    let distance = turf.length(distanceLine);
+
+    let html = '총 거리 : ';
 
     var popupOptions = {
         closeOnClick: false, // 클릭 시 닫히지 않음
-        closeButton: true // 닫기 버튼 표시
+        closeButton: false // 닫기 버튼 표시
     };
+
+    // 거리를 조건에 따라 km 또는 m 단위로 표시
+    if (distance > 1) {
+        html +=  distance.toFixed(1) + 'km<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
+    } else {
+        html +=  (distance * 1000).toFixed(1) + 'm<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
+    }
+
     // 새로운 팝업 생성
     distancePopup = new mapboxgl.Popup(popupOptions)
         .setLngLat(coordinates)
-        .setHTML('총 거리 : ' + distance + '<br><button onclick="endMeasurement()">종료</button>')
+        .setHTML(html)
         .addTo(map);
 }
 
 function endMeasurement() {
     // 팝업 제거
     distancePopup.remove();
+
     // geojson 객체 초기화
-    geojson = {
-        'type': 'FeatureCollection',
-        'features': []
-    };
-
-    // distanceLine 초기화
-    distanceLine = {
-        'type': 'Feature',
-        'geometry': {
-            'type': 'LineString',
-            'coordinates': []
-        }
-    };
-
-    // 맵에서 레이어 제거
-    map.removeLayer('measure-points');
-    map.removeLayer('measure-lines');
-    map.removeSource('geojson');
-
-    // 레이어가 존재하면 제거
-    if (map.getLayer('measure-points')) {
-        map.removeLayer('measure-points');
-    }
-
-    if (map.getLayer('measure-lines')) {
-        map.removeLayer('measure-lines');
-    }
-
-    // geojson 소스가 존재하면 제거
-    if (map.getSource('geojson')) {
-        map.removeSource('geojson');
-    }
+    geojson.features = []
+    map.getSource('geojson').setData(geojson)
+    map.doubleClickZoom.enable();
+    map.off('click', (e) => {drawDistance(e)});
+    map.off('contextmenu', (e) => {updateMeasurement(e)})
 }
 
 function calculateDistance(coord1, coord2) {

@@ -1028,3 +1028,10 @@ th, td {
 #distance-btn {
     border : 0;
 }
+
+.endMeasurementBtn {
+    margin-top: 5px;
+    border: 1px solid #909CAA;
+    width: 100%;
+    background-color: white;
+}
