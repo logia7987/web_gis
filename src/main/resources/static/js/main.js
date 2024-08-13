@@ -30,6 +30,9 @@ let distanceLine = {
 
 let distance = 0;
 
+// 스냅 거리 설정 (단위: meters)
+const snapDistance = 3;
+
 let distancePopup;
 let preDistancePopup;
 
@@ -1226,14 +1229,6 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
     let isProperty = true;
     let defaultLabel = $("#label_"+fileName + " option:selected").val();
 
-    // for (let i = 0; i < proper.length; i++) { // 빈칸 여부 체크
-    //     if (proper[i].value === '') {
-    //         toastOn("빈칸을 채워주세요.")
-    //         isProperty = false;
-    //         break;
-    //     }
-    // }
-
     if (isProperty) {
         for (let i = 0; i < property.length; i++) {
             let name = $(property[i]).attr("attr");
@@ -1987,6 +1982,15 @@ function initBasicTileSet() {
 
     map.addControl(language);
     map.addControl(draw, 'bottom-left');
+
+    // Mapbox snap 추가
+    const snapMode = new MapboxDrawSnapMode(draw, {
+        snapTo: {
+            // source: 'nodes-source', // 스냅할 노드 소스의 ID
+            layer: NODE_LAYER_ID // 노드 레이어의 ID
+        },
+        distance: 5 // 스냅 거리 (미터 단위)
+    });
 
     var info = document.getElementById('mouse_info');
     // 마우스 이동 이벤트 리스너
@@ -3298,7 +3302,7 @@ function undo() {
         draw.changeMode('simple_select', {
             featureIds: newFeatureIds.map(f => f)
         });
-    } else {
+    } else  {
         toastOn("초기상태입니다. 되돌릴 수 없습니다.")
     }
 }
@@ -3315,44 +3319,4 @@ function cancelLoadFile() {
     fileNm = ""
     loadData = {}
     dataArr = {}
-}
-
-function updateSnapping(e) {
-    const features = draw.getAll().features;
-
-    features.forEach(feature => {
-        const coordinates = feature.geometry.coordinates;
-        const snappedCoordinates = snapToClosestNode(coordinates);
-        draw.set(feature.id, {
-            ...feature,
-            geometry: {
-                ...feature.geometry,
-                coordinates: snappedCoordinates
-            }
-        });
-    });
-}
-
-// 주어진 좌표를 가장 가까운 노드로 스냅시키는 함수
-function snapToClosestNode(coordinates) {
-    const snapThreshold = 0.001; // 스냅할 거리 임계값 (단위: degrees)
-    const snappedCoordinates = coordinates.map(coord => {
-        let closestNode = coord;
-        let closestDistance = Infinity;
-
-        // 다른 노드와의 거리 계산 및 스냅
-        map.queryRenderedFeatures({ layers: ['drawn-layer'] }).forEach(feature => {
-            feature.geometry.coordinates.forEach(node => {
-                const distance = turf.distance(coord, node, { units: 'degrees' });
-                if (distance < closestDistance && distance < snapThreshold) {
-                    closestDistance = distance;
-                    closestNode = node;
-                }
-            });
-        });
-
-        return closestNode;
-    });
-
-    return snappedCoordinates;
 }
