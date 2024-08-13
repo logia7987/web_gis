@@ -27,6 +27,13 @@ let distanceLine = {
         'coordinates': []
     }
 };
+
+let distance = 0;
+
+let distancePopup;
+let preDistancePopup;
+
+let  debouncedPreDistance = debounce(preDistance, 5);
 // let shpLoadFeatures = {
 //     type : "FeatureCollection",
 //     features : []
@@ -845,43 +852,146 @@ function checkHasSource(sourceId, layerId) {
 }
 
 function checkDistance() {
-    map.addSource('geojson', {
-        'type': 'geojson',
-        'data': geojson
-    });
-    map.addLayer({
-        id: 'measure-points',
-        type: 'circle',
-        source: 'geojson',
-        paint: {
-            'circle-radius': 5,
-            'circle-color': '#000'
-        },
-        filter: ['in', '$type', 'Point']
-    });
-    map.addLayer({
-        id: 'measure-lines',
-        type: 'line',
-        source: 'geojson',
-        layout: {
-            'line-cap': 'round',
-            'line-join': 'round'
-        },
-        paint: {
-            'line-color': '#000',
-            'line-width': 2.5
-        },
-        filter: ['in', '$type', 'LineString']
-    });
+    if (!map.getSource('geojson')) {
+        map.addSource('geojson', {
+            'type': 'geojson',
+            'data': geojson
+        });
+    }
+    if (!map.getLayer('measure-points')) {
+        map.addLayer({
+            id: 'measure-points',
+            type: 'circle',
+            source: 'geojson',
+            paint: {
+                'circle-radius': 5,
+                'circle-color': 'rgb(255, 0, 142)'
+            },
+            filter: ['in', '$type', 'Point']
+        });
+    }
+    if (!map.getLayer('measure-lines')) {
+        map.addLayer({
+            id: 'measure-lines',
+            type: 'line',
+            source: 'geojson',
+            layout: {
+                'line-cap': 'round',
+                'line-join': 'round'
+            },
+            paint: {
+                'line-color': 'rgb(255, 0, 142)',
+                'line-width': 2.5
+            },
+            filter: ['in', '$type', 'LineString']
+        });
+    }
 
-    map.on('click', (e) => {
-        drawDistance(e)
-    });
+    map.on('click', drawDistance);
+    map.on('contextmenu',updateMeasurement)
+    map.on('mousemove',debouncedPreDistance)
+}
 
-    map.on('dblclick', (e) => {
-        updateMeasurement(e)
+// Debounce 함수
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
 
-    })
+
+// 거리 기능 미리보기
+function preDistance(e) {
+    const coordinates = [e.lngLat.lng, e.lngLat.lat];
+    let lastFeature;
+
+    if (geojson.features.length > 0) {
+        if (preDistancePopup) {
+            preDistancePopup.remove();
+        }
+
+        // 마지막 피처의 좌표를 가져옵니다.
+        lastFeature = geojson.features.length === 1
+            ? geojson.features[geojson.features.length - 1]
+            : geojson.features[geojson.features.length - 2];
+
+        let startCoord = lastFeature.geometry.coordinates;
+
+        // startCoord의 구조 확인 및 변환
+        if (Array.isArray(startCoord[0])) {
+            // 다차원 배열에서 첫 번째 좌표를 선택
+            startCoord = startCoord[0];
+        }
+
+        // startCoord이 배열 형태가 맞는지 확인합니다.
+        if (Array.isArray(startCoord) && startCoord.length >= 2) {
+            distanceLine.geometry.coordinates = [startCoord, coordinates];
+        } else {
+            console.error('Invalid startCoord format:', startCoord);
+            return; // 오류가 발생하면 함수 종료
+        }
+
+        // 소스가 이미 존재하는 경우 업데이트, 그렇지 않으면 추가
+        if (map.getSource('preview')) {
+            map.getSource('preview').setData({
+                'type': 'FeatureCollection',
+                'features': [{
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': distanceLine.geometry.coordinates
+                    },
+                    'properties': {}
+                }]
+            });
+        } else {
+            map.addSource('preview', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'FeatureCollection',
+                    'features': [{
+                        'type': 'Feature',
+                        'geometry': {
+                            'type': 'LineString',
+                            'coordinates': distanceLine.geometry.coordinates
+                        },
+                        'properties': {}
+                    }]
+                }
+            });
+        }
+
+        // 레이어가 이미 존재하는 경우 업데이트, 그렇지 않으면 추가
+        if (!map.getLayer('preview-line')) {
+            map.addLayer({
+                'id': 'preview-line',
+                'type': 'line',
+                'source': 'preview',
+                'paint': {
+                    'line-color': 'rgba(255, 0, 142, 0.5)', // 0.5 투명도 설정
+                    'line-width': 2.5
+                }
+            });
+        }
+
+        // 거리 계산 및 팝업 업데이트
+        const previewDistance = turf.length(distanceLine);
+        let html = '거리 : <b style="color : rgba(255, 0, 142)">'
+        html += previewDistance > 1 ? previewDistance.toFixed(1) + '</b>km' : (previewDistance * 1000).toFixed(1) + '</b>m';
+        html += '<br>마우스 우클릭 시 <br>거리 측정이 종료됩니다'
+
+        var popupOptions = {
+            closeOnClick: false, // 클릭 시 닫히지 않음
+            closeButton: false // 닫기 버튼 표시 안 함
+        };
+
+        preDistancePopup = new mapboxgl.Popup(popupOptions)
+            .setLngLat(coordinates)
+            .setHTML(html)
+            .addTo(map);
+    }
 }
 
 // 거리 측정을 그리는 함수
@@ -890,11 +1000,10 @@ function drawDistance(e) {
         layers: ['measure-points']
     });
 
+    let html = ''
+
     // 포인트 컬렉션을 기반으로 라인 스트링을 새로 그리기 위해 기존의 라인 스트링 제거
     if (geojson.features.length > 1) geojson.features.pop();
-
-    // 거리 컨테이너를 초기화하여 새 값으로 채우기
-    $('#distance').innerHTML = '';
 
     // 클릭된 피처가 있다면 맵에서 제거
     if (features.length) {
@@ -910,7 +1019,7 @@ function drawDistance(e) {
                 'coordinates': [e.lngLat.lng, e.lngLat.lat]
             },
             'properties': {
-                'id': String(new Date().getTime())
+                'distance' : ''
             }
         };
 
@@ -924,68 +1033,80 @@ function drawDistance(e) {
 
         geojson.features.push(distanceLine);
 
-        // 거리 컨테이너에 총 거리 표시
-        let value = document.createElement('pre');
-        $('#distance').append(value);
+        distance = turf.length(distanceLine);
+
+        if (distance > 1) {
+            html =  distance.toFixed(1) + 'km'
+        } else {
+            html =  (distance * 1000).toFixed(1) + 'm'
+        }
+
+        geojson.features[geojson.features.length - 2].properties.distance = html;
     }
+
+
     map.getSource('geojson').setData(geojson);
+
+    if (!map.getLayer('point-labels')) {
+        map.addLayer({
+            'id': 'point-labels',
+            'type': 'symbol',
+            'source': 'geojson',
+            'layout': {
+                'text-field': ['get', 'distance'],
+                'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+                'text-offset': [0, 1.25],
+                'text-anchor': 'top'
+            },
+            'paint': {
+                'text-color': 'rgb(255, 0, 142)'
+            }
+        });
+    }
 }
 
 function updateMeasurement(e) {
-    map.off('click', (e) => {drawDistance(e)});
+
+    preDistancePopup.remove()
+    map.off('mousemove',debouncedPreDistance)
 
     const coordinates = [e.lngLat.lng, e.lngLat.lat];
 
-    // 거리를 조건에 따라 km 또는 m 단위로 표시
-    let distance = turf.length(distanceLine);
+
+    let html = '총 거리 : <b style="color : rgba(255, 0, 142)">';
 
     var popupOptions = {
         closeOnClick: false, // 클릭 시 닫히지 않음
-        closeButton: true // 닫기 버튼 표시
+        closeButton: false // 닫기 버튼 표시
     };
+
+    // 거리를 조건에 따라 km 또는 m 단위로 표시
+    if (distance > 1) {
+        html +=  distance.toFixed(1) + '</b>km<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
+    } else {
+        html +=  (distance * 1000).toFixed(1) + '</b>m<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
+    }
+
     // 새로운 팝업 생성
     distancePopup = new mapboxgl.Popup(popupOptions)
         .setLngLat(coordinates)
-        .setHTML('총 거리 : ' + distance + '<br><button onclick="endMeasurement()">종료</button>')
+        .setHTML(html)
         .addTo(map);
+
 }
 
 function endMeasurement() {
     // 팝업 제거
     distancePopup.remove();
+
     // geojson 객체 초기화
-    geojson = {
-        'type': 'FeatureCollection',
-        'features': []
-    };
-
-    // distanceLine 초기화
-    distanceLine = {
-        'type': 'Feature',
-        'geometry': {
-            'type': 'LineString',
-            'coordinates': []
-        }
-    };
-
-    // 맵에서 레이어 제거
-    map.removeLayer('measure-points');
-    map.removeLayer('measure-lines');
-    map.removeSource('geojson');
-
-    // 레이어가 존재하면 제거
-    if (map.getLayer('measure-points')) {
-        map.removeLayer('measure-points');
-    }
-
-    if (map.getLayer('measure-lines')) {
-        map.removeLayer('measure-lines');
-    }
-
-    // geojson 소스가 존재하면 제거
-    if (map.getSource('geojson')) {
-        map.removeSource('geojson');
-    }
+    geojson.features = []
+    distance = 0
+    map.getSource('preview').setData(geojson)
+    map.getSource('geojson').setData(geojson)
+    map.doubleClickZoom.enable();
+    map.off('click', drawDistance);
+    map.off('contextmenu',updateMeasurement)
 }
 
 function calculateDistance(coord1, coord2) {

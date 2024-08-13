@@ -1055,3 +1055,9 @@ th, td {
 .table-row {
     display: none;
 }
+.endMeasurementBtn {
+    margin-top: 5px;
+    border: 1px solid #909CAA;
+    width: 100%;
+    background-color: white;
+}
