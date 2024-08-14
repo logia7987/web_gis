@@ -1220,6 +1220,7 @@ function editCreate(e) {
 }
 
 let properties = {};
+let isSavingFeature = false;
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
     isAddNew = true;
     properties = {};
@@ -1253,6 +1254,8 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
         properties["LABEL_COLUMN"] = defaultLabel;
 
         map.on('draw.create', function (e) {
+            console.log("create")
+
             const featureId = e.features[0].id;
             const allFeatures = draw.getAll().features;
             const feature = allFeatures.find(f => f.id === featureId);
@@ -1284,7 +1287,10 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
                     features: allFeatures
                 });
 
-                insertShpTable(feature);
+                if (!isSavingFeature) {
+                    isSavingFeature = true;
+                    insertShpTable(feature);
+                }
             }
         });
 
@@ -1983,15 +1989,6 @@ function initBasicTileSet() {
     map.addControl(language);
     map.addControl(draw, 'bottom-left');
 
-    // Mapbox snap 추가
-    const snapMode = new MapboxDrawSnapMode(draw, {
-        snapTo: {
-            // source: 'nodes-source', // 스냅할 노드 소스의 ID
-            layer: NODE_LAYER_ID // 노드 레이어의 ID
-        },
-        distance: 5 // 스냅 거리 (미터 단위)
-    });
-
     var info = document.getElementById('mouse_info');
     // 마우스 이동 이벤트 리스너
     map.on('mousemove', function(e) {
@@ -2166,7 +2163,6 @@ function setMapEvent() {
             }
         });
 
-        // map.on('draw.update', realTimeUpdateToDB);
         map.on('draw.create', saveState);
         map.on('draw.update', saveState);
         map.on('draw.delete', saveState);
@@ -3136,6 +3132,7 @@ function insertShpTable(data) {
                 toastOn("새 객체가 추가되었습니다.");
                 // changeEditMode()
                 isAddNew = false;
+                isSavingFeature = false;
             }
         },
         error : function (error){
@@ -3319,4 +3316,20 @@ function cancelLoadFile() {
     fileNm = ""
     loadData = {}
     dataArr = {}
+}
+
+//
+function getNearestNode(point, nodes, maxDistance) {
+    let nearestNode = null;
+    let minDistance = maxDistance;
+
+    nodes.forEach(node => {
+        const distance = turf.distance(point, node.geometry.coordinates, { units: 'meters' });
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestNode = node;
+        }
+    });
+
+    return nearestNode;
 }
