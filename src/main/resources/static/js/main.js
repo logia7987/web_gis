@@ -2588,21 +2588,22 @@ function saveToMatchObject() {
 
 function updateFeature() {
     // 변경된 features를 가져옵니다.
-    let feature = draw.getAll().features[0];
-    if (feature === undefined) {
-        toastOn("선택된 객체가 없습니다. 객체 선택 후 다시 시도해주세요.")
-    } else {
-        // feature의 타입을 구분합니다.
-        let type = feature.properties.SHP_TYPE;
+    if (draw.getAll().features.length > 0) {
+        let featureList = []
+        for (let i = 0; i < draw.getAll().features.length; i++) {
+            let aFeature = draw.getAll().features[i];
+            let featureType = aFeature.geometry.type;
+            if (featureType.indexOf("LineString") > -1) {
+                featureList.push(aFeature)
+            }
+        }
 
-        // 서버로 전송할 데이터를 구성합니다.
         const data = {
-            type: type,
-            feature: feature
+            feature: featureList
         };
 
         $.ajax({
-            url : '/api/updateGeometry.do',
+            url : '/api/saveSplitLine',
             type : 'POST',
             async : true,
             DataType : "JSON",
@@ -2613,7 +2614,6 @@ function updateFeature() {
                 if (result.result == 'success') {
                     // 정상 저장 후 화면 갱신
                     draw.deleteAll();
-                    // TODO 저장관련해서 선이 두개 생성되는 경우가 있음
                     setLinkNodeStationFeature();
 
                     toastOn("정상적으로 수정되었습니다.")
@@ -2625,6 +2625,44 @@ function updateFeature() {
                 console.log(error)
             }
         })
+    } else {
+        let feature = draw.getAll().features[0];
+        if (feature === undefined) {
+            toastOn("선택된 객체가 없습니다. 객체 선택 후 다시 시도해주세요.")
+        } else {
+            // feature의 타입을 구분합니다.
+            let type = feature.properties.SHP_TYPE;
+
+            // 서버로 전송할 데이터를 구성합니다.
+            const data = {
+                type: type,
+                feature: feature
+            };
+
+            $.ajax({
+                url : '/api/updateGeometry.do',
+                type : 'POST',
+                async : true,
+                DataType : "JSON",
+                contentType: "application/json",
+                data : JSON.stringify(data),
+                success : function (result){
+                    console.log(result)
+                    if (result.result == 'success') {
+                        // 정상 저장 후 화면 갱신
+                        draw.deleteAll();
+                        setLinkNodeStationFeature();
+
+                        toastOn("정상적으로 수정되었습니다.")
+                    } else {
+                        toastOn("정보 수정에 실패하였습니다.")
+                    }
+                },
+                error : function (error){
+                    console.log(error)
+                }
+            })
+        }
     }
 }
 
@@ -3540,16 +3578,31 @@ function splitIntoNode() {
                 // 마지막 좌표 추가
                 updatedCoordinates.push(linkCoordinates[linkCoordinates.length - 1]);
 
+                let nodeIdx = -1;
+                for (let i = 0; i < updatedCoordinates.length; i++) {
+                    if (updatedCoordinates[i] === nodeCoordinates) {
+                        nodeIdx = i;
+                    }
+                }
+
+                const firstPart = updatedCoordinates.slice(0, nodeIdx + 1);
+                const secondPart = [nodeCoordinates, ...updatedCoordinates.slice(nodeIdx)];
+
+                const multiLineString = {
+                    type: 'MultiLineString',
+                    coordinates: [
+                        firstPart,
+                        secondPart
+                    ]
+                };
+
                 // 기존 링크 삭제
                 draw.delete(linkId);
 
                 // draw의 링크 피처 업데이트
                 draw.add({
                     type: 'Feature',
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: updatedCoordinates
-                    },
+                    geometry: multiLineString,
                     properties: linkFeature.properties // 기존 링크의 속성 유지
                 });
             }
@@ -3633,7 +3686,7 @@ function handleSnap(e) {
 
     const geometry = feature.geometry;
 
-    if (geometry.type === 'LineString') {
+    if (geometry.type === 'LineString' || geometry.type === 'MultiLineString') {
         // 링크의 각 핸들 포인트에 대해 스냅 적용
         const updatedCoordinates = geometry.coordinates.map(coord => {
             return findClosestSnapTarget(coord) || coord;

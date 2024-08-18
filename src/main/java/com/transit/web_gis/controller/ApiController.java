@@ -522,6 +522,125 @@ public class ApiController {
         return resultMap;
     }
 
+    @ResponseBody
+    @RequestMapping(value = "/saveSplitLine", method = RequestMethod.POST)
+    public Map<String, Object> saveSplitLine(@RequestBody Map<String, Object> params) {
+        Map<String, Object> resultMap = new HashMap<>();
+
+        List<Map<String, Object>> feature = (List<Map<String, Object>>) params.get("feature");
+
+        for (int i = 0; i < feature.size(); i++) {
+            Map<String, Object> aFeature = feature.get(i);
+
+            Map<String, Object> properties = (Map<String, Object>) aFeature.get("properties");
+
+            System.out.println("aFeature: " + aFeature);
+
+            String fileName = (String) properties.get("FILE_NAME");
+            String idColumn = fileName + "_ID";
+            String featureId = (String) properties.get(idColumn);
+
+            // 테이블에서 현재 최대 ID 조회
+            String maxIdQuery = String.format("SELECT COALESCE(MAX(%s), 0) FROM TRANSIT.%s", idColumn, fileName);
+            Integer maxId = jdbcTemplate.queryForObject(maxIdQuery, Integer.class);
+            int newId = (maxId == null ? 0 : maxId) + 1; // 새로운 ID는 최대 ID + 1
+
+            if (i == 0) {
+                String sql = String.format(
+                        "DELETE FROM TRANSIT.%s WHERE %s = %s",
+                        fileName,
+                        idColumn,
+                        featureId
+                );
+
+                jdbcTemplate.update(sql);
+            }
+
+            // MultiLineString 처리
+            Object geometryObj = aFeature.get("geometry");
+            System.out.println("Geometry: " + geometryObj);
+            if (geometryObj instanceof Map) {
+                Map<String, Object> geometry = (Map<String, Object>) geometryObj;
+                String type = (String) geometry.get("type");
+
+                if ("MultiLineString".equals(type)) {
+                    List<List<List<Double>>> coordinatesList = (List<List<List<Double>>>) geometry.get("coordinates");
+
+                    for (List<List<Double>> coordinates : coordinatesList) {
+                        // 각 LineString을 새로운 로우로 삽입
+                        insertLineString(fileName, idColumn, newId, properties, coordinates);
+                        newId++; // 새로운 ID 생성
+                    }
+                } else if ("LineString".equals(type)) {
+                    List<List<Double>> coordinates = (List<List<Double>>) geometry.get("coordinates");
+                    // 단일 LineString을 새로운 로우로 삽입
+                    insertLineString(fileName, idColumn, newId, properties, coordinates);
+                    resultMap.put("result", "success");
+                } else {
+                    // 처리할 수 없는 형식 처리
+                    throw new IllegalArgumentException("Unsupported geometry type: " + type);
+                }
+            } else {
+                // 처리할 수 없는 형식 처리
+                throw new IllegalArgumentException("Unsupported geometry format");
+            }
+        }
+
+        return resultMap;
+    }
+
+    private void insertLineString(String fileName, String idColumn, int newId, Map<String, Object> properties, List<List<Double>> coordinates) {
+        // SQL 쿼리 동적 생성
+        StringJoiner columns = new StringJoiner(", ");
+        StringJoiner values = new StringJoiner(", ");
+
+        for (Map.Entry<String, Object> entry : properties.entrySet()) {
+            String key = entry.getKey();
+            if (key.equals("featureId") || key.equals("emptyLabel")) {
+                continue;
+            }
+            if (!key.equals(idColumn)) {
+                columns.add("\"" + key + "\"");
+                Object value = entry.getValue();
+
+                if (key.equals("geometry")) {
+                    try {
+                        // GEOMETRY가 LineString으로 처리
+                        Map<String, Object> lineStringGeometry = new HashMap<>();
+                        lineStringGeometry.put("type", "LineString");
+                        lineStringGeometry.put("coordinates", coordinates);
+
+                        String jsonValue = objectMapper.writeValueAsString(lineStringGeometry);
+                        values.add("'" + jsonValue + "'");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    if (value instanceof String) {
+                        values.add("'" + value + "'");
+                    } else if (value instanceof Number) {
+                        values.add(value.toString());
+                    } else {
+                        values.add("'" + value.toString() + "'");
+                    }
+                }
+            }
+        }
+
+        columns.add("\"" + idColumn + "\"");
+        values.add(Integer.toString(newId));
+
+        String insertSql = String.format(
+                "INSERT INTO TRANSIT.%s (%s) VALUES (%s)",
+                fileName,
+                columns,
+                values
+        );
+
+        jdbcTemplate.update(insertSql);
+    }
+
+
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
         JSONObject result = new JSONObject();
         result.put("type", "FeatureCollection");
