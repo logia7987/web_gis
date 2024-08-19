@@ -172,7 +172,11 @@
             <h5>도구</h5>
         </div>
         <div class="tab2-content">
-            <button id="distance-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal" style="margin-right: 5px"></i>거리측정</button>
+            <button id="distance-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i><br>거리</button>
+            <div class="tab2-section" style="display: none">
+                <input type="number" id="generateNumber">m
+                <button class="top-btn" onclick="generatePoints();" data-bs-placement="bottom" data-bs-toggle="tooltip" data-bs-original-title="선 간격 생성" style="margin-left: 5px; color: #000">생성</button>
+            </div>
         </div>
 <!--        <button class="top-btn" onclick="generatePoints(5);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="5M" data-bs-original-title="5M 간격 점생성">5M</button>-->
 <!--        <button class="top-btn" onclick="generatePoints(10);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="10M" data-bs-original-title="10M 간격 점생성">10M</button>-->

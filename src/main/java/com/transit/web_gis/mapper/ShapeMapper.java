@@ -12,6 +12,10 @@ public interface ShapeMapper {
     String getShpType(String fileName);
     List<String> getShpColumnNames(String fileName);
     Map<String, Object> getDefaultLabel(String fileName);
+    Map<String, Object> getDefaultColor(String fileName);
+    Map<String, Object> getDefaultWeight(String fileName);
+    Map<String, Object> getDefaultFontColor(String fileName);
+    Map<String, Object> getDefaultFontSize(String fileName);
     Map<String, Object> checkShpType(Map<String, Object> commandMap);
     List<Map<String, Object>> getNodeShpData(Map<String, Object> commandMap);
     List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap);

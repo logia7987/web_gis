@@ -867,18 +867,12 @@ th, td {
 .btn-handle-point {
     background: #fff;
     border: 1px solid;
-    padding: 5px 10px;
     border-radius: 5px;
     display: block;
-    margin-bottom: 5px;
 }
 
 .btn-handle-point:first-child {
-    margin-top: 15px;
-}
-
-.btn-handle-point:last-child {
-    margin-bottom: 0px;
+    margin-right: 5px;
 }
 
 .shp-property-window {
@@ -1026,7 +1020,14 @@ th, td {
 }
 
 #distance-btn {
-    border : 0;
+    font-size: 15px;
+    border: 1px solid #7a7a7a;
+    background-color: white;
+}
+
+#distance-btn:hover {
+    background-color: #7a7a7a;
+    color: white;
 }
 
 .table-div {
@@ -1060,4 +1061,16 @@ th, td {
     border: 1px solid #909CAA;
     width: 100%;
     background-color: white;
+}
+
+.tab2-section {
+    align-items: center;
+    display: flex;
+}
+
+#generateNumber {
+    border-radius: 5px;
+    margin-right: 5px;
+    width: 20%;
+    border: 1px solid #7a7a7a;
 }

@@ -28,6 +28,8 @@ let distanceLine = {
     }
 };
 
+let shpStyleList = {}
+
 let distance = 0;
 
 let distancePopup;
@@ -271,6 +273,27 @@ function getShpData(obj) {
 
     // DB에서 불러올 명단에 추가
     if (!tNameArr.includes(fileName)) {
+        $.ajax({
+            url : '/api/getShpStyle',
+            type : 'POST',
+            data : {
+                fileName : fileName
+            },
+            success : function (data){
+                if (!shpStyleList[fileName]) {
+                    shpStyleList[fileName] = {};
+                }
+
+                shpStyleList[fileName]['shpType'] = data.shpType
+                shpStyleList[fileName]['color'] = data.color.COLOR
+                shpStyleList[fileName]['weight'] = data.weight.WEIGHT
+                shpStyleList[fileName]['fontColor'] = data.fontColor.FONT_COLOR
+                shpStyleList[fileName]['fontSize'] = data.fontSize.FONT_SIZE
+            },
+            error : function (error){
+                console.log(error)
+            }
+        })
         tNameArr.push(fileName);
         $(obj).find("span:eq(1)").show();
 
@@ -282,6 +305,7 @@ function getShpData(obj) {
             return item !== fileName;
         });
         delete shpTypeArr[fileName]
+        delete shpStyleList[fileName]
         $(obj).find("span:eq(1)").hide();
         $("#TR_"+fileName).remove()
 
@@ -1092,7 +1116,6 @@ function updateMeasurement(e) {
         .setLngLat(coordinates)
         .setHTML(html)
         .addTo(map);
-
 }
 
 function endMeasurement() {
@@ -1775,7 +1798,9 @@ function setLayerTypePolygon(layerId, sourceId) {
 }
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
-function generatePoints(segmentLength, minDistance = 1) {
+function generatePoints() {
+    let minDistance = 1
+    let segmentLength = $('#generateNumber').val()
     let coordinates;
     const targetFeature = draw.getAll().features[0];
     const featureType = targetFeature.geometry.type;
@@ -2652,10 +2677,12 @@ function hideAllTool() {
     $("#node-tools").hide();
     $("#station-tools").hide();
     $("#link-btn-merge").hide();
+    $("#tab3 > div.tab2-content > .tab2-section").hide()
 }
 function showLinkTool() {
     hideAllTool();
     $("#link-tools").show();
+    $("#tab3 > div.tab2-content > .tab2-section").show()
 }
 function showNodeTool() {
     hideAllTool();
@@ -2667,10 +2694,20 @@ function showStationTool() {
 }
 
 function createInfoWindowContent(lngLat) {
-    const container = document.createElement('div');
 
+    const container = document.createElement('div');
+    container.style.marginTop = '10px';
+    container.style.display = 'flex';
+
+    const handlePointText = document.createElement('span');
+    handlePointText.innerText = '절점';
+    handlePointText.onclick = function() {
+        addHandle(selectedFeature, lngLat);
+        pointPopup.remove();
+    };    
+    
     const addButton = document.createElement('button');
-    addButton.innerText = '핸들 포인트 추가';
+    addButton.innerText = '추가';
     addButton.classList.add('btn-handle-point');
     addButton.onclick = function() {
         addHandle(selectedFeature, lngLat);
@@ -2678,13 +2715,14 @@ function createInfoWindowContent(lngLat) {
     };
 
     const removeButton = document.createElement('button');
-    removeButton.innerText = '핸들 포인트 삭제';
+    removeButton.innerText = '삭제';
     removeButton.classList.add('btn-handle-point');
     removeButton.onclick = function() {
         removeHandle(selectedFeature, lngLat);
         pointPopup.remove();
     };
 
+    container.appendChild(handlePointText);
     container.appendChild(addButton);
     container.appendChild(removeButton);
 

@@ -457,6 +457,28 @@ public class ApiController {
         return resultMap;
     }
 
+
+    @ResponseBody
+    @RequestMapping(value = "/getShpStyle", method = RequestMethod.POST)
+    public Map<String, Object> getShpStyle(@RequestParam("fileName") String fileName) {
+        Map<String, Object> resultMap = new HashMap<>();
+        Map<String, Object> commandMap = new HashMap<>();
+        commandMap.put("fileName", fileName);
+        String shpType = (String) shapeService.checkShpType(commandMap).get("SHP_TYPE");
+
+        Map<String, Object> color = shapeService.getDefaultColor(fileName);
+        Map<String, Object> weight = shapeService.getDefaultWeight(fileName);
+        Map<String, Object> fontColor = shapeService.getDefaultFontColor(fileName);
+        Map<String, Object> fontSize = shapeService.getDefaultFontSize(fileName);
+        resultMap.put("color", color);
+        resultMap.put("weight", weight);
+        resultMap.put("fontColor", fontColor);
+        resultMap.put("fontSize", fontSize);
+        resultMap.put("shpType", shpType);
+        return resultMap;
+    }
+
+
     @ResponseBody
     @RequestMapping(value = "/updateLabel", method = RequestMethod.POST)
     public Map<String, Object> updateLabel(@RequestParam("fileName") String fileName,
