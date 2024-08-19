@@ -2783,36 +2783,33 @@ function showStationTool() {
 
 function createInfoWindowContent(lngLat) {
 
+    let html = `
+        <span style="cursor: pointer;">절점</span>
+        <button class="btn-handle-point">추가</button>
+        <button class="btn-handle-point">삭제</button> `;
+
     const container = document.createElement('div');
     container.style.marginTop = '10px';
     container.style.display = 'flex';
+    container.innerHTML = html;
 
-    const handlePointText = document.createElement('span');
-    handlePointText.innerText = '절점';
+    const handlePointText = container.querySelector('span');
     handlePointText.onclick = function() {
         addHandle(selectedFeature, lngLat);
         pointPopup.remove();
-    };    
-    
-    const addButton = document.createElement('button');
-    addButton.innerText = '추가';
-    addButton.classList.add('btn-handle-point');
+    };
+
+    const addButton = container.querySelector('button:nth-child(2)');
     addButton.onclick = function() {
         addHandle(selectedFeature, lngLat);
         pointPopup.remove();
     };
 
-    const removeButton = document.createElement('button');
-    removeButton.innerText = '삭제';
-    removeButton.classList.add('btn-handle-point');
+    const removeButton = container.querySelector('button:nth-child(3)');
     removeButton.onclick = function() {
         removeHandle(selectedFeature, lngLat);
         pointPopup.remove();
     };
-
-    container.appendChild(handlePointText);
-    container.appendChild(addButton);
-    container.appendChild(removeButton);
 
     return container;
 }
