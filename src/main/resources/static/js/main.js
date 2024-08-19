@@ -3700,6 +3700,7 @@ function mergeIntoNode() {
 
     let matchingLinks = [];
     const toleranceMeters = 5;
+    const removalToleranceMeters = 10;
 
     function calculateDistance(coord1, coord2) {
         const R = 6371e3; // 지구 반지름 (미터 단위)
@@ -3742,70 +3743,26 @@ function mergeIntoNode() {
     if (matchingLinks.length >= 4) {
         console.log("노드와 매우 가까운 링크들:", matchingLinks);
 
-        // 노드 좌표를 링크에서 제거하고 링크를 병합하는 함수
-        function mergeLinks(links) {
-            let mergedCoordinates = [];
-
-            links.forEach(link => {
-                let filteredCoordinates = link.geometry.coordinates.filter(coord => {
-                    const distance = calculateDistance(coord, nodeCoordinates);
-
-                    // 좌표와 거리 값을 로그로 출력하여 디버깅
-                    console.log(`Filtering Coordinates: ${coord}`);
-                    console.log(`Distance to Node: ${distance}`);
-
-                    return distance > toleranceMeters; // 노드와 일치하지 않는 좌표만 남기기
-                });
-
-                mergedCoordinates = mergedCoordinates.concat(filteredCoordinates);
+        // Draw에 matchingLinks 추가
+        matchingLinks.forEach(link => {
+            let filteredCoordinates = link.geometry.coordinates.filter(coord => {
+                const distance = calculateDistance(coord, nodeCoordinates);
+                return distance > removalToleranceMeters; // 10미터 이내 좌표를 제거
             });
 
-            // 병합된 좌표가 일직선인지 확인하는 함수
-            function isStraightLine(coords) {
-                if (coords.length < 3) return true;
+            // 노드와 정확히 일치하는 좌표 삭제
+            filteredCoordinates = filteredCoordinates.filter(coord => {
+                return !(coord[0] === nodeCoordinates[0] && coord[1] === nodeCoordinates[1]);
+            });
 
-                const [start, ...rest] = coords;
-                const [end] = rest.slice(-1);
+            // 필터링된 좌표로 링크를 갱신
+            link.geometry.coordinates = filteredCoordinates;
 
-                let isStraight = true;
-
-                for (let i = 1; i < rest.length - 1; i++) {
-                    const [x1, y1] = rest[i];
-                    const [x2, y2] = rest[i + 1];
-
-                    const crossProduct = (x2 - x1) * (end[1] - start[1]) - (y2 - y1) * (end[0] - start[0]);
-                    if (Math.abs(crossProduct) > 1e-10) { // 허용 오차 범위 설정
-                        isStraight = false;
-                        break;
-                    }
-                }
-
-                return isStraight;
-            }
-
-            // 병합된 좌표가 일직선이면 하나의 링크로 병합
-            if (isStraightLine(mergedCoordinates)) {
-                return {
-                    type: "LineString",
-                    coordinates: mergedCoordinates
-                };
-            }
-
-            return null;
-        }
-
-        // 링크 병합 시도
-        const mergedLinkGeometry = mergeLinks(matchingLinks);
-
-        if (mergedLinkGeometry) {
-            console.log("병합된 링크:", mergedLinkGeometry);
-            toastOn("병합된 링크가 생성되었습니다.");
-            // 여기서 새로 병합된 링크를 저장하거나, 지도에 반영하는 추가 작업을 수행할 수 있습니다.
-        } else {
-            toastOn("병합할 수 없는 링크입니다.");
-        }
+            // 지도에서 지우고 draw에 추가
+            removeFromMap(link);
+        });
     } else {
-        toastOn("노드와 매우 가까운 링크를 찾지 못했습니다.");
+        toastOn("병합가능한 링크를 찾지 못했습니다.");
     }
 }
 
