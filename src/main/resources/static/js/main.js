@@ -1547,27 +1547,25 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
     });
 
     map.on('click', function(e) {
-        // let select = $('#type-select').val()
-        // if (!isEdit() && select === 'point') {
-        //
-        // }
-        const features = map.queryRenderedFeatures(e.point, {
-            layers: [layerId]
-        });
+        if (!isEdit()) {
+            const features = map.queryRenderedFeatures(e.point, {
+                layers: [layerId]
+            });
 
-        if (features.length === 0) {
-            // 없을 시 선택 취소
-            map.setFilter(layerId + '-highlighted', ['==', '', '']);
-        } else {
-            // 선택 외 객체 스타일 리셋
-            // resetHighlightedLayerFilters()
+            if (features.length === 0) {
+                // 없을 시 선택 취소
+                map.setFilter(layerId + '-highlighted', ['==', '', '']);
+            } else {
+                // 선택 외 객체 스타일 리셋
+                // resetHighlightedLayerFilters()
 
-            var clickedFeature = features[0];
-            if (clickedFeature) {
-                let filterName = clickedFeature.properties.FILE_NAME;
-                // 선택된 피처를 강조하도록 필터 업데이트
-                if (map.getLayer(layerId + '-highlighted')) {
-                    map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                var clickedFeature = features[0];
+                if (clickedFeature) {
+                    let filterName = clickedFeature.properties.FILE_NAME;
+                    // 선택된 피처를 강조하도록 필터 업데이트
+                    if (map.getLayer(layerId + '-highlighted')) {
+                        map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                    }
                 }
             }
         }
@@ -1692,44 +1690,25 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
                 // console.log('Closest start point node:', startPointNode);
                 // console.log('Closest end point node:', endPointNode);
 
-                if (clickedFeature) {
-                    // 선택 외 객체 스타일 리셋
-                    if (!isSplitLinkNode) {
-                        // resetHighlightedLayerFilters()
-                    }
+                if (!isEdit()) {
+                    if (clickedFeature) {
+                        // 선택 외 객체 스타일 리셋
+                        if (!isSplitLinkNode) {
+                            // resetHighlightedLayerFilters()
+                        }
 
-                    let filterName = clickedFeature.properties.FILE_NAME;
-                    // 선택된 피처를 강조하도록 필터 업데이트
-                    if (map.getLayer(layerId + '-highlighted')) {
-                        map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                        let filterName = clickedFeature.properties.FILE_NAME;
+                        // 선택된 피처를 강조하도록 필터 업데이트
+                        if (map.getLayer(layerId + '-highlighted')) {
+                            map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                        }
+                    } else {
+                        map.setFilter(layerId + '-highlighted', ['==', '', '']);
                     }
-                } else {
-                    map.setFilter(layerId + '-highlighted', ['==', '', '']);
                 }
             }
         }
     });
-
-    // map.on('click', function(e) {
-    //     const features = map.queryRenderedFeatures(e.link, {
-    //         layers: [layerId]
-    //     });
-    //
-    //     if (features.length === 0) {
-    //         // 없을 시 선택 취소
-    //         map.setFilter(layerId + '-highlighted', ['==', '', '']);
-    //     } else {
-    //         resetHighlightedLayerFilters()
-    //         var clickedFeature = features[0];
-    //         if (clickedFeature) {
-    //             let filterName = clickedFeature.properties.FILE_NAME;
-    //             // 선택된 피처를 강조하도록 필터 업데이트
-    //             if (map.getLayer(layerId + '-highlighted')) {
-    //                 map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
-    //             }
-    //         }
-    //     }
-    // });
 
     map.on('mouseenter', layerId, () => {
         map.getCanvas().style.cursor = 'pointer';
@@ -2101,72 +2080,81 @@ function setMapEvent() {
             updateMapData();
         });
 
+        let isHandlingClick = false;
         map.on('click', (e) => {
-            // 만약 핸들 포인트 window 가 켜져있다면 종료
-            pointPopup.remove();
+            if (isHandlingClick) return;
 
-            if (map.getLayer(LINK_LAYER_ID) !== undefined) {
-                let features;
-                // 일반 선택과 편집모드의 선택 구분 분할
-                if (isEdit()) {
-                    // 편집 모드일 때 선택된 타입에 따라 처리
-                    const select = $('#type-select').val();
+            isHandlingClick = true;
 
-                    // 선택된 레이어에서 클릭된 피처 쿼리
-                    switch (select) {
-                        case 'lineString':
-                            features = map.queryRenderedFeatures(e.point, { layers: [LINK_LAYER_ID] });
-                            break;
-                        case 'station':
-                            features = map.queryRenderedFeatures(e.point, { layers: [STATION_LAYER_ID] });
-                            break;
-                        case 'point':
-                            features = map.queryRenderedFeatures(e.point, { layers: [NODE_LAYER_ID] });
-                            break;
-                        default:
-                            features = [];
+            try {
+                // 만약 핸들 포인트 window 가 켜져있다면 종료
+                pointPopup.remove();
+
+                if (map.getLayer(LINK_LAYER_ID) !== undefined) {
+                    let features;
+                    // 일반 선택과 편집모드의 선택 구분 분할
+                    if (isEdit()) {
+                        // 편집 모드일 때 선택된 타입에 따라 처리
+                        const select = $('#type-select').val();
+
+                        // 선택된 레이어에서 클릭된 피처 쿼리
+                        switch (select) {
+                            case 'lineString':
+                                features = map.queryRenderedFeatures(e.point, { layers: [LINK_LAYER_ID] });
+                                break;
+                            case 'station':
+                                features = map.queryRenderedFeatures(e.point, { layers: [STATION_LAYER_ID] });
+                                break;
+                            case 'point':
+                                features = map.queryRenderedFeatures(e.point, { layers: [NODE_LAYER_ID] });
+                                break;
+                            default:
+                                features = [];
+                        }
+
+                        // 클릭된 피처가 있을 경우 클릭 이벤트 처리 중지
+                        if (features.length > 0) {
+                            return;
+                        }
+
+                        // 클릭된 위치에서 가장 가까운 링크 찾기
+                        const pointPos = getClosestLinkId([e.lngLat.lng, e.lngLat.lat]);
+
+                        // 가장 가까운 링크가 없으면 종료
+                        if (!pointPos) {
+                            return;
+                        }
+
+                        // 가장 가까운 링크 위치에서 클릭 이벤트 트리거
+                        map.fire('click', {
+                            lngLat: pointPos,
+                            point: map.project(pointPos)
+                        });
+
+                    } else {
+                        // 일반모드일때 선택 최적화 적용
+                        features = map.queryRenderedFeatures(e.point, {
+                            layers : [NODE_LAYER_ID, STATION_LAYER_ID, LINK_LAYER_ID, ]
+                        });
+
+                        if(features.length > 0) {
+                            return;
+                        }
+
+                        let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
+
+                        if(!pointPos){
+                            return;
+                        }
+
+                        map.fire('click', {
+                            lngLat : pointPos,
+                            point : map.project(pointPos)
+                        })
                     }
-
-                    // 클릭된 피처가 있을 경우 클릭 이벤트 처리 중지
-                    if (features.length > 0) {
-                        return;
-                    }
-
-                    // 클릭된 위치에서 가장 가까운 링크 찾기
-                    const pointPos = getClosestLinkId([e.lngLat.lng, e.lngLat.lat]);
-
-                    // 가장 가까운 링크가 없으면 종료
-                    if (!pointPos) {
-                        return;
-                    }
-
-                    // 가장 가까운 링크 위치에서 클릭 이벤트 트리거
-                    map.fire('click', {
-                        lngLat: pointPos,
-                        point: map.project(pointPos)
-                    });
-
-                } else {
-                    // 일반모드일때 선택 최적화 적용
-                    features = map.queryRenderedFeatures(e.point, {
-                        layers : [NODE_LAYER_ID, STATION_LAYER_ID, LINK_LAYER_ID, ]
-                    });
-
-                    if(features.length > 0) {
-                        return;
-                    }
-
-                    let pointPos = getClosestLinkId(new Array(e.lngLat.lng, e.lngLat.lat));
-
-                    if(!pointPos){
-                        return;
-                    }
-
-                    map.fire('click', {
-                        lngLat : pointPos,
-                        point : map.project(pointPos)
-                    })
                 }
+            } finally {
+                isHandlingClick = false;
             }
         });
 
@@ -2588,7 +2576,7 @@ function saveToMatchObject() {
 
 function updateFeature() {
     // 변경된 features를 가져옵니다.
-    if (draw.getAll().features.length > 0) {
+    if (draw.getAll().features.length > 1) {
         let featureList = []
         for (let i = 0; i < draw.getAll().features.length; i++) {
             let aFeature = draw.getAll().features[i];
@@ -3660,6 +3648,51 @@ function generatePointsAroundClosestPoint(start, end, closestPoint, nodeCoordina
     }
 
     return points;
+}
+
+function mergeIntoNode() {
+    if (draw.getAll().features[0] === undefined) {
+        toastOn("선택된 노드가 없습니다.")
+        return;
+    }
+
+    const nodeFeature = draw.getAll().features[0];
+    const nodeCoordinates = nodeFeature.geometry.coordinates;
+
+    // 지도에 있는 모든 링크 피처 가져오기
+    const linkFeatures = map.queryRenderedFeatures({ layers: [LINK_LAYER_ID] });
+
+    let matchingLinks = [];
+    const tolerance = 0.0000001; // 좌표 비교 시 허용할 오차 범위
+
+    // 두 좌표가 일정 범위 내에 있는지 확인하는 함수
+    function coordinatesMatch(coord1, coord2, tolerance) {
+        const distance = Math.sqrt(
+            Math.pow(coord1[0] - coord2[0], 2) + Math.pow(coord1[1] - coord2[1], 2)
+        );
+        return distance <= tolerance;
+    }
+
+    // 각 링크를 순회하며 노드 좌표와 일정 범위 내에 있는 링크를 찾음
+    for (let link of linkFeatures) {
+        const linkCoordinates = link.geometry.coordinates;
+
+        // 링크의 좌표 중 노드 좌표와 일정 범위 내에 있는 것을 찾기
+        for (let coord of linkCoordinates) {
+            if (coordinatesMatch(coord, nodeCoordinates, tolerance)) {
+                matchingLinks.push(link);
+                break; // 일치하는 링크를 찾으면 내부 반복 종료
+            }
+        }
+    }
+
+    if (matchingLinks.length >= 4) {
+        console.log("노드와 일치하는 링크들:", matchingLinks);
+        toastOn("노드와 일치하는 링크들을 찾았습니다.");
+        // 여기에서 추가적인 병합 로직을 수행할 수 있습니다.
+    } else {
+        toastOn("노드와 일치하는 링크를 찾지 못했습니다.");
+    }
 }
 
 // ================== snap ==================
