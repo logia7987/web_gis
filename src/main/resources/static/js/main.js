@@ -32,6 +32,9 @@ let shpStyleList = {}
 
 let distance = 0;
 
+// 스냅 거리 설정 (단위: meters)
+const snapDistance = 3;
+
 let distancePopup;
 let preDistancePopup;
 
@@ -73,6 +76,8 @@ let selectedBasicLink;
 
 const ICON_STATION_SRC = '/image/icon_station.png';
 const ICON_NODE_SRC = '/image/icon_node.png';
+
+const EARTH_RADIUS = 6378137; // WGS-84
 
 let matchLinkObj = {}
 let matchObj = {}
@@ -123,6 +128,9 @@ let tNameArr = [];
 let tNameLabelArr = {};
 
 let isSaving = false;
+
+let snapTargets = [];
+const SNAP_DISTANCE = 7.5; // 스냅 거리 (미터)
 
 // 타입 배열
 let shpTypeArr = []
@@ -511,6 +519,9 @@ function editShp(property, type) {
         featureIds: newFeatureIds.map(f => f)
     });
 
+    // 스냅 대상을 업데이트
+    updateSnapTargets();
+
     // 맵의 소스 데이터 업데이트
     map.getSource(LINK_NODE_STATION_SOURCE_ID).setData({
         type: 'FeatureCollection',
@@ -773,7 +784,6 @@ function getBoundingBox(coordinates, type) {
 // "moveend" 이벤트와 "zoomend" 이벤트에 대한 이벤트 핸들러 등록
 
 // map.on('zoomend', renderDataOnMapViewport);
-// TODO 스타일 보정 기능 넣기
 function handleFeatureSelection(e, layerId) {
     // 편집모드 클릭과 일반클릭을 분리
     // TODO 맵 클릭 시 링크 선 선택 해제 추가
@@ -811,29 +821,13 @@ function handleFeatureSelection(e, layerId) {
                     editShp(property, targetId);
                 }
                 $("#link-btn-merge").hide();
+            } else {
+                // viewInfoWindow(e)
             }
         }
     } else {
         // 보기 모드 클릭 시 인포윈도우에 속성 정보 표시
-        if (e.features !== undefined) {
-            $('.property-window').css('left', '10px'); // 속성 창 띄우기
-            $('.property-window > .property-list > table').empty() // 속성 리스트 비우기
-
-            const properties = e.features[0].properties;
-            let propertyHtml = '<tbody>';
-            for (const key in properties) {
-                propertyHtml += '<tr><td id='+e.features[0].id+'>' + key +'</td>' +
-                    '<td class="property-info">' +
-                    '<span class="property-text">'+ properties[key] + '</span>' +
-                    '<input class="property-input" type="text" name="'+key+'" value="'+ properties[key] +'">' +
-                    '</td>' +
-                    '</tr>'; // 속성 정보
-            }
-
-            propertyHtml += '</tbody>';
-
-            $('.property-window > .property-list > table').append(propertyHtml);
-        }
+        viewInfoWindow(e)
     }
 }
 
@@ -1240,6 +1234,7 @@ function editCreate(e) {
 }
 
 let properties = {};
+let isSavingFeature = false;
 function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 내용이 추가됨
     isAddNew = true;
     properties = {};
@@ -1248,14 +1243,6 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
     let proper = $('.property');
     let isProperty = true;
     let defaultLabel = $("#label_"+fileName + " option:selected").val();
-
-    // for (let i = 0; i < proper.length; i++) { // 빈칸 여부 체크
-    //     if (proper[i].value === '') {
-    //         toastOn("빈칸을 채워주세요.")
-    //         isProperty = false;
-    //         break;
-    //     }
-    // }
 
     if (isProperty) {
         for (let i = 0; i < property.length; i++) {
@@ -1281,6 +1268,8 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
         properties["LABEL_COLUMN"] = defaultLabel;
 
         map.on('draw.create', function (e) {
+            console.log("create")
+
             const featureId = e.features[0].id;
             const allFeatures = draw.getAll().features;
             const feature = allFeatures.find(f => f.id === featureId);
@@ -1312,7 +1301,10 @@ function addNewFeature() { // 버튼 클릭 시 입력 토대로 데이터에 �
                     features: allFeatures
                 });
 
-                insertShpTable(feature);
+                if (!isSavingFeature) {
+                    isSavingFeature = true;
+                    insertShpTable(feature);
+                }
             }
         });
 
@@ -1460,6 +1452,12 @@ function setLinkNodeStationFeature() {
                 });
             });
 
+            map.on('draw.create', updateSnapTargets); // Draw 피처 생성 후 스냅 대상을 업데이트
+            map.on('draw.update', updateSnapTargets); // Draw 피처 업데이트 후 스냅 대상을 업데이트
+            map.on('draw.delete', updateSnapTargets); // Draw 피처 삭제 후 스냅 대상을 업데이트
+            map.on('draw.create', handleSnap); // 핸들 이동 시 스냅 적용
+            map.on('draw.update', handleSnap); // 핸들 이동 시 스냅 적용
+
             promises.push(promise);
         });
 
@@ -1481,6 +1479,8 @@ function setLinkNodeStationFeature() {
                 setLayerTypeIconAndLabel(NODE_LAYER_ID, LINK_NODE_STATION_SOURCE_ID, NODE_FEATURE_ID, ICON_NODE_SRC);
                 // 링크 거리별 포인트 레이어 추가
                 setLayerLinkDot(METER_DOT_LAYER_ID, METER_DOT_SOURCE_ID);
+                // 스냅 하이라이트 레이어 추가
+                // addHighlightLayer()
             }
 
             resolve();
@@ -1566,12 +1566,14 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
     map.on('click', layerId, function (e) {
         if (!isAddNew) {
             handleFeatureSelection(e, layerId);
-        } else {
-            // TODO 스넵 넣기
         }
     });
 
     map.on('click', function(e) {
+        // let select = $('#type-select').val()
+        // if (!isEdit() && select === 'point') {
+        //
+        // }
         const features = map.queryRenderedFeatures(e.point, {
             layers: [layerId]
         });
@@ -1581,7 +1583,7 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
             map.setFilter(layerId + '-highlighted', ['==', '', '']);
         } else {
             // 선택 외 객체 스타일 리셋
-            resetHighlightedLayerFilters()
+            // resetHighlightedLayerFilters()
 
             var clickedFeature = features[0];
             if (clickedFeature) {
@@ -1648,6 +1650,8 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+
+
     // 선택된 레이어를 강조하기 위한 레이어 추가
     map.addLayer({
         'id': layerId + '-highlighted',
@@ -1713,7 +1717,9 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
 
                 if (clickedFeature) {
                     // 선택 외 객체 스타일 리셋
-                    resetHighlightedLayerFilters()
+                    if (!isSplitLinkNode) {
+                        // resetHighlightedLayerFilters()
+                    }
 
                     let filterName = clickedFeature.properties.FILE_NAME;
                     // 선택된 피처를 강조하도록 필터 업데이트
@@ -1795,6 +1801,50 @@ function setLayerTypePolygon(layerId, sourceId) {
             'line-width': 2,
         }
     });
+}
+
+function addHighlightLayer() {
+    if (map.getLayer('snap-highlighted')) {
+        map.removeLayer('snap-highlighted');
+        map.removeSource('snap-highlighted');
+    }
+
+    map.addSource('snap-highlighted', {
+        type: 'geojson',
+        data: {
+            type: 'FeatureCollection',
+            features: []
+        }
+    });
+
+    map.addLayer({
+        id: 'snap-highlighted',
+        type: 'circle',
+        source: 'snap-highlighted',
+        paint: {
+            'circle-color': '#FF0000', // 빨간색
+            'circle-radius': 6, // 반지름
+            'circle-stroke-width': 2, // 테두리 두께
+            'circle-stroke-color': '#FFFFFF' // 흰색 테두리
+        }
+    });
+}
+
+function updateHighlightLayer(snapTargets) {
+    const features = snapTargets.map(target => ({
+        type: 'Feature',
+        geometry: {
+            type: 'Point',
+            coordinates: target
+        },
+        properties: {}
+    }));
+
+    // 하이라이트 소스 데이터 업데이트
+    // map.getSource('snap-highlighted').setData({
+    //     type: 'FeatureCollection',
+    //     features: features
+    // });
 }
 
 // 시작점과 끝점 사이에 segmentLength 미터 간격으로 점 생성
@@ -2166,7 +2216,7 @@ function setMapEvent() {
         });
 
         map.on('mousemove', (e) => {
-            if (map.getLayer(STATION_LAYER_ID) !== undefined) {
+            if (map.getLayer(STATION_LAYER_ID) !== undefined && map.getLayer(NODE_LAYER_ID) !== undefined) {
                 //광범위한 링크 선택 근처 도달 시 마우스 모양 포인터로 처리
                 let features = map.queryRenderedFeatures(e.point, {
                     layers : [STATION_LAYER_ID, LINK_LAYER_ID, NODE_LAYER_ID]
@@ -2187,7 +2237,6 @@ function setMapEvent() {
             }
         });
 
-        // map.on('draw.update', realTimeUpdateToDB);
         map.on('draw.create', saveState);
         map.on('draw.update', saveState);
         map.on('draw.delete', saveState);
@@ -2564,21 +2613,22 @@ function saveToMatchObject() {
 
 function updateFeature() {
     // 변경된 features를 가져옵니다.
-    let feature = draw.getAll().features[0];
-    if (feature === undefined) {
-        toastOn("선택된 객체가 없습니다. 객체 선택 후 다시 시도해주세요.")
-    } else {
-        // feature의 타입을 구분합니다.
-        let type = feature.properties.SHP_TYPE;
+    if (draw.getAll().features.length > 0) {
+        let featureList = []
+        for (let i = 0; i < draw.getAll().features.length; i++) {
+            let aFeature = draw.getAll().features[i];
+            let featureType = aFeature.geometry.type;
+            if (featureType.indexOf("LineString") > -1) {
+                featureList.push(aFeature)
+            }
+        }
 
-        // 서버로 전송할 데이터를 구성합니다.
         const data = {
-            type: type,
-            feature: feature
+            feature: featureList
         };
 
         $.ajax({
-            url : '/api/updateGeometry.do',
+            url : '/api/saveSplitLine',
             type : 'POST',
             async : true,
             DataType : "JSON",
@@ -2589,7 +2639,6 @@ function updateFeature() {
                 if (result.result == 'success') {
                     // 정상 저장 후 화면 갱신
                     draw.deleteAll();
-                    // TODO 저장관련해서 선이 두개 생성되는 경우가 있음
                     setLinkNodeStationFeature();
 
                     toastOn("정상적으로 수정되었습니다.")
@@ -2601,6 +2650,44 @@ function updateFeature() {
                 console.log(error)
             }
         })
+    } else {
+        let feature = draw.getAll().features[0];
+        if (feature === undefined) {
+            toastOn("선택된 객체가 없습니다. 객체 선택 후 다시 시도해주세요.")
+        } else {
+            // feature의 타입을 구분합니다.
+            let type = feature.properties.SHP_TYPE;
+
+            // 서버로 전송할 데이터를 구성합니다.
+            const data = {
+                type: type,
+                feature: feature
+            };
+
+            $.ajax({
+                url : '/api/updateGeometry.do',
+                type : 'POST',
+                async : true,
+                DataType : "JSON",
+                contentType: "application/json",
+                data : JSON.stringify(data),
+                success : function (result){
+                    console.log(result)
+                    if (result.result == 'success') {
+                        // 정상 저장 후 화면 갱신
+                        draw.deleteAll();
+                        setLinkNodeStationFeature();
+
+                        toastOn("정상적으로 수정되었습니다.")
+                    } else {
+                        toastOn("정보 수정에 실패하였습니다.")
+                    }
+                },
+                error : function (error){
+                    console.log(error)
+                }
+            })
+        }
     }
 }
 
@@ -2672,6 +2759,7 @@ function splitLine() {
 
     saveState();
 }
+
 function hideAllTool() {
     $("#link-tools").hide();
     $("#node-tools").hide();
@@ -3074,6 +3162,15 @@ function checkEditSelect() {
     hideAllTool()
     let select = $('#type-select').val();
 
+    // 수정 내용삭제
+    draw.deleteAll();
+
+    // 히스토리 내역 초기화
+    historyStack = [];
+
+    // 수정 내용삭제 후 지도 정보 재로딩
+    setLinkNodeStationFeature();
+
     if (select === 'lineString') {
         showLinkTool();
     } else if (select === 'point') {
@@ -3170,6 +3267,7 @@ function insertShpTable(data) {
                 toastOn("새 객체가 추가되었습니다.");
                 // changeEditMode()
                 isAddNew = false;
+                isSavingFeature = false;
             }
         },
         error : function (error){
@@ -3336,7 +3434,7 @@ function undo() {
         draw.changeMode('simple_select', {
             featureIds: newFeatureIds.map(f => f)
         });
-    } else {
+    } else  {
         toastOn("초기상태입니다. 되돌릴 수 없습니다.")
     }
 }
@@ -3355,42 +3453,320 @@ function cancelLoadFile() {
     dataArr = {}
 }
 
-function updateSnapping(e) {
-    const features = draw.getAll().features;
+//
+function getNearestNode(point, nodes, maxDistance) {
+    let nearestNode = null;
+    let minDistance = maxDistance;
 
-    features.forEach(feature => {
-        const coordinates = feature.geometry.coordinates;
-        const snappedCoordinates = snapToClosestNode(coordinates);
-        draw.set(feature.id, {
-            ...feature,
-            geometry: {
-                ...feature.geometry,
-                coordinates: snappedCoordinates
+    nodes.forEach(node => {
+        const distance = turf.distance(point, node.geometry.coordinates, { units: 'meters' });
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestNode = node;
+        }
+    });
+
+    return nearestNode;
+}
+
+function viewInfoWindow(e) {
+    if (e.features !== undefined) {
+        $('.property-window').css('left', '10px'); // 속성 창 띄우기
+        $('.property-window > .property-list > table').empty() // 속성 리스트 비우기
+
+        const properties = e.features[0].properties;
+        let propertyHtml = '<tbody>';
+        for (const key in properties) {
+            propertyHtml += '<tr><td id='+e.features[0].id+'>' + key +'</td>' +
+                '<td class="property-info">' +
+                '<span class="property-text">'+ properties[key] + '</span>' +
+                '<input class="property-input" type="text" name="'+key+'" value="'+ properties[key] +'">' +
+                '</td>' +
+                '</tr>'; // 속성 정보
+        }
+
+        propertyHtml += '</tbody>';
+
+        $('.property-window > .property-list > table').append(propertyHtml);
+    }
+}
+
+let isSplitLinkNode = false;
+function splitIntoNode() {
+    if (draw.getAll().features[0] === undefined) {
+        toastOn("선택된 노드가 없습니다.")
+        return;
+    }
+
+    const nodeFeature = draw.getAll().features[0];
+    const nodeCoordinates = nodeFeature.geometry.coordinates;
+
+    // 사용자가 링크를 선택할 수 있는 기능
+    function choiceLinks(callback) {
+        toastOn("분할하실 선(링크)을 선택해주세요.");
+        isSplitLinkNode = true;
+        let targetLinks = [];
+        let selectedLinkIds = new Set(); // 선택된 링크의 ID를 추적하는 Set
+
+        // 링크 클릭 이벤트 핸들러 등록
+        function onLinkClick(e) {
+            const clickedLink = e.features[0];
+            const fileName = clickedLink.properties.FILE_NAME; // 각 링크의 고유 ID를 사용
+            const linkId = clickedLink.properties[fileName + "_ID"]; // 각 링크의 고유 ID를 사용
+
+            // 이미 선택된 링크인지 확인
+            if (selectedLinkIds.has(linkId)) {
+                return; // 중복된 링크 클릭 시 무시
+            }
+
+            // 클릭한 링크를 리스트에 추가
+            targetLinks.push(clickedLink);
+            removeFromMap(clickedLink)
+            selectedLinkIds.add(linkId);
+
+            // 최대 두 개의 링크만 선택하도록 제한
+            if (targetLinks.length >= 2) {
+                map.off('click', LINK_LAYER_ID, onLinkClick); // 이벤트 핸들러 제거
+                toastOn("선택하신 선(링크)으로 분할합니다.");
+                isSplitLinkNode = false;
+                callback(targetLinks); // 선택이 완료된 후 콜백 함수 호출
+            }
+        }
+
+        map.on('click', LINK_LAYER_ID, onLinkClick);
+    }
+
+    // 수직으로 노드와 링크 인접점 계산
+    function pointToLineDistance(px, py, x1, y1, x2, y2) {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        const param = len_sq != 0 ? dot / len_sq : -1;
+
+        let xx, yy;
+
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        return [xx, yy];
+    }
+
+    function processSelectedLinks(userSelectedLinks) {
+        const features = draw.getAll().features;
+
+        userSelectedLinks.forEach(link => {
+            const linkFeature = features.find(f => f.id === link.id);
+            if (!linkFeature) return;
+
+            const linkId = link.id;
+            const linkCoordinates = linkFeature.geometry.coordinates;
+
+            // 노드에서 링크까지의 가장 가까운 점 계산
+            let closestPoint = null;
+            let minDistance = Infinity;
+
+            for (let i = 0; i < linkCoordinates.length - 1; i++) {
+                const [x1, y1] = linkCoordinates[i];
+                const [x2, y2] = linkCoordinates[i + 1];
+                const [px, py] = nodeCoordinates;
+                const [closestX, closestY] = pointToLineDistance(px, py, x1, y1, x2, y2);
+
+                const distance = Math.sqrt((px - closestX) ** 2 + (py - closestY) ** 2);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestPoint = [closestX, closestY];
+                }
+            }
+
+            // 링크를 분할하고 포인트 추가
+            if (closestPoint) {
+                const updatedCoordinates = [];
+                let pointAdded = false;
+
+                for (let i = 0; i < linkCoordinates.length - 1; i++) {
+                    const [x1, y1] = linkCoordinates[i];
+                    const [x2, y2] = linkCoordinates[i + 1];
+
+                    // 기존 좌표 추가
+                    updatedCoordinates.push([x1, y1]);
+
+                    if (!pointAdded && ((x1 <= closestPoint[0] && closestPoint[0] <= x2) || (x2 <= closestPoint[0] && closestPoint[0] <= x1))) {
+                        updatedCoordinates.push([x1, y1]);
+
+                        const pointsAround = generatePointsAroundClosestPoint([x1, y1], [x2, y2], closestPoint, nodeCoordinates, 10);
+
+                        updatedCoordinates.push(...pointsAround);
+                        pointAdded = true;
+                    }
+                }
+
+                // 마지막 좌표 추가
+                updatedCoordinates.push(linkCoordinates[linkCoordinates.length - 1]);
+
+                let nodeIdx = -1;
+                for (let i = 0; i < updatedCoordinates.length; i++) {
+                    if (updatedCoordinates[i] === nodeCoordinates) {
+                        nodeIdx = i;
+                    }
+                }
+
+                const firstPart = updatedCoordinates.slice(0, nodeIdx + 1);
+                const secondPart = [nodeCoordinates, ...updatedCoordinates.slice(nodeIdx)];
+
+                const multiLineString = {
+                    type: 'MultiLineString',
+                    coordinates: [
+                        firstPart,
+                        secondPart
+                    ]
+                };
+
+                // 기존 링크 삭제
+                draw.delete(linkId);
+
+                // draw의 링크 피처 업데이트
+                draw.add({
+                    type: 'Feature',
+                    geometry: multiLineString,
+                    properties: linkFeature.properties // 기존 링크의 속성 유지
+                });
             }
         });
+    }
+
+    // 사용자가 링크를 선택하도록 활성화하고, 선택 후 처리
+    choiceLinks(processSelectedLinks);
+}
+
+function removeFromMap(feature) {
+    let source = map.getSource(LINK_NODE_STATION_SOURCE_ID);
+    let geoData = source._options.data.features;
+
+    for (let i = 0; i < geoData.length; i++) {
+        let fileName = feature.properties.FILE_NAME
+        if (geoData[i].properties[fileName + "_ID"] === feature.properties[fileName + "_ID"]) {
+            geoData.splice(i, 1); // 도형 제거
+            break;
+        }
+    }
+
+    // 주어진 속성의 새로운 도형을 Draw에 추가
+    feature.id = draw.getAll().features.length + 1; // 임시 ID 부여
+
+    draw.add(feature);
+
+    // 맵의 소스 데이터 업데이트
+    map.getSource(LINK_NODE_STATION_SOURCE_ID).setData({
+        type: 'FeatureCollection',
+        features: geoData
     });
 }
 
-// 주어진 좌표를 가장 가까운 노드로 스냅시키는 함수
-function snapToClosestNode(coordinates) {
-    const snapThreshold = 0.001; // 스냅할 거리 임계값 (단위: degrees)
-    const snappedCoordinates = coordinates.map(coord => {
-        let closestNode = coord;
-        let closestDistance = Infinity;
+// 두 지점 사이의 거리(미터)를 기준으로 새로운 좌표를 생성
+function generatePointsAroundClosestPoint(start, end, closestPoint, nodeCoordinates, interval) {
+    const distanceToStart = turf.distance(start, closestPoint, { units: 'meters' });
+    const distanceToEnd = turf.distance(closestPoint, end, { units: 'meters' });
 
-        // 다른 노드와의 거리 계산 및 스냅
-        map.queryRenderedFeatures({ layers: ['drawn-layer'] }).forEach(feature => {
-            feature.geometry.coordinates.forEach(node => {
-                const distance = turf.distance(coord, node, { units: 'degrees' });
-                if (distance < closestDistance && distance < snapThreshold) {
-                    closestDistance = distance;
-                    closestNode = node;
-                }
-            });
+    const points = [];
+
+    if (distanceToStart > interval) {
+        // closestPoint의 전 10미터 지점 생성
+        const pointBefore = turf.along(turf.lineString([start, closestPoint]), distanceToStart - interval, { units: 'meters' }).geometry.coordinates;
+        points.push(pointBefore);
+    }
+
+    // closestPoint를 추가
+    points.push(nodeCoordinates);
+
+    if (distanceToEnd > interval) {
+        // closestPoint의 후 10미터 지점 생성
+        const pointAfter = turf.along(turf.lineString([closestPoint, end]), interval, { units: 'meters' }).geometry.coordinates;
+        points.push(pointAfter);
+    }
+
+    return points;
+}
+
+// ================== snap ==================
+// 스냅 대상을 업데이트하는 함수
+function updateSnapTargets() {
+    snapTargets = [];
+
+    let features = map.getSource(LINK_NODE_STATION_SOURCE_ID)._options.data.features
+
+    snapTargets = features
+        .filter(feature => feature.geometry.type === 'Point') // 노드만 필터링
+        .map(feature => feature.geometry.coordinates); // 좌표만 추출
+}
+
+// 핸들 이동 시 스냅 적용
+function handleSnap(e) {
+    const featureId = e.features[0].id;
+    const feature = draw.get(featureId);
+
+    if (!feature) {
+        console.error('Feature not found:', featureId);
+        return;
+    }
+
+    const geometry = feature.geometry;
+
+    if (geometry.type === 'LineString' || geometry.type === 'MultiLineString') {
+        // 링크의 각 핸들 포인트에 대해 스냅 적용
+        const updatedCoordinates = geometry.coordinates.map(coord => {
+            return findClosestSnapTarget(coord) || coord;
         });
 
-        return closestNode;
+        // 업데이트된 feature 객체 생성
+        const updatedFeature = {
+            type: 'Feature',
+            id: featureId,
+            geometry: {
+                type: 'LineString',
+                coordinates: updatedCoordinates
+            },
+            properties: feature.properties // 기존 속성 유지
+        };
+
+        // 기존 피처 삭제
+        draw.delete(featureId);
+
+        // 새 피처 추가
+        draw.add(updatedFeature);
+
+        console.log(`Feature ${featureId} updated successfully.`);
+    }
+
+    // 하이라이트 레이어 업데이트
+    // updateHighlightLayer(snapTargets);
+}
+
+// 가장 가까운 스냅 대상을 찾는 함수
+function findClosestSnapTarget(coord) {
+    let minDistance = Infinity;
+    let closestPoint = null;
+
+    snapTargets.forEach(target => {
+        const distance = turf.distance(coord, target, { units: 'meters' });
+
+        if (distance < minDistance && distance < SNAP_DISTANCE) {
+            minDistance = distance;
+            closestPoint = target;
+        }
     });
 
-    return snappedCoordinates;
+    return closestPoint;
 }
