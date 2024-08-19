@@ -72,6 +72,15 @@ public class ShapeService {
     public Map<String, Object> getDefaultLabel(String fileName) {
         return shapeMapper.getDefaultLabel(fileName);
     }
+    public Map<String, Object> getDefaultColor(String fileName) {return shapeMapper.getDefaultColor(fileName);}
+    public Map<String, Object> getDefaultWeight(String fileName) {
+        return shapeMapper.getDefaultWeight(fileName);
+    }
+    public Map<String, Object> getDefaultFontColor(String fileName) {return shapeMapper.getDefaultFontColor(fileName);}
+    public Map<String, Object> getDefaultFontSize(String fileName) {
+        return shapeMapper.getDefaultFontSize(fileName);
+    }
+
     public Map<String, Object> checkShpType(Map<String, Object> commandMap) {
         return shapeMapper.checkShpType(commandMap);
     }

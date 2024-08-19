@@ -25,6 +25,30 @@
         FROM  TRANSIT.${fileName}
     </select>
 
+    <select id="getDefaultColor" resultType="map" parameterType="String">
+        SELECT DISTINCT COLOR
+        FROM  TRANSIT.${fileName}
+        WHERE COLOR IS NOT NULL
+    </select>
+
+    <select id="getDefaultWeight" resultType="map" parameterType="String">
+        SELECT DISTINCT WEIGHT
+        FROM  TRANSIT.${fileName}
+        WHERE WEIGHT IS NOT NULL
+    </select>
+
+    <select id="getDefaultFontColor" resultType="map" parameterType="String">
+        SELECT DISTINCT FONT_COLOR
+        FROM  TRANSIT.${fileName}
+        WHERE FONT_COLOR IS NOT NULL
+    </select>
+
+    <select id="getDefaultFontSize" resultType="map" parameterType="String">
+        SELECT DISTINCT FONT_SIZE
+        FROM  TRANSIT.${fileName}
+        WHERE FONT_SIZE IS NOT NULL
+    </select>
+
     <select id="checkShpType" resultType="map" parameterType="map">
         SELECT DISTINCT SHP_TYPE
         FROM TRANSIT.${fileName}
@@ -67,6 +91,30 @@
     <update id="updateLabel" parameterType="map">
         UPDATE TRANSIT.${fileName}
         SET LABEL_COLUMN = #{labelColumn}
+    </update>
+
+    <update id="updateDefaultColor" parameterType="map">
+        UPDATE TRANSIT.${fileName}
+        SET COLOR = #{color}
+        WHERE COLOR IS NOT NULL
+    </update>
+
+    <update id="updateDefaultWeight" parameterType="map">
+        UPDATE TRANSIT.${fileName}
+        SET WEIGHT = #{weight}
+        WHERE WEIGHT IS NOT NULL
+    </update>
+
+    <update id="updateDefaultFontColor" parameterType="map">
+        UPDATE TRANSIT.${fileName}
+        SET FONT_COLOR = #{fontColor}
+        WHERE FONT_COLOR IS NOT NULL
+    </update>
+
+    <update id="updateDefaultFontSize" parameterType="map">
+        UPDATE TRANSIT.${fileName}
+        SET FONT_SIZE = #{fontSize}
+        WHERE FONT_SIZE IS NOT NULL
     </update>
 
     <update id="updateNodeStationShpData" parameterType="map">
