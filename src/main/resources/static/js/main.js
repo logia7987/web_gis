@@ -1648,8 +1648,6 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-
-
     // 선택된 레이어를 강조하기 위한 레이어 추가
     map.addLayer({
         'id': layerId + '-highlighted',
@@ -3702,35 +3700,70 @@ function mergeIntoNode() {
     const linkFeatures = map.queryRenderedFeatures({ layers: [LINK_LAYER_ID] });
 
     let matchingLinks = [];
-    const tolerance = 0.0000001; // 좌표 비교 시 허용할 오차 범위
+    const toleranceMeters = 5;
+    const removalToleranceMeters = 10;
 
-    // 두 좌표가 일정 범위 내에 있는지 확인하는 함수
-    function coordinatesMatch(coord1, coord2, tolerance) {
-        const distance = Math.sqrt(
-            Math.pow(coord1[0] - coord2[0], 2) + Math.pow(coord1[1] - coord2[1], 2)
-        );
-        return distance <= tolerance;
+    function calculateDistance(coord1, coord2) {
+        const R = 6371e3; // 지구 반지름 (미터 단위)
+        const lat1 = coord1[1] * Math.PI / 180;
+        const lat2 = coord2[1] * Math.PI / 180;
+        const deltaLat = (coord2[1] - coord1[1]) * Math.PI / 180;
+        const deltaLng = (coord2[0] - coord1[0]) * Math.PI / 180;
+
+        const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        const distance = R * c; // 미터 단위 거리
+        return distance;
     }
 
-    // 각 링크를 순회하며 노드 좌표와 일정 범위 내에 있는 링크를 찾음
+    // 각 링크를 순회하며 노드 좌표와 매우 가까운 링크를 찾음
     for (let link of linkFeatures) {
         const linkCoordinates = link.geometry.coordinates;
+        const fileName = link.properties.FILE_NAME;
+        const linkId = link.properties[fileName + "_ID"];
 
-        // 링크의 좌표 중 노드 좌표와 일정 범위 내에 있는 것을 찾기
+        if (matchingLinks.some(existingLink => existingLink.properties[fileName + "_ID"] === linkId)) {
+            continue; // 이미 추가된 링크는 건너뛰기
+        }
+
+        // 링크의 좌표 중 노드 좌표와 매우 가까운 좌표를 찾기
         for (let coord of linkCoordinates) {
-            if (coordinatesMatch(coord, nodeCoordinates, tolerance)) {
+            const distance = calculateDistance(coord, nodeCoordinates);
+
+            if (distance <= toleranceMeters) {
                 matchingLinks.push(link);
                 break; // 일치하는 링크를 찾으면 내부 반복 종료
             }
         }
     }
 
+    // 일치하는 링크가 최소 4개인지 확인
     if (matchingLinks.length >= 4) {
-        console.log("노드와 일치하는 링크들:", matchingLinks);
-        toastOn("노드와 일치하는 링크들을 찾았습니다.");
-        // 여기에서 추가적인 병합 로직을 수행할 수 있습니다.
+        console.log("노드와 매우 가까운 링크들:", matchingLinks);
+
+        // Draw에 matchingLinks 추가
+        matchingLinks.forEach(link => {
+            let filteredCoordinates = link.geometry.coordinates.filter(coord => {
+                const distance = calculateDistance(coord, nodeCoordinates);
+                return distance > removalToleranceMeters; // 10미터 이내 좌표를 제거
+            });
+
+            // 노드와 정확히 일치하는 좌표 삭제
+            filteredCoordinates = filteredCoordinates.filter(coord => {
+                return !(coord[0] === nodeCoordinates[0] && coord[1] === nodeCoordinates[1]);
+            });
+
+            // 필터링된 좌표로 링크를 갱신
+            link.geometry.coordinates = filteredCoordinates;
+
+            // 지도에서 지우고 draw에 추가
+            removeFromMap(link);
+        });
     } else {
-        toastOn("노드와 일치하는 링크를 찾지 못했습니다.");
+        toastOn("병합가능한 링크를 찾지 못했습니다.");
     }
 }
 
