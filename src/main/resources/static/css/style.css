@@ -1019,12 +1019,6 @@ th, td {
     padding: 10px;
 }
 
-#distance-btn {
-    font-size: 15px;
-    border: 1px solid #7a7a7a;
-    background-color: white;
-}
-
 #distance-btn:hover {
     background-color: #7a7a7a;
     color: white;
@@ -1073,4 +1067,23 @@ th, td {
     margin-right: 5px;
     width: 20%;
     border: 1px solid #7a7a7a;
+}
+
+.btn-add-point {
+    border : 0
+}
+
+.btn-remove-point {
+    border : 0
+}
+
+.tool-content {
+    display: flex;
+    justify-content: space-between;
+}
+
+.tool-btn {
+    font-size: 15px;
+    border: 1px solid #7a7a7a;
+    background-color: white;
 }

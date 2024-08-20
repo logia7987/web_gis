@@ -1192,7 +1192,7 @@ function startViewerMode() {
 
 function startEditMode() {
     toastOn("편집모드로 전환되었습니다.")
-    $('#distance-btn').hide()
+    $('#tab3 > div.tab2-content > div:nth-child(1)').hide()
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
     $('#type-select-box').css('display', 'block');
@@ -2770,36 +2770,40 @@ function showStationTool() {
 }
 
 function createInfoWindowContent(lngLat) {
+        let html = `
+        <div style="display: flex">
+            <span style="cursor: pointer;">절점</span>
+            <hr style="width: 60px; margin: 10px 5px;">
+        </div>
+        <div style="display: flex; gap: 10px; padding : 5px">
+            <button class="btn-add-point">추가</button>
+            <button class="btn-remove-point">삭제</button> 
+        </div>`;
 
-    let html = `
-        <span style="cursor: pointer;">절점</span>
-        <button class="btn-handle-point">추가</button>
-        <button class="btn-handle-point">삭제</button> `;
+        const container = document.createElement('div');
+        container.style.marginTop = '10px';
+        container.style.display = 'block';
+        container.innerHTML = html;
 
-    const container = document.createElement('div');
-    container.style.marginTop = '10px';
-    container.style.display = 'flex';
-    container.innerHTML = html;
+        const handlePointText = container.querySelector('span');
+        handlePointText.onclick = function() {
+            addHandle(selectedFeature, lngLat);
+            pointPopup.remove();
+        };
 
-    const handlePointText = container.querySelector('span');
-    handlePointText.onclick = function() {
-        addHandle(selectedFeature, lngLat);
-        pointPopup.remove();
-    };
+        const addButton = container.querySelector('.btn-add-point');
+        addButton.onclick = function() {
+            addHandle(selectedFeature, lngLat);
+            pointPopup.remove();
+        };
 
-    const addButton = container.querySelector('button:nth-child(2)');
-    addButton.onclick = function() {
-        addHandle(selectedFeature, lngLat);
-        pointPopup.remove();
-    };
+        const removeButton = container.querySelector('.btn-remove-point');
+        removeButton.onclick = function() {
+            removeHandle(selectedFeature, lngLat);
+            pointPopup.remove();
+        };
 
-    const removeButton = container.querySelector('button:nth-child(3)');
-    removeButton.onclick = function() {
-        removeHandle(selectedFeature, lngLat);
-        pointPopup.remove();
-    };
-
-    return container;
+        return container;
 }
 
 // 핸들 포인트 추가 함수

@@ -60,7 +60,6 @@
                 <div id="link-tools">
                     <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
                     <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 삭제" data-bs-original-title="링크 삭제">링크 삭제</button>
-
                     <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
                         <i class="fas fa-undo-alt"></i>
                         되돌리기
@@ -174,7 +173,10 @@
             <h5>도구</h5>
         </div>
         <div class="tab2-content">
-            <button id="distance-btn" onclick="checkDistance();"><i class="fa-solid fa-ruler-horizontal"></i><br>거리</button>
+            <div class="tool-content">
+                <span>거리 측정</span><button class="tool-btn" id="distance-btn" onclick="checkDistance();">측정</button>
+            </div>
+
             <div class="tab2-section" style="display: none">
                 <input type="number" id="generateNumber">m
                 <button class="top-btn" onclick="generatePoints();" data-bs-placement="bottom" data-bs-toggle="tooltip" data-bs-original-title="선 간격 생성" style="margin-left: 5px; color: #000">생성</button>
