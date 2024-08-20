@@ -3716,74 +3716,10 @@ function mergeIntoNode() {
             Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-        const distance = R * c; // 미터 단위 거리
-        return distance;
+         // 미터 단위 거리
+        return R * c;
     }
 
-    function mergeLinksByCustomRules(targetLinks, nodeCoordinates) {
-        let mergedLinks = [];
-        let baseLink = null; // 병합의 기준이 될 링크
-        let distanceThreshold = 10; // 거리 임계값, 병합 여부를 결정
-
-        // 기준 노드와 거리가 가까운 링크들을 먼저 분류
-        let closeLinks = targetLinks.filter(link => {
-            let linkCoordinates = link.geometry.coordinates;
-            let startDistance = calculateDistance(linkCoordinates[0], nodeCoordinates);
-            let endDistance = calculateDistance(linkCoordinates[linkCoordinates.length - 1], nodeCoordinates);
-
-            // 노드와 동일한 접점이 있는 링크는 제외
-            if (coordinatesAreSame(linkCoordinates[0], nodeCoordinates) || coordinatesAreSame(linkCoordinates[linkCoordinates.length - 1], nodeCoordinates)) {
-                return false;
-            }
-
-            // 두 점 중 하나가 기준 노드와 가까우면 선택
-            return startDistance < distanceThreshold || endDistance < distanceThreshold;
-        });
-
-        // 병합하지 않은 링크들을 다시 필터링
-        targetLinks = targetLinks.filter(link => !closeLinks.includes(link));
-
-        if (closeLinks.length > 1) {
-            baseLink = closeLinks.shift(); // 첫 번째 링크를 기준으로 병합 시작
-            let mergedCoordinates = [...baseLink.geometry.coordinates];
-
-            // 같은 방향의 링크를 병합
-            closeLinks.forEach(link => {
-                let linkCoordinates = link.geometry.coordinates;
-
-                // 기준 링크와 연결 가능 여부를 검사
-                if (coordinatesAreClose(mergedCoordinates[mergedCoordinates.length - 1], linkCoordinates[0])) {
-                    mergedCoordinates = mergedCoordinates.concat(linkCoordinates.slice(1));
-                } else if (coordinatesAreClose(mergedCoordinates[0], linkCoordinates[linkCoordinates.length - 1])) {
-                    mergedCoordinates = linkCoordinates.concat(mergedCoordinates.slice(1));
-                }
-            });
-
-            mergedLinks.push({
-                type: 'Feature',
-                geometry: {
-                    type: 'LineString',
-                    coordinates: mergedCoordinates
-                },
-                properties: baseLink.properties // 기준 링크의 속성을 사용
-            });
-        }
-
-        // 병합되지 않은 나머지 링크들을 추가
-        mergedLinks = mergedLinks.concat(targetLinks);
-
-        return mergedLinks;
-    }
-
-    // 두 좌표가 같은지 체크하는 함수
-    function coordinatesAreSame(coord1, coord2) {
-        return coord1[0] === coord2[0] && coord1[1] === coord2[1];
-    }
-
-    // 두 좌표가 가까운지 체크하는 함수
-    function coordinatesAreClose(coord1, coord2, tolerance = 1) {
-        return calculateDistance(coord1, coord2) <= tolerance;
-    }
     // 각 링크를 순회하며 노드 좌표와 매우 가까운 링크를 찾음
     for (let link of linkFeatures) {
         const linkCoordinates = link.geometry.coordinates;
@@ -3805,46 +3741,65 @@ function mergeIntoNode() {
         }
     }
 
-    // 일치하는 링크가 최소 4개인지 확인
-    let mergedLinks;
+    // 노드와 연결된 링크가 4개 이상인 경우 병합 진행
     if (matchingLinks.length >= 4) {
-        console.log("노드와 매우 가까운 링크들:", matchingLinks);
+        let mergedCoordinates = [];
 
-        let targetLinks = [];
-        // Draw에 matchingLinks 추가
+        // TODO 주로 수정할 부분
         matchingLinks.forEach(link => {
             let filteredCoordinates = link.geometry.coordinates.filter(coord => {
                 const distance = calculateDistance(coord, nodeCoordinates);
-                return distance > removalToleranceMeters; // 10미터 이내 좌표를 제거
+                return distance > removalToleranceMeters;
             });
 
-            // 노드와 정확히 일치하는 좌표 삭제
+            // 노드 좌표와 일치하는 좌표 제거
             filteredCoordinates = filteredCoordinates.filter(coord => {
                 return !(coord[0] === nodeCoordinates[0] && coord[1] === nodeCoordinates[1]);
             });
 
-            // 필터링된 좌표로 링크를 갱신
-            link.geometry.coordinates = filteredCoordinates;
+            if (mergedCoordinates.length === 0) {
+                mergedCoordinates = filteredCoordinates;
+            } else {
+                const lastCoord = mergedCoordinates[mergedCoordinates.length - 1];
+                const firstCoord = filteredCoordinates[0];
 
-            targetLinks = targetLinks.concat(link);
+                // 두 링크의 끝점이 가까우면 병합
+                if (calculateDistance(lastCoord, firstCoord) <= 20) {
+                    mergedCoordinates = mergedCoordinates.concat(filteredCoordinates.slice(1));
+                } else {
+                    mergedCoordinates = mergedCoordinates.concat(filteredCoordinates);
+                }
+            }
         });
 
-        mergedLinks = mergeLinksByCustomRules(targetLinks);
+        // 새로운 병합된 링크 생성
+        const mergedLink = {
+            type: "Feature",
+            geometry: {
+                type: "LineString",
+                coordinates: mergedCoordinates
+            },
+            properties: {
+                // 원하는 속성 추가
+            }
+        };
 
         let source = map.getSource(LINK_NODE_STATION_SOURCE_ID);
         let geoData = source._options.data.features;
-        // 병합된 링크들을 Draw에 추가
-        mergedLinks.forEach(link => {
+
+        // 기존 링크들 제거
+        matchingLinks.forEach(link => {
             for (let i = 0; i < geoData.length; i++) {
-                let fileName = link.properties.FILE_NAME
+                let fileName = link.properties.FILE_NAME;
                 if (geoData[i].properties[fileName + "_ID"] === link.properties[fileName + "_ID"]) {
-                    geoData.splice(i, 1); // 도형 제거
+                    geoData.splice(i, 1);
                     break;
                 }
             }
-
-            draw.add(link);
         });
+
+        // 병합된 링크 추가
+        draw.add(mergedLink);
 
         // 맵의 소스 데이터 업데이트
         map.getSource(LINK_NODE_STATION_SOURCE_ID).setData({
@@ -3852,7 +3807,7 @@ function mergeIntoNode() {
             features: geoData
         });
     } else {
-        toastOn("병합가능한 링크를 찾지 못했습니다.");
+        toastOn("병합 가능한 링크를 찾지 못했습니다.");
     }
 }
 
