@@ -1161,7 +1161,8 @@ function findProperty(id, type) {
 
 function startViewerMode() {
     toastOn("보기 모드로 전환되었습니다.")
-    $('#distance-btn').show()
+    $("#tab3 > div.tab2-content > div.tool-content").show()
+    $('#tab3 > div.tab2-content > div.tab2-section').hide()
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
     $('#type-select-box').css('display', 'none');
@@ -2751,7 +2752,7 @@ function hideAllTool() {
     $("#node-tools").hide();
     $("#station-tools").hide();
     $("#link-btn-merge").hide();
-    $("#tab3 > div.tab2-content > .tab2-section").hide()
+    $("#tab3 > div.tab2-content > div.tool-content").hide()
 }
 function showLinkTool() {
     hideAllTool();

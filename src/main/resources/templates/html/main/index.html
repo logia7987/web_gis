@@ -57,37 +57,6 @@
                 </select>
             </div>
             <div id="top-tool-box">
-                <div id="link-tools">
-                    <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
-                    <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 삭제" data-bs-original-title="링크 삭제">링크 삭제</button>
-                    <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
-                        <i class="fas fa-undo-alt"></i>
-                        되돌리기
-                    </button>
-                    <button class="top-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
-                </div>
-                <div id="node-tools">
-                    <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
-                    <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="노드 삭제" data-bs-original-title="노드 삭제">노드 삭제</button>
-                    <button class="top-btn" onclick="splitIntoNode()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="이 노드로 링크 분할" data-bs-original-title="이 노드로 링크 분할">선 분할</button>
-                    <button class="top-btn" onclick="mergeIntoNode()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 병합" data-bs-original-title="이 노드로 링크 분할">선 병합</button>
-
-                    <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
-                        <i class="fas fa-undo-alt"></i>
-                        되돌리기
-                    </button>
-                    <button class="top-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
-                </div>
-                <div id="station-tools">
-                    <button class="top-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">객체 추가</button>
-                    <button class="top-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="정류소 삭제" data-bs-original-title="정류소 삭제">정류소 삭제</button>
-
-                    <button class="top-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
-                        <i class="fas fa-undo-alt"></i>
-                        되돌리기
-                    </button>
-                    <button class="top-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
-                </div>
             </div>
 <!--            <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_line top-btn mapbox-ctrl-btn" title="LineString tool (l)"></button>-->
 <!--            <button class="mapbox-gl-draw_ctrl-draw-btn mapbox-gl-draw_polygon top-btn mapbox-ctrl-btn" title="Polygon tool (p)"></button>-->
@@ -176,10 +145,61 @@
             <div class="tool-content">
                 <span>거리 측정</span><button class="tool-btn" id="distance-btn" onclick="checkDistance();">측정</button>
             </div>
-
-            <div class="tab2-section" style="display: none">
-                <input type="number" id="generateNumber">m
-                <button class="top-btn" onclick="generatePoints();" data-bs-placement="bottom" data-bs-toggle="tooltip" data-bs-original-title="선 간격 생성" style="margin-left: 5px; color: #000">생성</button>
+            <div id="link-tools">
+                <div class="tool-content">
+                    <span>객체 추가</span><button class="tool-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">추가</button>
+                </div>
+                <div class="tool-content">
+                    <span>링크 삭제</span><button class="tool-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 삭제" data-bs-original-title="링크 삭제">삭제</button>
+                </div>
+                <div class="tool-content">
+                    <span>되돌리기</span><button class="tool-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기">
+                        <i class="fas fa-undo-alt"></i>
+                    </button>
+                </div>
+                <div class="tool-content">
+                    <span>저장</span><button class="tool-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
+                </div>
+                <div class="tool-content">
+                    <div>
+                        <input type="number" id="generateNumber">m
+                    </div>
+                    <button class="tool-btn" onclick="generatePoints();" data-bs-placement="bottom" data-bs-toggle="tooltip" data-bs-original-title="선 간격 생성">생성</button>
+                </div>
+            </div>
+            <div id="node-tools">
+                <div class="tool-content">
+                    <span>객체 추가</span><button class="tool-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">추가</button>
+                </div>
+                <div class="tool-content">
+                    <span>링크 삭제</span><button class="tool-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="노드 삭제" data-bs-original-title="노드 삭제">삭제</button>
+                </div>
+                <div class="tool-content">
+                    <span>선 분할</span><button class="tool-btn" onclick="splitIntoNode()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="이 노드로 링크 분할" data-bs-original-title="이 노드로 링크 분할">분할</button>
+                </div>
+                <div class="tool-content">
+                    <span>선 병합</span><button class="tool-btn" onclick="mergeIntoNode()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="링크 병합" data-bs-original-title="이 노드로 링크 분할">병합</button>
+                </div>
+                <div class="tool-content">
+                    <span>되돌리기</span><button class="tool-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기"><i class="fas fa-undo-alt"></i></button>
+                </div>
+                <div class="tool-content">
+                    <span>저장</span> <button class="tool-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
+                </div>
+            </div>
+            <div id="station-tools">
+                <div class="tool-content">
+                    <span>객체 추가</span><button class="tool-btn" onclick="openNewFeatureModal()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="객체 추가" data-bs-original-title="객체 추가">추가</button>
+                </div>
+                <div class="tool-content">
+                    <span>링크 삭제</span><button class="tool-btn" onclick="removeFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="노드 삭제" data-bs-original-title="노드 삭제">삭제</button>
+                </div>
+                <div class="tool-content">
+                    <span>되돌리기</span><button class="tool-btn" onclick="undo()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="되돌리기" data-bs-original-title="되돌리기"><i class="fas fa-undo-alt"></i></button>
+                </div>
+                <div class="tool-content">
+                    <span>저장</span> <button class="tool-btn" onclick="updateFeature()" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="저장" data-bs-original-title="저장">저장</button>
+                </div>
             </div>
         </div>
 <!--        <button class="top-btn" onclick="generatePoints(5);" data-bs-placement="bottom" data-bs-toggle="tooltip" aria-label="5M" data-bs-original-title="5M 간격 점생성">5M</button>-->
