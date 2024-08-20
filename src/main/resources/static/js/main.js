@@ -3719,6 +3719,22 @@ function mergeIntoNode() {
         return distance;
     }
 
+    // 두 좌표 간의 각도를 계산하는 함수
+    function calculateBearing(coord1, coord2) {
+        const lat1 = coord1[1] * Math.PI / 180;
+        const lat2 = coord2[1] * Math.PI / 180;
+        const deltaLng = (coord2[0] - coord1[0]) * Math.PI / 180;
+
+        const y = Math.sin(deltaLng) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLng);
+        return Math.atan2(y, x) * 180 / Math.PI; // 각도 (degrees)
+    }
+
+    // 각도가 유사한지 확인하는 함수
+    function areAnglesSimilar(angle1, angle2, tolerance = 5) {
+        return Math.abs(angle1 - angle2) <= tolerance;
+    }
+
     // 각 링크를 순회하며 노드 좌표와 매우 가까운 링크를 찾음
     for (let link of linkFeatures) {
         const linkCoordinates = link.geometry.coordinates;
@@ -3744,6 +3760,7 @@ function mergeIntoNode() {
     if (matchingLinks.length >= 4) {
         console.log("노드와 매우 가까운 링크들:", matchingLinks);
 
+        let targetLinks = [];
         // Draw에 matchingLinks 추가
         matchingLinks.forEach(link => {
             let filteredCoordinates = link.geometry.coordinates.filter(coord => {
@@ -3759,8 +3776,73 @@ function mergeIntoNode() {
             // 필터링된 좌표로 링크를 갱신
             link.geometry.coordinates = filteredCoordinates;
 
-            // 지도에서 지우고 draw에 추가
-            removeFromMap(link);
+            targetLinks = targetLinks.concat(link);
+        });
+
+        // 각도가 같은 링크를 병합
+        let mergedLinks = [];
+
+        while (targetLinks.length > 0) {
+            let currentLink = targetLinks.shift(); // 병합 대상 링크 하나 꺼내기
+            let currentCoordinates = currentLink.geometry.coordinates;
+            let currentAngle = calculateBearing(currentCoordinates[0], currentCoordinates[1]);
+
+            let mergedCoordinates = [...currentCoordinates];
+
+            // 같은 방향의 링크들을 찾음
+            targetLinks = targetLinks.filter(link => {
+                let linkCoordinates = link.geometry.coordinates;
+                let angle = calculateBearing(linkCoordinates[0], linkCoordinates[1]);
+
+                if (areAnglesSimilar(currentAngle, angle)) {
+                    // 두 링크의 좌표를 연결할 때 끝점과 시작점이 맞는지 확인
+                    if (currentCoordinates[currentCoordinates.length - 1][0] === linkCoordinates[0][0] &&
+                        currentCoordinates[currentCoordinates.length - 1][1] === linkCoordinates[0][1]) {
+                        // 링크의 시작점이 현재 링크의 끝점과 연결될 때
+                        mergedCoordinates = mergedCoordinates.concat(linkCoordinates.slice(1));
+                    } else if (currentCoordinates[0][0] === linkCoordinates[linkCoordinates.length - 1][0] &&
+                        currentCoordinates[0][1] === linkCoordinates[linkCoordinates.length - 1][1]) {
+                        // 링크의 끝점이 현재 링크의 시작점과 연결될 때
+                        mergedCoordinates = linkCoordinates.concat(mergedCoordinates.slice(1));
+                    } else {
+                        // 위의 경우가 아니라면, 연결될 수 없는 링크이므로 병합하지 않음
+                        return true;
+                    }
+                    return false; // 병합된 링크는 리스트에서 제거
+                }
+                return true; // 병합되지 않은 링크만 남김
+            });
+
+            // 병합된 좌표로 새 링크 생성
+            mergedLinks.push({
+                type: 'Feature',
+                geometry: {
+                    type: 'LineString',
+                    coordinates: mergedCoordinates
+                },
+                properties: currentLink.properties
+            });
+        }
+
+        let source = map.getSource(LINK_NODE_STATION_SOURCE_ID);
+        let geoData = source._options.data.features;
+        // 병합된 링크들을 Draw에 추가
+        mergedLinks.forEach(link => {
+            for (let i = 0; i < geoData.length; i++) {
+                let fileName = link.properties.FILE_NAME
+                if (geoData[i].properties[fileName + "_ID"] === link.properties[fileName + "_ID"]) {
+                    geoData.splice(i, 1); // 도형 제거
+                    break;
+                }
+            }
+
+            draw.add(link);
+        });
+
+        // 맵의 소스 데이터 업데이트
+        map.getSource(LINK_NODE_STATION_SOURCE_ID).setData({
+            type: 'FeatureCollection',
+            features: geoData
         });
     } else {
         toastOn("병합가능한 링크를 찾지 못했습니다.");
