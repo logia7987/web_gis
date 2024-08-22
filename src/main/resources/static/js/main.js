@@ -3788,7 +3788,7 @@ function mergeIntoNode() {
     }
 
     // 노드와 연결된 링크가 4개 이상인 경우 병합 진행
-    if (matchingLinks.length >= 4) {
+    if (matchingLinks.length === 4) {
         let linkSegments = [];
 
         matchingLinks.forEach(link => {
@@ -3866,6 +3866,8 @@ function mergeIntoNode() {
         });
 
         toastOn("링크가 성공적으로 병합되었습니다.");
+    } else if (matchingLinks.length > 4) {
+        toastOn("근처 링크가 너무 많습니다.");
     } else {
         toastOn("병합 가능한 링크를 찾지 못했습니다.");
     }
