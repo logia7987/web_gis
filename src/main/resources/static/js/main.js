@@ -3729,11 +3729,12 @@ function mergeIntoNode() {
     const nodeCoordinates = nodeFeature.geometry.coordinates;
 
     // 지도에 있는 모든 링크 피처 가져오기
-    const linkFeatures = map.queryRenderedFeatures({ layers: [LINK_LAYER_ID] });
+    const linkFeatures = map.queryRenderedFeatures({layers: [LINK_LAYER_ID]});
 
     let matchingLinks = [];
     const toleranceMeters = 5;
     const removalToleranceMeters = 10;
+    const angleThreshold = 10;
 
     function calculateDistance(coord1, coord2) {
         const R = 6371e3; // 지구 반지름 (미터 단위)
@@ -3747,8 +3748,22 @@ function mergeIntoNode() {
             Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-         // 미터 단위 거리
+        // 미터 단위 거리
         return R * c;
+    }
+
+    function calculateAngle(coord1, coord2, coord3) {
+        const vectorA = [coord1[0] - coord2[0], coord1[1] - coord2[1]];
+        const vectorB = [coord3[0] - coord2[0], coord3[1] - coord2[1]];
+
+        const dotProduct = vectorA[0] * vectorB[0] + vectorA[1] * vectorB[1];
+        const magnitudeA = Math.sqrt(vectorA[0] ** 2 + vectorA[1] ** 2);
+        const magnitudeB = Math.sqrt(vectorB[0] ** 2 + vectorB[1] ** 2);
+
+        const cosineAngle = dotProduct / (magnitudeA * magnitudeB);
+        const angle = Math.acos(cosineAngle);
+
+        return (angle * 180) / Math.PI; // 각도를 라디안에서 도로 변환
     }
 
     // 각 링크를 순회하며 노드 좌표와 매우 가까운 링크를 찾음
@@ -3774,69 +3789,83 @@ function mergeIntoNode() {
 
     // 노드와 연결된 링크가 4개 이상인 경우 병합 진행
     if (matchingLinks.length >= 4) {
-        let mergedCoordinates = [];
+        let linkSegments = [];
 
-        // TODO 주로 수정할 부분
         matchingLinks.forEach(link => {
-            let filteredCoordinates = link.geometry.coordinates.filter(coord => {
+            const linkCoordinates = link.geometry.coordinates;
+
+            // 링크의 좌표 중 노드와 가까운 좌표를 제거
+            const filteredCoordinates = linkCoordinates.filter(coord => {
                 const distance = calculateDistance(coord, nodeCoordinates);
                 return distance > removalToleranceMeters;
             });
 
-            // 노드 좌표와 일치하는 좌표 제거
-            filteredCoordinates = filteredCoordinates.filter(coord => {
-                return !(coord[0] === nodeCoordinates[0] && coord[1] === nodeCoordinates[1]);
-            });
-
-            if (mergedCoordinates.length === 0) {
-                mergedCoordinates = filteredCoordinates;
-            } else {
-                const lastCoord = mergedCoordinates[mergedCoordinates.length - 1];
-                const firstCoord = filteredCoordinates[0];
-
-                // 두 링크의 끝점이 가까우면 병합
-                if (calculateDistance(lastCoord, firstCoord) <= 20) {
-                    mergedCoordinates = mergedCoordinates.concat(filteredCoordinates.slice(1));
-                } else {
-                    mergedCoordinates = mergedCoordinates.concat(filteredCoordinates);
-                }
+            // 링크의 시작과 끝을 추출
+            if (filteredCoordinates.length > 0) {
+                linkSegments.push(filteredCoordinates);
             }
         });
 
-        // 새로운 병합된 링크 생성
-        const mergedLink = {
-            type: "Feature",
-            geometry: {
-                type: "LineString",
-                coordinates: mergedCoordinates
-            },
-            properties: {
-                // 원하는 속성 추가
-            }
-        };
+        if (linkSegments.length < 2) {
+            toastOn("병합 가능한 링크가 충분하지 않습니다.");
+            return;
+        }
 
-        let source = map.getSource(LINK_NODE_STATION_SOURCE_ID);
-        let geoData = source._options.data.features;
+        // 링크 세그먼트를 병합하여 새로운 링크를 생성
+        const newLinks = [];
+
+        // 링크 세그먼트들을 병합하여 두 개의 새로운 링크 생성
+        for (let i = 0; i < linkSegments.length - 1; i++) {
+            const segment1 = linkSegments[i];
+            const segment2 = linkSegments[i + 1];
+
+            if (segment1[segment1.length - 1][0] === nodeCoordinates[0] && segment1[segment1.length - 1][1] === nodeCoordinates[1]) {
+                // 링크 1의 끝과 노드가 일치할 경우
+                newLinks.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "LineString",
+                        coordinates: segment1.concat(segment2)
+                    },
+                    properties: {
+                        // 원하는 속성 추가
+                    }
+                });
+            } else {
+                // 링크 2의 끝과 노드가 일치할 경우
+                newLinks.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "LineString",
+                        coordinates: segment2.concat(segment1)
+                    },
+                    properties: {
+                        // 원하는 속성 추가
+                    }
+                });
+            }
+        }
 
         // 기존 링크들 제거
-        matchingLinks.forEach(link => {
-            for (let i = 0; i < geoData.length; i++) {
+        let source = map.getSource(LINK_NODE_STATION_SOURCE_ID);
+        let geoData = source._options.data.features;
+        geoData = geoData.filter(feature => {
+            return !matchingLinks.some(link => {
                 let fileName = link.properties.FILE_NAME;
-                if (geoData[i].properties[fileName + "_ID"] === link.properties[fileName + "_ID"]) {
-                    geoData.splice(i, 1);
-                    break;
-                }
-            }
+                return feature.properties[fileName + "_ID"] === link.properties[fileName + "_ID"];
+            });
         });
 
-        // 병합된 링크 추가
-        draw.add(mergedLink);
+        // 새로운 링크들 추가
+        newLinks.forEach(link => draw.add(link));
 
         // 맵의 소스 데이터 업데이트
-        map.getSource(LINK_NODE_STATION_SOURCE_ID).setData({
+        source.setData({
             type: 'FeatureCollection',
-            features: geoData
+            features: geoData.concat(newLinks)
         });
+
+        toastOn("링크가 성공적으로 병합되었습니다.");
     } else {
         toastOn("병합 가능한 링크를 찾지 못했습니다.");
     }
