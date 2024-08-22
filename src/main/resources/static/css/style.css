@@ -1070,11 +1070,15 @@ th, td {
 }
 
 .btn-add-point {
-    border : 0
+    line-height: 1;
+    padding: 5px 10px;
+    border: 0;
 }
 
 .btn-remove-point {
-    border : 0
+    line-height: 1;
+    padding: 5px 10px;
+    border: 0;
 }
 
 .tool-content {
@@ -1089,4 +1093,20 @@ th, td {
     font-size: 15px;
     border: 1px solid #dee2e6;
     background-color: white;
+}
+
+#saveBtn {
+    color: #4d4d4d;
+    background-color: unset;
+    border: 1px solid #c6c6c6;
+    padding: 5px 10px;
+    margin: -5px -5px !important;
+    font-size: 14px;
+    line-height: 1.2;
+    display: none;
+    font-weight: 500;
+}
+#saveBtn:hover {
+    background-color: #c6c6c6 !important;
+    color: white;
 }
