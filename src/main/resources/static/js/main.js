@@ -1715,43 +1715,21 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
                 // 시작 노드와 끝 노드 feature 추출 완료. 후 처리를 어떻게 하는지 못여쭈어봄;
                 // console.log('Closest start point node:', startPointNode);
                 // console.log('Closest end point node:', endPointNode);
-            }
-        }
-    });
 
-    map.on('click', function (e) {
-        if (!isEdit()) {
-            let clickedLngLat = e.lngLat;
-            let radiusInMeters = 5;
+                if (!isEdit()) {
+                    if (clickedFeature) {
+                        // 선택 외 객체 스타일 리셋
+                        if (!isSplitLinkNode) {
+                            // resetHighlightedLayerFilters()
+                        }
 
-            // 클릭한 위치를 Turf.js 포인트로 변환
-            let clickedPoint = turf.point([clickedLngLat.lng, clickedLngLat.lat]);
-
-            // 해당 레이어의 모든 피처 가져오기
-            const features = map.queryRenderedFeatures(e.point, {
-                layers: [layerId] // 피처를 검색할 레이어 이름
-            });
-
-            // 가까운 피처 찾기
-            let nearbyFeatures = features.filter(function(feature) {
-                let line = turf.lineString(feature.geometry.coordinates);
-                let distance = turf.pointToLineDistance(clickedPoint, line, {units: 'meters'});
-                return distance <= radiusInMeters;
-            });
-
-            if (nearbyFeatures.length === 0) {
-                // 없을 시 선택 취소
-                map.setFilter(layerId + '-highlighted', ['==', '', '']);
-            } else {
-                // 선택 외 객체 스타일 리셋
-                resetHighlightedLayerFilters();
-
-                let clickedFeature = nearbyFeatures[0];
-                if (clickedFeature) {
-                    let filterName = clickedFeature.properties.FILE_NAME;
-                    // 선택된 피처를 강조하도록 필터 업데이트
-                    if (map.getLayer(layerId + '-highlighted')) {
-                        map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                        let filterName = clickedFeature.properties.FILE_NAME;
+                        // 선택된 피처를 강조하도록 필터 업데이트
+                        if (map.getLayer(layerId + '-highlighted')) {
+                            map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
+                        }
+                    } else {
+                        map.setFilter(layerId + '-highlighted', ['==', '', '']);
                     }
                 }
             }
