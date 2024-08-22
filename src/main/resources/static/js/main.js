@@ -548,7 +548,11 @@ document.addEventListener('contextmenu', function (){
 function changeEditMode() {
     if ( $('#btn-status').text() === '보기 모드') {
         // 편집 모드로 전환
+        map.setFilter(LINK_LAYER_ID + '-highlighted', ['==', 'id', '']);
+        map.setFilter(NODE_LAYER_ID + '-highlighted', ['==', 'id', '']);
         startEditMode()
+        $('.tab').hide()
+        $('#tab3').show();
     } else if ( $('#btn-status').text() === '편집 모드') {
         hideAllTool();
         // 보기 모드로 전환
@@ -1581,7 +1585,7 @@ function setLayerTypeIconAndLabel(layerId, sourceId, featureId, symbolImage){
                 map.setFilter(layerId + '-highlighted', ['==', '', '']);
             } else {
                 // 선택 외 객체 스타일 리셋
-                // resetHighlightedLayerFilters()
+                resetHighlightedLayerFilters()
 
                 var clickedFeature = features[0];
                 if (clickedFeature) {
@@ -1711,21 +1715,43 @@ function setLayerTypeLine(layerId, sourceId, featureId, popupFlag){
                 // 시작 노드와 끝 노드 feature 추출 완료. 후 처리를 어떻게 하는지 못여쭈어봄;
                 // console.log('Closest start point node:', startPointNode);
                 // console.log('Closest end point node:', endPointNode);
+            }
+        }
+    });
 
-                if (!isEdit()) {
-                    if (clickedFeature) {
-                        // 선택 외 객체 스타일 리셋
-                        if (!isSplitLinkNode) {
-                            // resetHighlightedLayerFilters()
-                        }
+    map.on('click', function (e) {
+        if (!isEdit()) {
+            let clickedLngLat = e.lngLat;
+            let radiusInMeters = 5;
 
-                        let filterName = clickedFeature.properties.FILE_NAME;
-                        // 선택된 피처를 강조하도록 필터 업데이트
-                        if (map.getLayer(layerId + '-highlighted')) {
-                            map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
-                        }
-                    } else {
-                        map.setFilter(layerId + '-highlighted', ['==', '', '']);
+            // 클릭한 위치를 Turf.js 포인트로 변환
+            let clickedPoint = turf.point([clickedLngLat.lng, clickedLngLat.lat]);
+
+            // 해당 레이어의 모든 피처 가져오기
+            const features = map.queryRenderedFeatures(e.point, {
+                layers: [layerId] // 피처를 검색할 레이어 이름
+            });
+
+            // 가까운 피처 찾기
+            let nearbyFeatures = features.filter(function(feature) {
+                let line = turf.lineString(feature.geometry.coordinates);
+                let distance = turf.pointToLineDistance(clickedPoint, line, {units: 'meters'});
+                return distance <= radiusInMeters;
+            });
+
+            if (nearbyFeatures.length === 0) {
+                // 없을 시 선택 취소
+                map.setFilter(layerId + '-highlighted', ['==', '', '']);
+            } else {
+                // 선택 외 객체 스타일 리셋
+                resetHighlightedLayerFilters();
+
+                let clickedFeature = nearbyFeatures[0];
+                if (clickedFeature) {
+                    let filterName = clickedFeature.properties.FILE_NAME;
+                    // 선택된 피처를 강조하도록 필터 업데이트
+                    if (map.getLayer(layerId + '-highlighted')) {
+                        map.setFilter(layerId + '-highlighted', ['==', filterName + "_ID", clickedFeature.properties[filterName + "_ID"]]);
                     }
                 }
             }
@@ -1829,135 +1855,140 @@ function updateHighlightLayer(snapTargets) {
 function generatePoints() {
     let minDistance = 1
     let segmentLength = $('#generateNumber').val()
-    let coordinates;
-    const targetFeature = draw.getAll().features[0];
-    const featureType = targetFeature.geometry.type;
 
-    // 선의 좌표 추출
-    if (featureType === "MultiLineString") {
-        coordinates = targetFeature.geometry.coordinates;
-    } else if (featureType === "LineString") {
-        coordinates = [targetFeature.geometry.coordinates]; // MultiLineString처럼 처리
-    }
+    if (segmentLength > 0) {
+        let coordinates;
+        const targetFeature = draw.getAll().features[0];
+        const featureType = targetFeature.geometry.type;
 
-    const newFeatures = [];
-    const R = 6371000; // 지구의 반지름(미터 단위)
+        // 선의 좌표 추출
+        if (featureType === "MultiLineString") {
+            coordinates = targetFeature.geometry.coordinates;
+        } else if (featureType === "LineString") {
+            coordinates = [targetFeature.geometry.coordinates]; // MultiLineString처럼 처리
+        }
 
-    // 도와 관련된 함수들
-    function toRadians(degrees) {
-        return degrees * Math.PI / 180;
-    }
+        const newFeatures = [];
+        const R = 6371000; // 지구의 반지름(미터 단위)
 
-    function haversineDistance(coord1, coord2) {
-        const lat1 = toRadians(coord1[1]);
-        const lat2 = toRadians(coord2[1]);
-        const dLat = lat2 - lat1;
-        const dLng = toRadians(coord2[0] - coord1[0]);
+        // 도와 관련된 함수들
+        function toRadians(degrees) {
+            return degrees * Math.PI / 180;
+        }
 
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        function haversineDistance(coord1, coord2) {
+            const lat1 = toRadians(coord1[1]);
+            const lat2 = toRadians(coord2[1]);
+            const dLat = lat2 - lat1;
+            const dLng = toRadians(coord2[0] - coord1[0]);
 
-        return R * c;
-    }
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1) * Math.cos(lat2) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    function interpolatePoint(coord1, coord2, factor) {
-        return [
-            coord1[0] + (coord2[0] - coord1[0]) * factor,
-            coord1[1] + (coord2[1] - coord1[1]) * factor
-        ];
-    }
+            return R * c;
+        }
 
-    function createPointsFromCoordinates(coords) {
-        let points = [];
-        let currentPoint = coords[0];
-        let remainingDistance = segmentLength;
-        let accumulatedDistance = 0;
-        points.push(currentPoint); // 첫 번째 점 추가
+        function interpolatePoint(coord1, coord2, factor) {
+            return [
+                coord1[0] + (coord2[0] - coord1[0]) * factor,
+                coord1[1] + (coord2[1] - coord1[1]) * factor
+            ];
+        }
 
-        for (let i = 1; i < coords.length; i++) {
-            const nextPoint = coords[i];
-            let segmentDistance = haversineDistance(currentPoint, nextPoint);
+        function createPointsFromCoordinates(coords) {
+            let points = [];
+            let currentPoint = coords[0];
+            let remainingDistance = segmentLength;
+            let accumulatedDistance = 0;
+            points.push(currentPoint); // 첫 번째 점 추가
 
-            // 첫 점과 다음 점 사이의 변수의 거리만큼 점 추가
-            while (segmentDistance >= remainingDistance) {
-                const factor = remainingDistance / segmentDistance;
-                let newPoint = interpolatePoint(currentPoint, nextPoint, factor);
+            for (let i = 1; i < coords.length; i++) {
+                const nextPoint = coords[i];
+                let segmentDistance = haversineDistance(currentPoint, nextPoint);
 
-                // 새로 생성된 점과 마지막으로 추가된 점 간의 거리 체크
-                if (points.length === 0 || haversineDistance(points[points.length - 1], newPoint) > minDistance) {
-                    points.push(newPoint); // 새로 생성된 점 추가
+                // 첫 점과 다음 점 사이의 변수의 거리만큼 점 추가
+                while (segmentDistance >= remainingDistance) {
+                    const factor = remainingDistance / segmentDistance;
+                    let newPoint = interpolatePoint(currentPoint, nextPoint, factor);
+
+                    // 새로 생성된 점과 마지막으로 추가된 점 간의 거리 체크
+                    if (points.length === 0 || haversineDistance(points[points.length - 1], newPoint) > minDistance) {
+                        points.push(newPoint); // 새로 생성된 점 추가
+                    }
+
+                    accumulatedDistance += remainingDistance;
+                    segmentDistance -= remainingDistance;
+                    remainingDistance = segmentLength;
+                    currentPoint = newPoint;
                 }
 
-                accumulatedDistance += remainingDistance;
-                segmentDistance -= remainingDistance;
-                remainingDistance = segmentLength;
-                currentPoint = newPoint;
+                accumulatedDistance += segmentDistance;
+                remainingDistance -= segmentDistance;
+                currentPoint = nextPoint;
+                points.push(currentPoint); // 다음 원래의 점 추가
             }
 
-            accumulatedDistance += segmentDistance;
-            remainingDistance -= segmentDistance;
-            currentPoint = nextPoint;
-            points.push(currentPoint); // 다음 원래의 점 추가
+            // 마지막 점이 원래 선의 마지막 점과 일치하지 않으면 추가
+            if (points[points.length - 1][0] !== coords[coords.length - 1][0] ||
+                points[points.length - 1][1] !== coords[coords.length - 1][1]) {
+                points.push(coords[coords.length - 1]);
+            }
+
+            return points;
+
         }
+            // 각 LineString에 대해 점을 생성
+        coordinates.forEach((lineCoords) => {
+            let points = createPointsFromCoordinates(lineCoords);
 
-        // 마지막 점이 원래 선의 마지막 점과 일치하지 않으면 추가
-        if (points[points.length - 1][0] !== coords[coords.length - 1][0] ||
-            points[points.length - 1][1] !== coords[coords.length - 1][1]) {
-            points.push(coords[coords.length - 1]);
-        }
+            // 새로운 피처 객체 생성
+            const newFeature = {
+                type: 'Feature',
+                id: Date.now(), // 임시아이디 부여 (현재 시간 사용)
+                properties: { ...targetFeature.properties },
+                geometry: {
+                    type: 'LineString',
+                    coordinates: points
+                }
+            };
 
-        return points;
-    }
-
-    // 각 LineString에 대해 점을 생성
-    coordinates.forEach((lineCoords) => {
-        let points = createPointsFromCoordinates(lineCoords);
-
-        // 새로운 피처 객체 생성
-        const newFeature = {
-            type: 'Feature',
-            id: Date.now(), // 임시아이디 부여 (현재 시간 사용)
-            properties: { ...targetFeature.properties },
-            geometry: {
-                type: 'LineString',
-                coordinates: points
-            }
-        };
-
-        newFeatures.push(newFeature);
-    });
-
-    // MultiLineString 처리: 여러 LineString 피처를 하나의 MultiLineString으로 병합
-    if (featureType === "MultiLineString") {
-        // 기존 MultiLineString 피처의 모든 선을 포함한 새로운 MultiLineString 피처 생성
-        const mergedFeature = {
-            type: 'Feature',
-            id: Date.now(), // 임시아이디 부여 (현재 시간 사용)
-            properties: { ...targetFeature.properties },
-            geometry: {
-                type: 'MultiLineString',
-                coordinates: newFeatures.map(f => f.geometry.coordinates)
-            }
-        };
-
-        newFeatures.length = 0; // 기존 피처 배열을 비우고 병합된 피처를 추가
-        newFeatures.push(mergedFeature);
-    }
-
-    // 기존 선택된 선을 삭제
-    draw.deleteAll();
-
-    // 새로운 피처를 Draw에 추가
-    newFeatures.forEach((feature) => {
-        const newFeatureIds = draw.add(feature);
-        draw.changeMode('simple_select', {
-            featureIds: newFeatureIds.map(f => f)
+            newFeatures.push(newFeature);
         });
-    });
 
-    saveState();
+            // MultiLineString 처리: 여러 LineString 피처를 하나의 MultiLineString으로 병합
+        if (featureType === "MultiLineString") {
+            // 기존 MultiLineString 피처의 모든 선을 포함한 새로운 MultiLineString 피처 생성
+            const mergedFeature = {
+                type: 'Feature',
+                id: Date.now(), // 임시아이디 부여 (현재 시간 사용)
+                properties: { ...targetFeature.properties },
+                geometry: {
+                    type: 'MultiLineString',
+                    coordinates: newFeatures.map(f => f.geometry.coordinates)
+                },
+            };
+
+            newFeatures.length = 0; // 기존 피처 배열을 비우고 병합된 피처를 추가
+            newFeatures.push(mergedFeature);
+        }
+
+        // 기존 선택된 선을 삭제
+        draw.deleteAll();
+
+            // 새로운 피처를 Draw에 추가
+        newFeatures.forEach((feature) => {
+            const newFeatureIds = draw.add(feature);
+            draw.changeMode('simple_select', {
+                featureIds: newFeatureIds.map(f => f)
+            });
+        });
+
+        saveState();
+    } else {
+        toastOn('0보다 큰 수는 입력 할수 없습니다')
+    }
 }
 
 
