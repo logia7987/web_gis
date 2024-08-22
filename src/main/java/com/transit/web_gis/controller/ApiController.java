@@ -459,7 +459,7 @@ public class ApiController {
 
 
     @ResponseBody
-    @RequestMapping(value = "/getShpStyle", method = RequestMethod.POST)
+//    @RequestMapping(value = "/getShpStyle", method = RequestMethod.POST)
     public Map<String, Object> getShpStyle(@RequestParam("fileName") String fileName) {
         Map<String, Object> resultMap = new HashMap<>();
         Map<String, Object> commandMap = new HashMap<>();

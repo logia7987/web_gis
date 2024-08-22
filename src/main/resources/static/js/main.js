@@ -281,27 +281,27 @@ function getShpData(obj) {
 
     // DB에서 불러올 명단에 추가
     if (!tNameArr.includes(fileName)) {
-        $.ajax({
-            url : '/api/getShpStyle',
-            type : 'POST',
-            data : {
-                fileName : fileName
-            },
-            success : function (data){
-                if (!shpStyleList[fileName]) {
-                    shpStyleList[fileName] = {};
-                }
-
-                shpStyleList[fileName]['shpType'] = data.shpType
-                shpStyleList[fileName]['color'] = data.color.COLOR
-                shpStyleList[fileName]['weight'] = data.weight.WEIGHT
-                shpStyleList[fileName]['fontColor'] = data.fontColor.FONT_COLOR
-                shpStyleList[fileName]['fontSize'] = data.fontSize.FONT_SIZE
-            },
-            error : function (error){
-                console.log(error)
-            }
-        })
+        // $.ajax({
+        //     url : '/api/getShpStyle',
+        //     type : 'POST',
+        //     data : {
+        //         fileName : fileName
+        //     },
+        //     success : function (data){
+        //         if (!shpStyleList[fileName]) {
+        //             shpStyleList[fileName] = {};
+        //         }
+        //
+        //         shpStyleList[fileName]['shpType'] = data.shpType
+        //         shpStyleList[fileName]['color'] = data.color.COLOR
+        //         shpStyleList[fileName]['weight'] = data.weight.WEIGHT
+        //         shpStyleList[fileName]['fontColor'] = data.fontColor.FONT_COLOR
+        //         shpStyleList[fileName]['fontSize'] = data.fontSize.FONT_SIZE
+        //     },
+        //     error : function (error){
+        //         console.log(error)
+        //     }
+        // })
         tNameArr.push(fileName);
         $(obj).find("span:eq(1)").show();
 
