@@ -2758,6 +2758,7 @@ function splitLine() {
 
 function hideAllTool() {
     $("#link-tools").hide();
+    $("#saveBtn").hide();
     $("#node-tools").hide();
     $("#station-tools").hide();
     $("#link-btn-merge").hide();
@@ -2766,24 +2767,27 @@ function hideAllTool() {
 function showLinkTool() {
     hideAllTool();
     $("#link-tools").show();
+    $("#saveBtn").show();
     $("#tab3 > div.tab2-content > .tab2-section").show()
 }
 function showNodeTool() {
     hideAllTool();
+    $("#saveBtn").show();
     $("#node-tools").show();
 }
 function showStationTool() {
     hideAllTool();
+    $("#saveBtn").show();
     $("#station-tools").show();
 }
 
 function createInfoWindowContent(lngLat) {
         let html = `
         <div style="display: flex">
-            <span style="cursor: pointer;">절점</span>
-            <hr style="width: 60px; margin: 10px 5px;">
+            <span style="margin-left: -5px; cursor: pointer;">절점</span>
+            <hr style="width: 70px; margin: 10px -5px 10px 5px;">
         </div>
-        <div style="display: flex; gap: 10px; padding : 5px">
+        <div style="display: flex; gap: 5px; margin-top: 5px;">
             <button class="btn-add-point">추가</button>
             <button class="btn-remove-point">삭제</button> 
         </div>`;
@@ -3564,6 +3568,7 @@ function splitIntoNode() {
         const features = draw.getAll().features;
 
         userSelectedLinks.forEach(link => {
+            console.log("Link ID:", link.id);
             const linkFeature = features.find(f => f.id === link.id);
             if (!linkFeature) return;
 
@@ -3655,13 +3660,14 @@ function removeFromMap(feature) {
     for (let i = 0; i < geoData.length; i++) {
         let fileName = feature.properties.FILE_NAME
         if (geoData[i].properties[fileName + "_ID"] === feature.properties[fileName + "_ID"]) {
+            feature = geoData[i]
+            feature.id = draw.getAll().features.length + 1; // 임시 ID 부여
             geoData.splice(i, 1); // 도형 제거
             break;
         }
     }
 
-    // 주어진 속성의 새로운 도형을 Draw에 추가
-    feature.id = draw.getAll().features.length + 1; // 임시 ID 부여
+    // 주어진 속성의 새로운 도형을 Draw에 추
 
     draw.add(feature);
 
