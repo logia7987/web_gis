@@ -3717,7 +3717,10 @@ function mergeIntoNode() {
     let matchingLinks = [];
     const toleranceMeters = 5;
     const removalToleranceMeters = 10;
-    const angleThreshold = 10;
+
+    function coordToString(coord) {
+        return `${coord[0].toFixed(6)},${coord[1].toFixed(6)}`;
+    }
 
     function calculateDistance(coord1, coord2) {
         const R = 6371e3; // 지구 반지름 (미터 단위)
@@ -3735,19 +3738,35 @@ function mergeIntoNode() {
         return R * c;
     }
 
-    function calculateAngle(coord1, coord2, coord3) {
-        const vectorA = [coord1[0] - coord2[0], coord1[1] - coord2[1]];
-        const vectorB = [coord3[0] - coord2[0], coord3[1] - coord2[1]];
-
-        const dotProduct = vectorA[0] * vectorB[0] + vectorA[1] * vectorB[1];
-        const magnitudeA = Math.sqrt(vectorA[0] ** 2 + vectorA[1] ** 2);
-        const magnitudeB = Math.sqrt(vectorB[0] ** 2 + vectorB[1] ** 2);
-
-        const cosineAngle = dotProduct / (magnitudeA * magnitudeB);
-        const angle = Math.acos(cosineAngle);
-
-        return (angle * 180) / Math.PI; // 각도를 라디안에서 도로 변환
+    function calculateMidPoint(coord1, coord2) {
+        return [
+            (coord1[0] + coord2[0]) / 2,
+            (coord1[1] + coord2[1]) / 2
+        ];
     }
+
+    // 기준 노드의 반대편 마지막 좌표를 찾는 함수
+    function findFarthestCoordinate(link, nodeCoordinates) {
+        const linkCoordinates = link.geometry.coordinates;
+        let maxDistance = -Infinity;
+        let farthestCoordinate = null;
+
+        for (let coord of linkCoordinates) {
+            const distance = calculateDistance(coord, nodeCoordinates);
+            if (distance > maxDistance) {
+                maxDistance = distance;
+                farthestCoordinate = coord;
+            }
+        }
+        return farthestCoordinate;
+    }
+
+    // 좌표 목록에서 중복된 값을 제거하는 함수
+    function removeDuplicateCoordinates(coords) {
+        const uniqueCoords = new Set(coords.map(coordToString));
+        return Array.from(uniqueCoords).map(coordStr => coordStr.split(',').map(Number));
+    }
+
 
     // 각 링크를 순회하며 노드 좌표와 매우 가까운 링크를 찾음
     for (let link of linkFeatures) {
@@ -3773,9 +3792,31 @@ function mergeIntoNode() {
     // 노드와 연결된 링크가 4개 이상인 경우 병합 진행
     if (matchingLinks.length === 4) {
         let linkSegments = [];
+        let standardPoints = [];
 
         matchingLinks.forEach(link => {
             const linkCoordinates = link.geometry.coordinates;
+
+            let closestIndex = -1;
+            let minDistance = Infinity;
+
+            // 노드와 가장 가까운 좌표의 인덱스를 찾기
+            for (let i = 0; i < linkCoordinates.length; i++) {
+                const distance = calculateDistance(linkCoordinates[i], nodeCoordinates);
+
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestIndex = i;
+                }
+            }
+
+            // 가장 가까운 좌표의 전 또는 후의 좌표 정보를 추출하여 standardPoints에 저장
+            if (closestIndex > 0) {
+                standardPoints.push(linkCoordinates[closestIndex - 1]); // 전 인덱스 좌표
+            }
+            if (closestIndex < linkCoordinates.length - 1) {
+                standardPoints.push(linkCoordinates[closestIndex + 1]); // 후 인덱스 좌표
+            }
 
             // 링크의 좌표 중 노드와 가까운 좌표를 제거
             const filteredCoordinates = linkCoordinates.filter(coord => {
@@ -3794,40 +3835,69 @@ function mergeIntoNode() {
             return;
         }
 
-        // 링크 세그먼트를 병합하여 새로운 링크를 생성
-        const newLinks = [];
+        // standardPoints에 있는 좌표들을 사용해 사각형을 구성할 점들 계산
+        standardPoints.push(standardPoints[0])
+        let squarePoints = [];
 
-        // 링크 세그먼트들을 병합하여 두 개의 새로운 링크 생성
-        for (let i = 0; i < linkSegments.length - 1; i++) {
-            const segment1 = linkSegments[i];
-            const segment2 = linkSegments[i + 1];
+        // 좌표들 사이의 중간점을 계산하여 추가
+        for (let i = 0; i < standardPoints.length - 1; i++) {
+            let nextIndex = (i + 1) % standardPoints.length;
+            let midPoint = calculateMidPoint(standardPoints[i], standardPoints[nextIndex]);
+            squarePoints.push(midPoint);
+        }
 
-            if (segment1[segment1.length - 1][0] === nodeCoordinates[0] && segment1[segment1.length - 1][1] === nodeCoordinates[1]) {
-                // 링크 1의 끝과 노드가 일치할 경우
-                newLinks.push({
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: segment1.concat(segment2)
-                    },
-                    properties: {
-                        // 원하는 속성 추가
-                    }
-                });
-            } else {
-                // 링크 2의 끝과 노드가 일치할 경우
-                newLinks.push({
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: segment2.concat(segment1)
-                    },
-                    properties: {
-                        // 원하는 속성 추가
-                    }
-                });
+        const oppositeEndCoordinates = matchingLinks.map(link => findFarthestCoordinate(link, nodeCoordinates));
+        const uniqueOppositeEndCoordinates = removeDuplicateCoordinates(oppositeEndCoordinates);
+
+        console.log(uniqueOppositeEndCoordinates);
+
+        // todo 여기서 비교하여 필요한 정보를 추출
+        let pointsToRemove = [];
+        uniqueOppositeEndCoordinates.forEach(endCoord => {
+            let closestCoord = null;
+            let minDistance = Infinity;
+
+            squarePoints.forEach(point => {
+                let distance = calculateDistance(endCoord, point);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestCoord = point;
+                }
+            });
+
+            // 가장 가까운 좌표를 삭제할 목록에 추가
+            if (closestCoord) {
+                pointsToRemove.push(closestCoord);
+            }
+        });
+
+        // 중복 제거 후 실제 squarePoints에서 삭제
+        const uniquePointsToRemove = removeDuplicateCoordinates(pointsToRemove);
+        uniquePointsToRemove.forEach(coordToRemove => {
+            squarePoints = squarePoints.filter(point => coordToString(point) !== coordToString(coordToRemove));
+        });
+
+
+        // squarePoints.forEach(point => {
+        //     uniqueOppositeEndCoordinates.forEach(endCoord => {
+        //         let distance = calculateDistance(point, endCoord);
+        //         console.log(`좌표: ${point}, 기준 노드와 가장 먼 좌표: ${endCoord}, 거리: ${distance}`);
+        //     });
+        // });
+
+        // 테스트 결과 확인 용 draw
+        let testData = {
+            type: "Feature",
+                geometry: {
+            type: "LineString",
+                coordinates: squarePoints
+            },
+            properties: {
+                // 원하는 속성 추가
             }
         }
+
+        draw.add(testData)
 
         // 기존 링크들 제거
         let source = map.getSource(LINK_NODE_STATION_SOURCE_ID);
@@ -3837,15 +3907,6 @@ function mergeIntoNode() {
                 let fileName = link.properties.FILE_NAME;
                 return feature.properties[fileName + "_ID"] === link.properties[fileName + "_ID"];
             });
-        });
-
-        // 새로운 링크들 추가
-        newLinks.forEach(link => draw.add(link));
-
-        // 맵의 소스 데이터 업데이트
-        source.setData({
-            type: 'FeatureCollection',
-            features: geoData.concat(newLinks)
         });
 
         toastOn("링크가 성공적으로 병합되었습니다.");
