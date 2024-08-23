@@ -3747,7 +3747,6 @@ function mergeIntoNode() {
 
     let matchingLinks = [];
     const toleranceMeters = 5;
-    const removalToleranceMeters = 10;
 
     function coordToString(coord) {
         return `${coord[0].toFixed(6)},${coord[1].toFixed(6)}`;
@@ -3810,6 +3809,9 @@ function mergeIntoNode() {
         });
     }
 
+    const zoomLevel = map.getZoom();
+    const adjustedTolerance = toleranceMeters / (zoomLevel / 10);
+
     // 각 링크를 순회하며 노드 좌표와 매우 가까운 링크를 찾음
     for (let link of linkFeatures) {
         const linkCoordinates = link.geometry.coordinates;
@@ -3824,7 +3826,7 @@ function mergeIntoNode() {
         for (let coord of linkCoordinates) {
             const distance = calculateDistance(coord, nodeCoordinates);
 
-            if (distance <= toleranceMeters) {
+            if (distance <= adjustedTolerance) {
                 matchingLinks.push(link);
                 break; // 일치하는 링크를 찾으면 내부 반복 종료
             }
@@ -3960,6 +3962,8 @@ function mergeIntoNode() {
             type: 'FeatureCollection',
             features: geoData
         });
+
+        console.log(matchingLinks)
 
         toastOn("링크가 성공적으로 병합되었습니다.");
     } else if (matchingLinks.length > 4) {
