@@ -38,18 +38,17 @@ import java.util.*;
 @Service
 public class ShapeService {
 
-    private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
-    private static final File geoDir = new File("C:\\mapbox\\geoJson");
-
     // EPSG:2097 (Korean Transverse Mercator) PROJ 문자열 정의
     private static final String PROJ_KTM = "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 +x_0=200000 +y_0=500000 +ellps=bessel +units=m +no_defs +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43";
 
     // EPSG:4326 (WGS 84) PROJ 문자열 정의
     private static final String PROJ_WGS84 = "+proj=longlat +datum=WGS84 +no_defs";
 
-    // 리눅스 경로
+//     리눅스 경로
 //    private static final File tempDir = new File("/app/shapefile_temp");
 //    private static final File geoDir = new File("/app/geoJson");
+        private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
+    private static final File geoDir = new File("C:\\mapbox\\geoJson");
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

@@ -39,6 +39,7 @@ public class MainController {
     private ShapeService shapeService;
 
     private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
+//    private static final File tempDir = new File("/app/shapefile_temp");
 
     @GetMapping("/")
     public String mainView(Model model) {

@@ -2404,7 +2404,7 @@ function addShpList() {
     // 페이징 UI 업데이트
     updatePagingUI();
 
-    $(".tab-links:eq(0)").click()
+    $(".tab-links:eq(1)").click()
 }
 
 function shpPropertyAllChecked() {
@@ -3030,16 +3030,30 @@ function uploadShpTable(flag) {
             },
             success : function (result){
                 if (result.result === "success") {
-                    let html = '<a href="#" data-table-name="'+fileNm+'" onclick="getShpData(this)"><span>'+fileNm+'</span>' +
-                        '<span class="option-selected" ' +
-                        'data-bs-placement="right" data-bs-toggle="tooltip" title="불러온 파일" >' +
-                        '<i class="fas fa-check"></i></span></a>'
+
+                    let html = '<div class="table-div" data-table-name="'+fileNm+'" onclick="getShpData(this)">'
+
+                    let dataType = loadData.data.features[0].geometry.type;
+                    if (dataType === 'Point') {
+                        html += '<i class= "fa-brands fa-hashnode"aria-hidden="true"></i>'
+                    } else if (dataType.indexOf("LineString") > -1) {
+                        html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
+                    } else {
+                        html += '<i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>'
+                    }
+
+                    html += '<span class="table-name">'+fileNm+'</span>'
+                    html += '<span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" aria-label="불러온 파일" data-bs-original-title="불러온 파일">'
+                    html += '<i class="fas fa-check" aria-hidden="true"></i>'
+                    html += '</span>'
+                    html += '<div class="table-row"></div>'
+                    html += '</div>'
 
                     clearShpList();
 
                     if ($("[data-table-name='"+fileNm+"']").length === 0) {
-                        $("body > header > div > div.custom-select > div.options").append(html);
-                        $("body > header > div > div.custom-select > div.options a:last-child").click();
+                        $(".attr-list").append(html);
+                        $(".table-div:last-child").click();
                     } else {
                         if (!$("[data-table-name='"+fileNm+"']").find(".option-selected").is(":visible")) {
                             $("[data-table-name='"+fileNm+"']").click();
@@ -3047,6 +3061,9 @@ function uploadShpTable(flag) {
                     }
 
                     toastOn("성공적으로 저장되었습니다.");
+
+                    $(".tab-links:eq(0)").click();
+
                 } else if (result.message != "" || flag === false) {
                     // toastOn(result.message);
                     $("#modal_confirmFile").modal('show');

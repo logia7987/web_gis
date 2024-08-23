@@ -604,7 +604,6 @@ public class ApiController {
                 } else if ("LineString".equals(type)) {
                     List<List<Double>> coordinates = (List<List<Double>>) geometry.get("coordinates");
 
-                    System.out.println(coordinates.toString());
                     insertLineString(fileName, idColumn, newId, properties, coordinates);
                     resultMap.put("result", "success");
                 } else {
