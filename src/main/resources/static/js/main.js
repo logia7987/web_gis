@@ -3578,7 +3578,6 @@ function splitIntoNode() {
         const features = draw.getAll().features;
 
         userSelectedLinks.forEach(link => {
-            console.log("Link ID:", link.id);
             const linkFeature = features.find(f => f.id === link.id);
             if (!linkFeature) return;
 
@@ -3670,7 +3669,12 @@ function removeFromMap(feature) {
     for (let i = 0; i < geoData.length; i++) {
         let fileName = feature.properties.FILE_NAME
         if (geoData[i].properties[fileName + "_ID"] === feature.properties[fileName + "_ID"]) {
-            feature.geometry.coordinates = geoData[i].geometry.coordinates[0]
+            if (geoData[i].geometry.coordinates.length > 1) {
+                feature.geometry.coordinates = geoData[i].geometry.coordinates
+            } else {
+                feature.geometry.coordinates = geoData[i].geometry.coordinates[0]
+            }
+
             geoData.splice(i, 1); // 도형 제거
             break;
         }
