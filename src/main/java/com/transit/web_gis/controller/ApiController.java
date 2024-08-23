@@ -574,6 +574,17 @@ public class ApiController {
 
             jdbcTemplate.update(sql);
 
+            if (properties.containsKey("DELETE_ID")) {
+                sql = String.format(
+                        "DELETE FROM TRANSIT.%s WHERE %s = %s",
+                        fileName,
+                        idColumn,
+                        properties.get("DELETE_ID")
+                );
+
+                jdbcTemplate.update(sql);
+            }
+
             // MultiLineString 처리
             Object geometryObj = aFeature.get("geometry");
 
@@ -589,6 +600,12 @@ public class ApiController {
                         insertLineString(fileName, idColumn, newId, properties, coordinates);
                         newId++; // 새로운 ID 생성
                     }
+                    resultMap.put("result", "success");
+                } else if ("LineString".equals(type)) {
+                    List<List<Double>> coordinates = (List<List<Double>>) geometry.get("coordinates");
+
+                    System.out.println(coordinates.toString());
+                    insertLineString(fileName, idColumn, newId, properties, coordinates);
                     resultMap.put("result", "success");
                 } else {
                     // 처리할 수 없는 형식 처리
@@ -612,7 +629,7 @@ public class ApiController {
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
             String key = entry.getKey();
             System.out.println(key);
-            if (key.equals("featureId") || key.equals("emptyLabel") || key.equals("label") || key.equals(idColumn)) {
+            if (key.equals("featureId") || key.equals("emptyLabel") || key.equals("label") || key.equals(idColumn) || key.equals("DELETE_ID")) {
                 continue;
             }
 

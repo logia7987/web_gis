@@ -3905,6 +3905,10 @@ function mergeIntoNode() {
         const mergedLink1 = mergeLinks(closestLinks[0][0], closestLinks[0][1]);
         const mergedLink2 = mergeLinks(closestLinks[1][0], closestLinks[1][1]);
 
+        let fileName = closestLinks[0][1].properties.FILE_NAME;
+
+        closestLinks[0][0].properties.DELETE_ID = closestLinks[0][1].properties[fileName + "_ID"];
+        closestLinks[1][0].properties.DELETE_ID = closestLinks[1][1].properties[fileName + "_ID"];
         let mergeData = {
             type: "Feature",
             geometry: {
