@@ -9,7 +9,7 @@
 }
 
 #frmFile {
-    border-radius: 10px;
+    border-radius: 0 0 10px 10px;
     overflow: auto;
     border: 1px solid #c6c6c6;
     height: 200px;
@@ -912,10 +912,10 @@ th, td {
 }
 
 .select-shape-area {
+    margin-bottom: -1px;
     align-items: center;
     display: flex;
     justify-content: center;
-    margin-top: 10px;
     flex-direction: column;
 }
 
@@ -941,9 +941,12 @@ th, td {
 }
 
 .radio-label {
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+    width: 100%;
     color: #020202;
     font-size: 15px;
-    margin-right: 10px;
 }
 
 .radio-button > label {
@@ -962,7 +965,7 @@ th, td {
     background-color: unset;
     border: 1px solid #c6c6c6;
     border-right: none;
-    height: 75px;
+    height: 50px;
     font-weight: 500;
 }
 
@@ -1007,12 +1010,16 @@ th, td {
 }
 
 #mouse_info {
+    font-size: 15px;
     position: absolute;
     bottom: 0;
     right: 395px;
-    background-color: #fff;
-    padding: 5px;
+    background-color: #020202;
+    opacity: 0.5;
+    padding: 5px 10px;
+    color: white;
     z-index: 100;
+
 }
 
 .tab2-content {

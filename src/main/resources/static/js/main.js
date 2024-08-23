@@ -317,6 +317,10 @@ function getShpData(obj) {
         $(obj).find("span:eq(1)").hide();
         $("#TR_"+fileName).remove()
 
+        if ($("#TR_LINK").length === 0) {
+            $("#empty-layerOption").show();
+        }
+
         toastOn("DB에서 "+ fileName + " 을(를) 숨깁니다.")
     }
 
@@ -1167,6 +1171,10 @@ function startViewerMode() {
     toastOn("보기 모드로 전환되었습니다.")
     $("#tab3 > div.tab2-content > div.tool-content").show()
     $('#tab3 > div.tab2-content > div.tab2-section').hide()
+    $(".tab-links").removeClass("active");
+    $(".tab-menu > div:nth-child(1)").addClass("active");
+    $("#tab3").hide();
+    $("#tab1").show();
     $('.mapboxgl-ctrl-group').hide()
     $('#btn-status').text("보기 모드")
     $('#type-select-box').css('display', 'none');
@@ -1198,6 +1206,8 @@ function startViewerMode() {
 function startEditMode() {
     toastOn("편집모드로 전환되었습니다.")
     $('#tab3 > div.tab2-content > div:nth-child(1)').hide()
+    $(".tab-links").removeClass("active");
+    $(".tab-menu > div:nth-child(3)").addClass("active");
     fileNm = $('.selected .file-tit').text()
     $('#btn-status').text("편집 모드")
     $('#type-select-box').css('display', 'block');
@@ -2055,14 +2065,14 @@ function initBasicTileSet() {
     map.on('mousemove', function(e) {
         var coords = e.lngLat;
         var zoom = map.getZoom().toFixed(2);
-        info.innerHTML = '위도: ' + coords.lat.toFixed(4) + '<br>경도: ' + coords.lng.toFixed(4) + '<br>줌 레벨: ' + zoom;
+        info.innerHTML = '<span>위도: ' + coords.lat.toFixed(4) + '</span><br><span>경도: ' + coords.lng.toFixed(4) + '</span><br><span>줌 레벨: ' + zoom + '</span>';
     });
 
     // 줌 이벤트 리스너
     map.on('zoom', function() {
         var coords = map.getCenter();
         var zoom = map.getZoom().toFixed(2);
-        info.innerHTML = '위도: ' + coords.lat.toFixed(4) + '<br>경도: ' + coords.lng.toFixed(4) + '<br>줌 레벨: ' + zoom;
+        info.innerHTML = '<span>위도: ' + coords.lat.toFixed(4) + '</span><br><span>경도: ' + coords.lng.toFixed(4) + '</span><br><span>줌 레벨: ' + zoom + '</span>';
     });
 
     setMapEvent();
