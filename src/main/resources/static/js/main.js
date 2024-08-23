@@ -3660,15 +3660,14 @@ function removeFromMap(feature) {
     for (let i = 0; i < geoData.length; i++) {
         let fileName = feature.properties.FILE_NAME
         if (geoData[i].properties[fileName + "_ID"] === feature.properties[fileName + "_ID"]) {
-            feature = geoData[i]
-            feature.id = draw.getAll().features.length + 1; // 임시 ID 부여
+            feature.geometry.coordinates = geoData[i].geometry.coordinates[0]
             geoData.splice(i, 1); // 도형 제거
             break;
         }
     }
 
-    // 주어진 속성의 새로운 도형을 Draw에 추
-
+    // 주어진 속성의 새로운 도형을 Draw에 추기
+    feature.id = draw.getAll().features.length + 1; // 임시 ID 부여
     draw.add(feature);
 
     // 맵의 소스 데이터 업데이트
