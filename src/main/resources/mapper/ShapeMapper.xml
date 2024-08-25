@@ -58,10 +58,10 @@
         SELECT *
         FROM TRANSIT.${fileName}
         WHERE 1 = 1
-          AND LNG <![CDATA[<=]]> #{sc_NE_LNG}
+          AND (LNG <![CDATA[<=]]> #{sc_NE_LNG}
           AND LAT <![CDATA[<=]]> #{sc_NE_LAT}
           AND LNG <![CDATA[>=]]> #{sc_SW_LNG}
-          AND LAT <![CDATA[>=]]> #{sc_SW_LAT}
+          AND LAT <![CDATA[>=]]> #{sc_SW_LAT})
     </select>
 
     <select id="getLinkShpData" resultType="map" parameterType="map">
@@ -69,9 +69,11 @@
         FROM TRANSIT.${fileName}
         WHERE 1 = 1
         AND (
-            (F_LNG <![CDATA[<=]]> #{sc_NE_LNG} AND F_LAT <![CDATA[<=]]> #{sc_NE_LAT} AND F_LNG <![CDATA[>=]]> #{sc_SW_LNG} AND F_LAT <![CDATA[>=]]> #{sc_SW_LAT})
+            (F_LNG <![CDATA[<=]]> #{sc_NE_LNG} AND F_LAT <![CDATA[<=]]> #{sc_NE_LAT}
+            AND F_LNG <![CDATA[>=]]> #{sc_SW_LNG} AND F_LAT <![CDATA[>=]]> #{sc_SW_LAT})
             OR
-            (T_LNG <![CDATA[<=]]> #{sc_NE_LNG} AND T_LAT <![CDATA[<=]]> #{sc_NE_LAT} AND T_LNG <![CDATA[>=]]> #{sc_SW_LNG} AND T_LAT <![CDATA[>=]]> #{sc_SW_LAT})
+            (T_LNG <![CDATA[<=]]> #{sc_NE_LNG} AND T_LAT <![CDATA[<=]]> #{sc_NE_LAT}
+            AND T_LNG <![CDATA[>=]]> #{sc_SW_LNG} AND T_LAT <![CDATA[>=]]> #{sc_SW_LAT})
         )
     </select>
 

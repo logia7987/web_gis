@@ -3634,7 +3634,7 @@ function splitIntoNode() {
                     if (!pointAdded && ((x1 <= closestPoint[0] && closestPoint[0] <= x2) || (x2 <= closestPoint[0] && closestPoint[0] <= x1))) {
                         updatedCoordinates.push([x1, y1]);
 
-                        const pointsAround = generatePointsAroundClosestPoint([x1, y1], [x2, y2], closestPoint, nodeCoordinates, 10);
+                        const pointsAround = generatePointsAroundClosestPoint([x1, y1], [x2, y2], closestPoint, nodeCoordinates, 15.5);
 
                         updatedCoordinates.push(...pointsAround);
                         pointAdded = true;
@@ -3671,6 +3671,8 @@ function splitIntoNode() {
                     geometry: multiLineString,
                     properties: linkFeature.properties // 기존 링크의 속성 유지
                 });
+
+                toastOn("지도에 생성된 링크를 추가로 알맞게 수정해주세요.")
             }
         });
     }
@@ -3744,9 +3746,10 @@ function mergeIntoNode() {
 
     // 지도에 있는 모든 링크 피처 가져오기
     const linkFeatures = map.queryRenderedFeatures({layers: [LINK_LAYER_ID]});
+    // const linkFeatures = map.getSource(LINK_NODE_STATION_SOURCE_ID)._options.data.features
 
     let matchingLinks = [];
-    const toleranceMeters = 5;
+    const toleranceMeters = 20 ;
 
     function coordToString(coord) {
         return `${coord[0].toFixed(6)},${coord[1].toFixed(6)}`;
@@ -3810,11 +3813,28 @@ function mergeIntoNode() {
     }
 
     const zoomLevel = map.getZoom();
-    const adjustedTolerance = toleranceMeters / (zoomLevel / 10);
+    const minZoomLevel = 18; // 최소 줌 레벨 설정 (필요에 따라 조정)
+
+    if (zoomLevel > minZoomLevel) {
+        toastOn("줌 레벨이 너무 높아 병합 작업을 수행할 수 없습니다.");
+        return;
+    }
+    const metersPerPixel = 156543.03392 * Math.cos(nodeCoordinates[1] * Math.PI / 180) / Math.pow(2, zoomLevel);
+    const adjustedTolerance = toleranceMeters / metersPerPixel;
 
     // 각 링크를 순회하며 노드 좌표와 매우 가까운 링크를 찾음
     for (let link of linkFeatures) {
-        const linkCoordinates = link.geometry.coordinates;
+        if (link.geometry.type.indexOf("LineString") === -1) {
+            continue;
+        }
+
+        let linkCoordinates // = link.geometry.coordinates;
+        if (link.geometry.coordinates.length > 1) {
+            linkCoordinates = link.geometry.coordinates;
+        } else {
+            linkCoordinates = link.geometry.coordinates[0];
+        }
+
         const fileName = link.properties.FILE_NAME;
         const linkId = link.properties[fileName + "_ID"];
 
@@ -3962,8 +3982,6 @@ function mergeIntoNode() {
             type: 'FeatureCollection',
             features: geoData
         });
-
-        console.log(matchingLinks)
 
         toastOn("링크가 성공적으로 병합되었습니다.");
     } else if (matchingLinks.length > 4) {

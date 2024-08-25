@@ -627,7 +627,6 @@ public class ApiController {
         Map<String, Object> lineStringGeometry = new HashMap<>();
         for (Map.Entry<String, Object> entry : properties.entrySet()) {
             String key = entry.getKey();
-            System.out.println(key);
             if (key.equals("featureId") || key.equals("emptyLabel") || key.equals("label") || key.equals(idColumn) || key.equals("DELETE_ID")) {
                 continue;
             }
@@ -635,6 +634,15 @@ public class ApiController {
             columns.add("\"" + key + "\"");
             Object value = entry.getValue();
 
+            if (key.equals("F_LNG")) {
+                entry.setValue(coordinates.get(0).get(0));
+            } else if (key.equals("F_LAT")) {
+                entry.setValue(coordinates.get(0).get(1));
+            } else if (key.equals("T_LNG")) {
+                entry.setValue(coordinates.get(coordinates.size()-1).get(0));
+            } else if (key.equals("T_LAT")) {
+                entry.setValue(coordinates.get(coordinates.size()-1).get(1));
+            }
 
             if (value instanceof String) {
                 values.add("'" + value + "'");
