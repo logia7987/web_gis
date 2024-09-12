@@ -2078,38 +2078,130 @@ function initBasicTileSet() {
     setMapEvent();
 }
 
-function getVworldTilesSet(){
-    map = new mapboxgl.Map({
-        container: "map",
-        style : {
-            'version': 8,
-            'sources': {
-                'vworld-raster-tiles-source': {
-                    'type': 'raster',
-                    'tiles': ['https://api.vworld.kr/req/wmts/1.0.0/' + VWORLD_KEY + '/Base/{z}/{y}/{x}.png'],
-                    'tileSize': 256,
-                    'attribution': 'VWORLD'
-                }
-            },
-            'layers': [
-                {
-                    'id': 'vworld-raster-tiles-layers',
-                    'type': 'raster',
-                    'source': 'vworld-raster-tiles-source',
-                    'maxzoom': 19,
-                    'minzoom': 6
-                }
-            ],
-            "glyphs": "mapbox://fonts/mapbox/{fontstack}/{range}.pbf"
-        },
-        center: [126.88271541564299, 37.48151056694073],
-        zoom: 11,
-        //vworld 규정 지도 레벨 최대값 및 최소값으로 설정
-        maxZoom: 18,
-        minZoom: 6,
-        dragRotate: false,
-        preserveDrawingBuffer: true,
+function changeTileSet() {
+    const val = $("#tile-select option:selected").val();
+
+    if (val === 'kakao') {
+        getKakaoTileSet()
+    } else if (val ==='vworld') {
+        getVworldTilesSet()
+    } else if (val === 'settle') {
+        getNaverSatelliteTileSet()
+    } else {
+        setMapboxDefaultTileSet('mapbox://styles/mapbox/streets-v12');
+    }
+}
+
+function setMapboxDefaultTileSet(style = 'mapbox://styles/mapbox/streets-v12') {
+    // 적용된 타일 소스와 레이어 제거
+    removeCustomTileSets();
+
+    // 기본 맵박스 스타일로 변경
+    map.setStyle(style);
+
+    // 스타일 로드 완료 후 추가적인 이벤트 설정
+    map.on('style.load', function () {
+        setMapEvent(); // 필요한 이벤트들을 다시 설정
     });
+}
+
+// 커스텀 타일셋을 제거하는 함수
+function removeCustomTileSets() {
+    // 예시: vWorld 타일셋 제거
+    if (map.getLayer('vworld-raster-tiles-layers')) {
+        map.removeLayer('vworld-raster-tiles-layers');
+    }
+    if (map.getSource('vworld-raster-tiles-source')) {
+        map.removeSource('vworld-raster-tiles-source');
+    }
+
+    // 예시: Kakao 타일셋 제거
+    if (map.getLayer('kakao-satellite-tiles-layers')) {
+        map.removeLayer('kakao-satellite-tiles-layers');
+    }
+    if (map.getSource('kakao-satellite-tiles-source')) {
+        map.removeSource('kakao-satellite-tiles-source');
+    }
+
+    // 필요한 다른 커스텀 타일셋도 동일한 방식으로 제거 가능
+}
+
+// 타일 소스 및 레이어 추가 함수
+function getVworldTilesSet() {
+    if (map.getSource('vworld-raster-tiles-source')) {
+        // 이미 vWorld 타일 소스가 있는 경우, 해당 레이어를 표시
+        map.setLayoutProperty('vworld-raster-tiles-layers', 'visibility', 'visible');
+    } else {
+        // vWorld 타일 소스를 추가
+        map.addSource('vworld-raster-tiles-source', {
+            'type': 'raster',
+            'tiles': ['https://api.vworld.kr/req/wmts/1.0.0/' + VWORLD_KEY + '/Base/{z}/{y}/{x}.png'],
+            'tileSize': 256,
+            'attribution': 'VWORLD'
+        });
+
+        map.addLayer({
+            'id': 'vworld-raster-tiles-layers',
+            'type': 'raster',
+            'source': 'vworld-raster-tiles-source',
+            'maxzoom': 19,
+            'minzoom': 6
+        });
+    }
+
+    setMapEvent();
+}
+
+function getKakaoTileSet() {
+    if (map.getSource('kakao-raster-tiles-source')) {
+        // 이미 Kakao 타일 소스가 있는 경우, 해당 레이어를 표시
+        map.setLayoutProperty('kakao-raster-tiles-layers', 'visibility', 'visible');
+    } else {
+        // Kakao 타일 소스를 추가
+        map.addSource('kakao-raster-tiles-source', {
+            'type': 'raster',
+            'tiles': ['http://map.daumcdn.net/map_k3f_prod/bakery/image_map_png/PNG01/v26_gxuw0/{z}/{y}/{x}.png'],
+            'tileSize': 256,
+            'attribution': '© Kakao'
+        });
+
+        map.addLayer({
+            'id': 'kakao-raster-tiles-layers',
+            'type': 'raster',
+            'source': 'kakao-raster-tiles-source',
+            'maxzoom': 19,
+            'minzoom': 6
+        });
+    }
+
+    setMapEvent();
+}
+
+function getNaverSatelliteTileSet() {
+    if (map.getSource('naver-satellite-tiles-source')) {
+        // 이미 Naver 위성 타일 소스가 있는 경우, 해당 레이어를 표시
+        map.setLayoutProperty('naver-satellite-tiles-layers', 'visibility', 'visible');
+    } else {
+        // Naver 위성 타일 소스를 추가
+        map.addSource('naver-satellite-tiles-source', {
+            'type': 'raster',
+            'tiles': ['https://naveropenapi.apigw.ntruss.com/map-static/v2/raster/{z}/{x}/{y}.png'],
+            'tileSize': 256,
+            'attribution': '© Naver',
+            'headers': {
+                'X-NCP-APIGW-API-KEY-ID': 'YOUR_NAVER_API_KEY_ID',
+                'X-NCP-APIGW-API-KEY': 'YOUR_NAVER_API_KEY'
+            }
+        });
+
+        map.addLayer({
+            'id': 'naver-satellite-tiles-layers',
+            'type': 'raster',
+            'source': 'naver-satellite-tiles-source',
+            'maxzoom': 19,
+            'minzoom': 6
+        });
+    }
 
     setMapEvent();
 }
@@ -4088,44 +4180,45 @@ function updateSnapTargets() {
 
 // 핸들 이동 시 스냅 적용
 function handleSnap(e) {
-    const featureId = e.features[0].id;
-    const feature = draw.get(featureId);
+    if (snapTargets.length > 0) {
+        const featureId = e.features[0].id;
+        const feature = draw.get(featureId);
 
-    if (!feature) {
-        console.error('Feature not found:', featureId);
-        return;
+        if (!feature) {
+            console.error('Feature not found:', featureId);
+            return;
+        }
+
+        const geometry = feature.geometry;
+
+        if (geometry.type === 'LineString' || geometry.type === 'MultiLineString') {
+            // 링크의 각 핸들 포인트에 대해 스냅 적용
+            const updatedCoordinates = geometry.coordinates.map(coord => {
+                const snapTarget = findClosestSnapTarget(coord);
+                return snapTarget || coord; // 스냅할 대상이 없으면 원래 좌표 유지
+            });
+
+            // 업데이트된 feature 객체 생성
+            const updatedFeature = {
+                type: 'Feature',
+                id: featureId,
+                geometry: {
+                    type: 'LineString',
+                    coordinates: updatedCoordinates
+                },
+                properties: feature.properties // 기존 속성 유지
+            };
+
+            // 기존 피처 삭제 후 새 피처 추가
+            draw.delete(featureId);
+            draw.add(updatedFeature);
+
+            console.log(`Feature ${featureId} updated successfully.`);
+        }
+
+        // 하이라이트 레이어 업데이트
+        // updateHighlightLayer(snapTargets);
     }
-
-    const geometry = feature.geometry;
-
-    if (geometry.type === 'LineString' || geometry.type === 'MultiLineString') {
-        // 링크의 각 핸들 포인트에 대해 스냅 적용
-        const updatedCoordinates = geometry.coordinates.map(coord => {
-            return findClosestSnapTarget(coord) || coord;
-        });
-
-        // 업데이트된 feature 객체 생성
-        const updatedFeature = {
-            type: 'Feature',
-            id: featureId,
-            geometry: {
-                type: 'LineString',
-                coordinates: updatedCoordinates
-            },
-            properties: feature.properties // 기존 속성 유지
-        };
-
-        // 기존 피처 삭제
-        draw.delete(featureId);
-
-        // 새 피처 추가
-        draw.add(updatedFeature);
-
-        console.log(`Feature ${featureId} updated successfully.`);
-    }
-
-    // 하이라이트 레이어 업데이트
-    // updateHighlightLayer(snapTargets);
 }
 
 // 가장 가까운 스냅 대상을 찾는 함수

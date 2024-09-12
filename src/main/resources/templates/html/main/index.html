@@ -48,6 +48,14 @@
             </button>
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>레이어 설정</button>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
+            <div id="tile-select-box">
+                <select class="form-select" name="tileSelect" id="tile-select" onchange="changeTileSet()">
+                    <option value="">기본</option>
+                    <option value="vworld">브이월드</option>
+                    <option value="kakao">카카오</option>
+                    <option value="settle">위성지도</option>
+                </select>
+            </div>
             <div id="type-select-box">
                 <select class="form-select" name="typeSelect" id="type-select" onchange="checkEditSelect()">
                     <option value="none">선택</option>

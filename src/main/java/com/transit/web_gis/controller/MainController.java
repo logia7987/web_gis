@@ -3,6 +3,7 @@ package com.transit.web_gis.controller;
 import com.transit.web_gis.service.ShapeService;
 import com.transit.web_gis.service.ShpService;
 import com.transit.web_gis.vo.ShpVo;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.json.simple.JSONObject;
@@ -42,7 +43,12 @@ public class MainController {
 //    private static final File tempDir = new File("/app/shapefile_temp");
 
     @GetMapping("/")
-    public String mainView(Model model) {
+    public String mainView(Model model, HttpServletResponse response) {
+
+        // 캐시 무효화 헤더 추가
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
 
         List<ShpVo> list = shapeService.selectShpList();
         for (int i = 0; i < list.size(); i++) {
