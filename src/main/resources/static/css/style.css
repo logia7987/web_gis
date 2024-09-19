@@ -1157,3 +1157,7 @@ th, td {
     font-size: 0.8rem;
     font-weight: bold;
 }
+
+#select-table, #search-column {
+    width: 50%;
+}

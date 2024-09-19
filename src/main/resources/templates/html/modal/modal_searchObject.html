@@ -17,6 +17,19 @@
             </div>
             <!-- Modal body -->
             <div class="modal-body" style="padding: 0">
+                <div style="display: flex">
+                    <div>
+                        <div>
+                            <span>종 류</span>
+                            <select id="select-table"></select>
+                        </div>
+                        <div>
+                            <span>검 색</span>
+                            <input type="text" id="search-column">
+                        </div>
+                    </div>
+                    <button>조회</button>
+                </div>
                 <div class="layer-setting" style="padding: 0">
                     <table>
                         <thead>
@@ -30,10 +43,6 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" style="font-size: 1rem" class="btn btn-secondary" data-bs-dismiss="modal" onclick="cancelSearch()">취 소</button>
-                <button type="button" style="font-size: 1rem" class="btn btn-primary" data-bs-dismiss="modal" onclick="saveToMatchObject()">이 동</button>
             </div>
         </div>
     </div>

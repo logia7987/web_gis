@@ -304,6 +304,7 @@ function getShpData(obj) {
         // })
         tNameArr.push(fileName);
         $(obj).find("span:eq(1)").show();
+        $('#select-table').append('<option value="' + fileName + '">' + fileName + '</option>');
 
         appendToLayerOption(fileName)
 
@@ -316,6 +317,7 @@ function getShpData(obj) {
         delete shpStyleList[fileName]
         $(obj).find("span:eq(1)").hide();
         $("#TR_"+fileName).remove()
+        $('#select-table option[value="' + fileName + '"]').remove();
 
         if ($("#TR_LINK").length === 0) {
             $("#empty-layerOption").show();
