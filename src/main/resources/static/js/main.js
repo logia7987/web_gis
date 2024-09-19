@@ -2710,6 +2710,37 @@ function saveToMatchObject() {
     addShpList()
 }
 
+function searchCoordinate() {
+    let lat = parseFloat($('#search_coordinate #lat').val())
+    let lng = parseFloat($('#search_coordinate #lng').val())
+    let level = parseFloat(map.getZoom())
+
+    if (!isNaN(lat) && !isNaN(lng) && lat !== '' && lng !== '') {
+        if (lat >= 33.0 && lat <= 43.0 && lng >= 124.0 && lng <= 132.0) { // 한국 범위로 설정
+            map.flyTo({
+                center: [lng, lat],
+                essential: true, // 이 옵션은 접근성 및 기타 요구 사항에 필요할 수 있음
+                zoom: level // 원하는 줌 레벨을 설정할 수 있습니다
+            });
+            $('#search_coordinate #lat').val('')
+            $('#search_coordinate #lng').val('')
+            hideModal("search_coordinate")
+        } else {
+            toastOn('한국을 벗어나는 좌표입니다. 다시 확인 부탁드립니다');
+            $('#search_coordinate').modal('show');
+        }
+    } else {
+        toastOn('올바른 좌표를 입력해 주세요.');
+        $('#search_coordinate').modal('show');
+    }
+}
+
+function cancelSearch() {
+    $('#search_coordinate #lat').val('')
+    $('#search_coordinate #lng').val('')
+    hideModal("search_coordinate")
+}
+
 function updateFeature() {
     // 변경된 features를 가져옵니다.
     if (draw.getAll().features.length > 1) {

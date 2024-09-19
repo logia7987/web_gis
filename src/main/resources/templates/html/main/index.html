@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/reset.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.2/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"/>
     <script src="https://kit.fontawesome.com/872a12cba7.js" crossorigin="anonymous"></script>
 
     <!--Noto Sans font-->
@@ -46,6 +46,12 @@
                 <i class="fa-solid fa-floppy-disk"></i>업로드
             </button>
             <button class="top-btn" onclick="openLayerOptionWindow();"><i class="fas fa-filter"></i>레이어 설정</button>
+            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#search_coordinate' id="searchObjectBtn" title="좌표 검색">
+                <i class="fas fa-search"></i>좌표 검색
+            </button>
+            <button class='top-btn'  data-bs-toggle='modal' data-bs-target='#search_object' id="searchCoordinateBtn" title="개체 검색">
+                <i class="fas fa-search"></i>개체 검색
+            </button>
             <button class="top-btn" onclick="changeEditMode()"><i class="fa-solid fa-pencil"></i><p id="btn-status">보기 모드</p></button>
             <div id="tile-select-box">
                 <select class="form-select" name="tileSelect" id="tile-select" onchange="changeTileSet()">
@@ -279,6 +285,14 @@
         <div id="loading-bar"></div>
     </div>
 
+    <div class="modal" id="search_coordinate">
+        <div th:insert="~{html/modal/modal_searchCoordinate.html::searchCoordinate}"></div>
+    </div>
+
+    <div class="modal" id="search_object">
+        <div th:insert="~{html/modal/modal_searchObject.html::searchObject}"></div>
+    </div>
+
     <div class="modal" id="newpolygon">
         <div th:insert="~{html/modal/modal_newPolygon.html::newpolygon}"></div>
     </div>
@@ -312,7 +326,6 @@
     </div>
 
     <div id="mouse_info">
-
     </div>
 </body>
 <script th:inline="javascript">
@@ -492,6 +505,54 @@
         })
 
     });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var searchCoordinateModalElement = document.getElementById('search_coordinate');
+        var searchObjectModalElement = document.getElementById('search_object');
+
+        var modals = ['search_coordinate', 'search_object'];
+
+        var searchCoordinateModal = new bootstrap.Modal(searchCoordinateModalElement, {
+            backdrop: false
+        });
+
+        var searchObjectModal = new bootstrap.Modal(searchObjectModalElement, {
+            backdrop: false
+        });
+
+        modals.forEach(function(modalId) {
+            var modal = document.querySelector('#' + modalId + ' .modal-dialog');
+            var modalHeader = document.querySelector('#' + modalId + ' .modal-header');
+
+            var isDragging = false;
+            var offsetX, offsetY;
+
+            // 모달 드래그 기능
+            modalHeader.addEventListener('mousedown', function (e) {
+                isDragging = true;
+                var rect = modal.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                modal.style.position = 'absolute';
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (isDragging) {
+                    modal.style.position = 'absolute';
+                    modal.style.margin = 0;
+                    modal.style.left = `${e.clientX - offsetX}px`;
+                    modal.style.top = `${e.clientY - offsetY}px`;
+                }
+            });
+
+            document.addEventListener('mouseup', function () {
+                isDragging = false;
+            });
+
+        });
+    });
+
+
 
 </script>
 <script src="/js/main.js"></script>
