@@ -1030,28 +1030,23 @@ function drawDistance(e) {
     let html = ''
 
     // 포인트 컬렉션을 기반으로 라인 스트링을 새로 그리기 위해 기존의 라인 스트링 제거
-    if (geojson.features.length > 1) geojson.features.pop();
+    if (geojson.features.length > 1) {
+        geojson.features.pop();
+    }
 
     // 클릭된 피처가 있다면 맵에서 제거
-    if (features.length) {
-        const id = features[0].properties.id;
-        geojson.features = geojson.features.filter(
-            (point) => point.properties.id !== id
-        );
-    } else {
-        const point = {
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Point',
-                'coordinates': [e.lngLat.lng, e.lngLat.lat]
-            },
-            'properties': {
-                'distance' : ''
-            }
-        };
+    const point = {
+        'type': 'Feature',
+        'geometry': {
+            'type': 'Point',
+            'coordinates': [e.lngLat.lng, e.lngLat.lat]
+        },
+        'properties': {
+            'distance' : ''
+        }
+    };
 
-        geojson.features.push(point);
-    }
+    geojson.features.push(point);
 
     if (geojson.features.length > 1) {
         distanceLine.geometry.coordinates = geojson.features.map(
