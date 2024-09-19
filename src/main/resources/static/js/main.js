@@ -1034,7 +1034,6 @@ function drawDistance(e) {
         geojson.features.pop();
     }
 
-    // 클릭된 피처가 있다면 맵에서 제거
     const point = {
         'type': 'Feature',
         'geometry': {
