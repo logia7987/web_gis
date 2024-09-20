@@ -1180,7 +1180,7 @@ function findProperty(id, type) {
 
 function startViewerMode() {
     toastOn("보기 모드로 전환되었습니다.")
-    $("#tab3 > div.tab2-content > div.tool-content").show()
+    $("#tab3 > div.tab2-content > div.tool-content, #searchObjectBtn, #searchCoordinateBtn").show()
     $('#tab3 > div.tab2-content > div.tab2-section').hide()
     $(".tab-links").removeClass("active");
     $(".tab-menu > div:nth-child(1)").addClass("active");
@@ -1216,7 +1216,7 @@ function startViewerMode() {
 
 function startEditMode() {
     toastOn("편집모드로 전환되었습니다.")
-    $('#tab3 > div.tab2-content > div:nth-child(1)').hide()
+    $('#tab3 > div.tab2-content > div:nth-child(1),#searchObjectBtn ,#searchCoordinateBtn').hide()
     $(".tab-links").removeClass("active");
     $(".tab-menu > div:nth-child(3)").addClass("active");
     fileNm = $('.selected .file-tit').text()
@@ -2874,14 +2874,21 @@ function searchObject() {
     }
 }
 
-function moveToObjectNode(lat, lng, idx) {
+async function moveToObjectNode(lat, lng, idx) {
     map.flyTo({
         center: [lng, lat],
         essential: true, // 이 옵션은 접근성 및 기타 요구 사항에 필요할 수 있음
         zoom: 14 // 원하는 줌 레벨을 설정할 수 있습니다
-    });
+    }, async () => { // 이 콜백 함수는 flyTo가 완료된 후 실행됩니다
+        await updateMapData(); // 맵 데이터를 업데이트 후에 다음 작업 진행
 
-    map.setFilter(NODE_LAYER_ID+'-highlighted', ['==',$("#select-table").val()+'_ID', '']);
+        // updateMapData()가 완료되면 필터와 클릭 이벤트 실행
+        map.setFilter(NODE_LAYER_ID + '-highlighted', ['==', $("#select-table").val() + '_ID', '']);
+        map.fire('click', {
+            lngLat: [lng, lat],
+            point: map.project([lng, lat])
+        });
+    });
     map.setFilter(NODE_LAYER_ID+'-highlighted', ['==', $("#select-table").val()+'_ID', String(idx)])
 }
 
