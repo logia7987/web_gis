@@ -2827,52 +2827,62 @@ function searchObject() {
     let table = $("#select-table").val()
     let column = $("#select-column").val()
     let keyword = $("#search-column").val()
-    if (table !== '' && column !== '' && keyword !== '') {
-        $.ajax({
-            url : '/api/searchObject',
-            type  : 'POST',
-            dataType: 'json',
-            contentType: "application/json",  // JSON request
-            data : JSON.stringify({
-                table: table,
-                column: column,
-                keyword: keyword
-            }),
-            success: function (result) {
-                let data = result.data;
-                let html = ''
-                let none = '<tr><td id="select-object-none" colspan="2" style="display: none;">검색된 데이터가 없습니다</td></tr>'
-                if (data[0].SHP_TYPE === 'node' || data[0].SHP_TYPE === 'station') {
-                    if (data.length > 0) {
-                        $('#search_object .modal-body .layer-setting table tbody tr').remove()
 
-                        for (let i = 0; i < data.length; i++) {
-                            number = i+1
-                            html = '<tr onclick="moveToObjectNode('+data[i].LAT+', '+data[i].LNG+', '+data[i][table+"_ID"]+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
-                            $('#search_object .modal-body .layer-setting table tbody').append(html)
-                        }
-                    } else {
-                        $('#search_object .modal-body .layer-setting table tbody').append(none);
+    if (table === 'none') {
+        toastOn("조회하실 DB를 선택해주세요.")
+        return
+    }
+    if (column === 'none') {
+        toastOn("조회하실 컬럼을 선택해주세요.")
+        return
+    }
+    if (keyword === '') {
+        toastOn("키워드를 입력해주세요.")
+        return
+    }
+
+    $.ajax({
+        url : '/api/searchObject',
+        type  : 'POST',
+        dataType: 'json',
+        contentType: "application/json",  // JSON request
+        data : JSON.stringify({
+            table: table,
+            column: column,
+            keyword: keyword
+        }),
+        success: function (result) {
+            let data = result.data;
+            let html = ''
+            let none = '<tr><td id="select-object-none" colspan="2" style="display: none;">검색된 데이터가 없습니다</td></tr>'
+            if (data[0].SHP_TYPE === 'node' || data[0].SHP_TYPE === 'station') {
+                if (data.length > 0) {
+                    $('#search_object .modal-body .layer-setting table tbody tr').remove()
+
+                    for (let i = 0; i < data.length; i++) {
+                        number = i+1
+                        html = '<tr onclick="moveToObjectNode('+data[i].LAT+', '+data[i].LNG+', '+data[i][table+"_ID"]+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
+                        $('#search_object .modal-body .layer-setting table tbody').append(html)
                     }
                 } else {
-                    if (data.length > 0) {
-                        for (let i = 0; i < data.length; i++) {
-                            number = i+1
-                            html = '<tr onclick="moveToObjectLink('+id+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
-                            $('#search_object .modal-body .layer-setting table tbody').append(html)
-                        }
-                    } else {
-                        $('#select-object-none').show();
-                    }
+                    $('#search_object .modal-body .layer-setting table tbody').append(none);
                 }
-            },
-            error: function (error) {
-                console.log(error)
-            },
-        })
-    } else {
-        toastOn('검색 조건을 확인해주세요')
-    }
+            } else {
+                if (data.length > 0) {
+                    for (let i = 0; i < data.length; i++) {
+                        number = i+1
+                        html = '<tr onclick="moveToObjectLink('+id+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
+                        $('#search_object .modal-body .layer-setting table tbody').append(html)
+                    }
+                } else {
+                    $('#select-object-none').show();
+                }
+            }
+        },
+        error: function (error) {
+            console.log(error)
+        },
+    })
 }
 
 async function moveToObjectNode(lat, lng, idx) {
