@@ -12,34 +12,44 @@
         <div class="modal-content" >
             <!-- Modal Header -->
             <div class="modal-header" >
-                <h4 class="modal-title" style="font-size: 1rem">개체 검색</h4>
+                <h4 class="modal-title" style="font-size: 1rem">객체 검색</h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <!-- Modal body -->
             <div class="modal-body" style="padding: 0">
-                <div style="display: flex">
-                    <div>
-                        <div>
-                            <span>종 류</span>
-                            <select id="select-table"></select>
+                <div style="display: flex; padding: 10px;">
+                    <div class="search-object-list">
+                        <div class="search-object-item">
+                            <span class="search-object-tit">DB</span>
+                            <select id="select-table" class="form-select" onchange="searchColumn()">
+                                <option value="none">선 택</option>
+                            </select>
                         </div>
-                        <div>
-                            <span>검 색</span>
+                        <div class="search-object-item">
+                            <span class="search-object-tit">칼럼</span>
+                            <select id="select-column" class="form-select">
+                                <option value="none">선 택</option>
+                            </select>
+                        </div>
+                        <div class="search-object-item">
+                            <span class="search-object-tit">검색</span>
                             <input type="text" id="search-column">
                         </div>
                     </div>
-                    <button>조회</button>
+                    <button id="search-object-btn" onclick="searchObject()">조회</button>
                 </div>
-                <div class="layer-setting" style="padding: 0">
+                <div class="layer-setting" style="padding: 0; height: 300px; overflow-y: auto;">
                     <table>
                         <thead>
                         <tr>
-                            <th>구 분</th>
-                            <th>명 칭</th>
+                            <th style="font-size: 0.9rem; width: 30%">구 분</th>
+                            <th style="font-size: 0.9rem">명 칭</th>
                         </tr>
                         </thead>
                         <tbody>
-
+                            <tr>
+                                <td id="select-object-none" colspan="2">검색된 데이터가 없습니다</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

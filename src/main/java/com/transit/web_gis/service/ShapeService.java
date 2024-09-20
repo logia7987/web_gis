@@ -62,6 +62,9 @@ public class ShapeService {
     public List<ShpVo> selectShpList() {
         return shapeMapper.selectShpList();
     }
+    public List<String> selectObject(String table, String column, String keyword) {
+        return shapeMapper.selectObject(table, column, keyword);
+    }
     public String getShpType(String fileName) {
         return shapeMapper.getShpType(fileName);
     }
