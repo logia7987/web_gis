@@ -2080,50 +2080,43 @@ function initBasicTileSet() {
 
 function changeTileSet() {
     const val = $("#tile-select option:selected").val();
+    hideAllTileSets();
 
-    if (val === 'kakao') {
-        getKakaoTileSet()
-    } else if (val ==='vworld') {
-        getVworldTilesSet()
-    } else if (val === 'settle') {
-        getNaverSatelliteTileSet()
-    } else {
-        setMapboxDefaultTileSet('mapbox://styles/mapbox/streets-v12');
+    const tileSets = {
+        'vworld': getVworldTilesSet,
+        'naver': getNaverTileSet,
+        'settle': getNaverSatelliteTileSet,
+    };
+
+    // 선택된 값에 해당하는 타일셋 함수 호출
+    if (tileSets[val]) {
+        tileSets[val]();
     }
 }
 
 function setMapboxDefaultTileSet(style = 'mapbox://styles/mapbox/streets-v12') {
-    // 적용된 타일 소스와 레이어 제거
-    removeCustomTileSets();
-
     // 기본 맵박스 스타일로 변경
     map.setStyle(style);
 
     // 스타일 로드 완료 후 추가적인 이벤트 설정
     map.on('style.load', function () {
+        map.addControl(language);
+
         setMapEvent(); // 필요한 이벤트들을 다시 설정
     });
 }
 
 // 커스텀 타일셋을 제거하는 함수
-function removeCustomTileSets() {
-    // 예시: vWorld 타일셋 제거
+function hideAllTileSets() {
+    if (map.getLayer('naver-tiles-layers')) {
+        map.setLayoutProperty('naver-tiles-layers', 'visibility', 'none');
+    }
+    if (map.getLayer('naver-satellite-tiles-layers')) {
+        map.setLayoutProperty('naver-satellite-tiles-layers', 'visibility', 'none');
+    }
     if (map.getLayer('vworld-raster-tiles-layers')) {
-        map.removeLayer('vworld-raster-tiles-layers');
+        map.setLayoutProperty('vworld-raster-tiles-layers', 'visibility', 'none');
     }
-    if (map.getSource('vworld-raster-tiles-source')) {
-        map.removeSource('vworld-raster-tiles-source');
-    }
-
-    // 예시: Kakao 타일셋 제거
-    if (map.getLayer('kakao-satellite-tiles-layers')) {
-        map.removeLayer('kakao-satellite-tiles-layers');
-    }
-    if (map.getSource('kakao-satellite-tiles-source')) {
-        map.removeSource('kakao-satellite-tiles-source');
-    }
-
-    // 필요한 다른 커스텀 타일셋도 동일한 방식으로 제거 가능
 }
 
 // 타일 소스 및 레이어 추가 함수
@@ -2135,7 +2128,9 @@ function getVworldTilesSet() {
         // vWorld 타일 소스를 추가
         map.addSource('vworld-raster-tiles-source', {
             'type': 'raster',
-            'tiles': ['https://api.vworld.kr/req/wmts/1.0.0/' + VWORLD_KEY + '/Base/{z}/{y}/{x}.png'],
+            'tiles': [
+                'https://api.vworld.kr/req/wmts/1.0.0/' + VWORLD_KEY + '/Base/{z}/{y}/{x}.png'
+            ],
             'tileSize': 256,
             'attribution': 'VWORLD'
         });
@@ -2149,7 +2144,10 @@ function getVworldTilesSet() {
         });
     }
 
-    setMapEvent();
+    // 스타일 로드 완료 후 추가적인 이벤트 설정
+    map.on('style.load', function () {
+        setMapEvent(); // 필요한 이벤트들을 다시 설정
+    });
 }
 
 function getKakaoTileSet() {
@@ -2177,6 +2175,38 @@ function getKakaoTileSet() {
     setMapEvent();
 }
 
+function getNaverTileSet() {
+    if (map.getSource('naver-tiles-source')) {
+        // 이미 Naver 위성 타일 소스가 있는 경우, 해당 레이어를 표시
+        map.setLayoutProperty('naver-tiles-layers', 'visibility', 'visible');
+    } else {
+        // Naver 위성 타일 소스를 추가
+        map.addSource('naver-tiles-source', {
+            'type': 'raster',
+            'tiles': [
+                "https://map.pstatic.net/nrb/styles/basic/{z}/{x}/{y}.png?mt=bg.ol.sw.ar.lko"
+            ],
+            'tileSize': 256,
+            'attribution': '© Naver',
+            'headers': {
+                "Content-Type": "application/json;charset=UTF-8",
+                "X-Pubtrans-Authorization": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6IuydtOq4sOykgCIsImV4cCI6MTU5MTU3OTY5NywidXNlcklkIjoia2lqb29uIiwiYXV0aG9yaXRpZXMiOlsiUk9MRV9VU0VSIl19.DkKPHE7vSKgxcKHseROQ70IxzhV6omndSw0-aajX34I",
+                "Accept": "application/json"
+            }
+        });
+
+        map.addLayer({
+            'id': 'naver-tiles-layers',
+            'type': 'raster',
+            'source': 'naver-tiles-source',
+            'maxzoom': 22,
+            'minzoom': 0
+        });
+    }
+
+    setMapEvent();
+}
+
 function getNaverSatelliteTileSet() {
     if (map.getSource('naver-satellite-tiles-source')) {
         // 이미 Naver 위성 타일 소스가 있는 경우, 해당 레이어를 표시
@@ -2185,12 +2215,15 @@ function getNaverSatelliteTileSet() {
         // Naver 위성 타일 소스를 추가
         map.addSource('naver-satellite-tiles-source', {
             'type': 'raster',
-            'tiles': ['https://naveropenapi.apigw.ntruss.com/map-static/v2/raster/{z}/{x}/{y}.png'],
+            'tiles': [
+                "https://map.pstatic.net/nrb/styles/satellite/{z}/{x}/{y}.png?mt=bg.ol.sw.ar.lko"
+            ],
             'tileSize': 256,
             'attribution': '© Naver',
             'headers': {
-                'X-NCP-APIGW-API-KEY-ID': 'YOUR_NAVER_API_KEY_ID',
-                'X-NCP-APIGW-API-KEY': 'YOUR_NAVER_API_KEY'
+                "Content-Type": "application/json;charset=UTF-8",
+                "X-Pubtrans-Authorization": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6IuydtOq4sOykgCIsImV4cCI6MTU5MTU3OTY5NywidXNlcklkIjoia2lqb29uIiwiYXV0aG9yaXRpZXMiOlsiUk9MRV9VU0VSIl19.DkKPHE7vSKgxcKHseROQ70IxzhV6omndSw0-aajX34I",
+                "Accept": "application/json"
             }
         });
 
@@ -2198,8 +2231,8 @@ function getNaverSatelliteTileSet() {
             'id': 'naver-satellite-tiles-layers',
             'type': 'raster',
             'source': 'naver-satellite-tiles-source',
-            'maxzoom': 19,
-            'minzoom': 6
+            'maxzoom': 22,
+            'minzoom': 0
         });
     }
 
