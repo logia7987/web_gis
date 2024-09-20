@@ -1117,3 +1117,47 @@ th, td {
     background-color: #c6c6c6 !important;
     color: white;
 }
+
+#search_coordinate .modal-header {
+    cursor: move; /* 드래그할 수 있음을 나타내는 커서 */
+}
+
+#search_object .modal-header {
+    cursor: move; /* 드래그할 수 있음을 나타내는 커서 */
+}
+
+#search_coordinate {
+    pointer-events: none; /* 모달이 떠있어도 지도가 클릭/이동 가능하도록 설정 */
+}
+
+#search_coordinate .modal-dialog {
+    top : 35%;
+    left : 35%;
+    pointer-events: auto; /* 모달 내용만 클릭 가능 */
+    position: absolute;
+}
+
+#search_object {
+    pointer-events: none; /* 모달이 떠있어도 지도가 클릭/이동 가능하도록 설정 */
+}
+
+#search_object .modal-dialog {
+    top : 35%;
+    left : 35%;
+    pointer-events: auto; /* 모달 내용만 클릭 가능 */
+    position: absolute;
+}
+
+.coordinate_input {
+    width: 100%;
+}
+
+.coordinate_tit {
+    width: 30%;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+#select-table, #search-column {
+    width: 50%;
+}

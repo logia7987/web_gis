@@ -304,6 +304,7 @@ function getShpData(obj) {
         // })
         tNameArr.push(fileName);
         $(obj).find("span:eq(1)").show();
+        $('#select-table').append('<option value="' + fileName + '">' + fileName + '</option>');
 
         appendToLayerOption(fileName)
 
@@ -316,6 +317,7 @@ function getShpData(obj) {
         delete shpStyleList[fileName]
         $(obj).find("span:eq(1)").hide();
         $("#TR_"+fileName).remove()
+        $('#select-table option[value="' + fileName + '"]').remove();
 
         if ($("#TR_LINK").length === 0) {
             $("#empty-layerOption").show();
@@ -916,6 +918,7 @@ function checkDistance() {
     map.on('click', drawDistance);
     map.on('contextmenu',updateMeasurement)
     map.on('mousemove',debouncedPreDistance)
+    map.on('dblclick',handleDblClick)
 }
 
 // Debounce 함수
@@ -1029,28 +1032,22 @@ function drawDistance(e) {
     let html = ''
 
     // 포인트 컬렉션을 기반으로 라인 스트링을 새로 그리기 위해 기존의 라인 스트링 제거
-    if (geojson.features.length > 1) geojson.features.pop();
-
-    // 클릭된 피처가 있다면 맵에서 제거
-    if (features.length) {
-        const id = features[0].properties.id;
-        geojson.features = geojson.features.filter(
-            (point) => point.properties.id !== id
-        );
-    } else {
-        const point = {
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Point',
-                'coordinates': [e.lngLat.lng, e.lngLat.lat]
-            },
-            'properties': {
-                'distance' : ''
-            }
-        };
-
-        geojson.features.push(point);
+    if (geojson.features.length > 1) {
+        geojson.features.pop();
     }
+
+    const point = {
+        'type': 'Feature',
+        'geometry': {
+            'type': 'Point',
+            'coordinates': [e.lngLat.lng, e.lngLat.lat]
+        },
+        'properties': {
+            'distance' : ''
+        }
+    };
+
+    geojson.features.push(point);
 
     if (geojson.features.length > 1) {
         distanceLine.geometry.coordinates = geojson.features.map(
@@ -1092,32 +1089,33 @@ function drawDistance(e) {
 }
 
 function updateMeasurement(e) {
+    if ($(".fa-eraser").length === 0) {
+        preDistancePopup.remove()
+        map.off('mousemove',debouncedPreDistance)
 
-    preDistancePopup.remove()
-    map.off('mousemove',debouncedPreDistance)
-
-    const coordinates = [e.lngLat.lng, e.lngLat.lat];
+        const coordinates = [e.lngLat.lng, e.lngLat.lat];
 
 
-    let html = '총 거리 : <b style="color : rgba(255, 0, 142)">';
+        let html = '총 거리 : <b style="color : rgba(255, 0, 142)">';
 
-    var popupOptions = {
-        closeOnClick: false, // 클릭 시 닫히지 않음
-        closeButton: false // 닫기 버튼 표시
-    };
+        var popupOptions = {
+            closeOnClick: false, // 클릭 시 닫히지 않음
+            closeButton: false // 닫기 버튼 표시
+        };
 
-    // 거리를 조건에 따라 km 또는 m 단위로 표시
-    if (distance > 1) {
-        html +=  distance.toFixed(1) + '</b>km<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
-    } else {
-        html +=  (distance * 1000).toFixed(1) + '</b>m<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
+        // 거리를 조건에 따라 km 또는 m 단위로 표시
+        if (distance > 1) {
+            html +=  distance.toFixed(1) + '</b>km<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
+        } else {
+            html +=  (distance * 1000).toFixed(1) + '</b>m<br><button class="endMeasurementBtn" onclick="endMeasurement()"><i class="fa-solid fa-eraser" style="margin-right: 5px"></i>지우기</button>'
+        }
+
+        // 새로운 팝업 생성
+        distancePopup = new mapboxgl.Popup(popupOptions)
+            .setLngLat(coordinates)
+            .setHTML(html)
+            .addTo(map);
     }
-
-    // 새로운 팝업 생성
-    distancePopup = new mapboxgl.Popup(popupOptions)
-        .setLngLat(coordinates)
-        .setHTML(html)
-        .addTo(map);
 }
 
 function endMeasurement() {
@@ -1129,9 +1127,14 @@ function endMeasurement() {
     distance = 0
     map.getSource('preview').setData(geojson)
     map.getSource('geojson').setData(geojson)
-    map.doubleClickZoom.enable();
+        map.doubleClickZoom.enable();
     map.off('click', drawDistance);
     map.off('contextmenu',updateMeasurement)
+    map.off('dblclick',handleDblClick)
+}
+
+function handleDblClick(e) {
+    e.preventDefault();
 }
 
 function calculateDistance(coord1, coord2) {
@@ -2740,6 +2743,37 @@ function saveToMatchObject() {
 
     // 정보 매칭이 완료되었으면 SHP 리스트에 정보 표출
     addShpList()
+}
+
+function searchCoordinate() {
+    let lat = parseFloat($('#search_coordinate #lat').val())
+    let lng = parseFloat($('#search_coordinate #lng').val())
+    let level = parseFloat(map.getZoom())
+
+    if (!isNaN(lat) && !isNaN(lng) && lat !== '' && lng !== '') {
+        if (lat >= 33.0 && lat <= 43.0 && lng >= 124.0 && lng <= 132.0) { // 한국 범위로 설정
+            map.flyTo({
+                center: [lng, lat],
+                essential: true, // 이 옵션은 접근성 및 기타 요구 사항에 필요할 수 있음
+                zoom: level // 원하는 줌 레벨을 설정할 수 있습니다
+            });
+            $('#search_coordinate #lat').val('')
+            $('#search_coordinate #lng').val('')
+            hideModal("search_coordinate")
+        } else {
+            toastOn('한국을 벗어나는 좌표입니다. 다시 확인 부탁드립니다');
+            $('#search_coordinate').modal('show');
+        }
+    } else {
+        toastOn('올바른 좌표를 입력해 주세요.');
+        $('#search_coordinate').modal('show');
+    }
+}
+
+function cancelSearch() {
+    $('#search_coordinate #lat').val('')
+    $('#search_coordinate #lng').val('')
+    hideModal("search_coordinate")
 }
 
 function updateFeature() {
