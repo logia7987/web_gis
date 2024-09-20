@@ -304,6 +304,10 @@ function getShpData(obj) {
         // })
         tNameArr.push(fileName);
         $(obj).find("span:eq(1)").show();
+        if ($("#select-table option").length === 1) {
+            $("#searchObjectBtn").show()
+        }
+
         $('#select-table').append('<option value="' + fileName + '">' + fileName + '</option>');
 
         appendToLayerOption(fileName)
@@ -318,6 +322,10 @@ function getShpData(obj) {
         $(obj).find("span:eq(1)").hide();
         $("#TR_"+fileName).remove()
         $('#select-table option[value="' + fileName + '"]').remove();
+
+        if ($("#select-table option").length === 1) {
+            $("#searchObjectBtn").hide()
+        }
 
         if ($("#TR_LINK").length === 0) {
             $("#empty-layerOption").show();
@@ -2770,7 +2778,123 @@ function searchCoordinate() {
     }
 }
 
-function cancelSearch() {
+let noDisplayNodeColumn = ["FILE_NAME", "LABEL_COLUMN", "WEIGHT", "COLOR", "FONT_SIZE", "FONT_COLOR", "LNG", "LAT"]
+
+function searchColumn() {
+    $.ajax({
+        url : '/api/getShpProperties',
+        type : 'POST',
+        data : {
+            fileName : $("#select-table").val()
+        },
+        success : function (data) {
+            if ($('#search_object .modal-body .layer-setting table tbody tr').length > 1) {
+                let none = '<tr><td id="select-object-none" colspan="2" style="display: none;">검색된 데이터가 없습니다</td></tr>'
+                $('#search_object .modal-body .layer-setting table tbody tr').remove()
+                $('#search_object .modal-body .layer-setting table tbody').append(none);
+            }
+
+            if ($("#select-column option").length > 1) {
+                $("#select-column option").remove()
+                let select = '<option value="none">선 택</option>'
+                $("#select-column").append(select)
+            }
+
+            const defaultLabel = data.labelColumn.LABEL_COLUMN
+
+            let html = ''
+
+            let display = data.columnNames.filter(x => !noDisplayNodeColumn.includes(x));
+
+            for (let i = 0; i < display.length; i++) {
+                let aColumn = display[i]
+                if (defaultLabel === aColumn) {
+                    html += '<option value="' + aColumn + '">' + aColumn + '</option>'
+                } else {
+                    html += '<option value="' + aColumn + '">' + aColumn + '</option>'
+                }
+            }
+            $("#select-column").append(html)
+        },
+        error: function (error){
+            console.log(error)
+        }
+    })
+}
+
+function searchObject() {
+    let table = $("#select-table").val()
+    let column = $("#select-column").val()
+    let keyword = $("#search-column").val()
+    if (table !== '' && column !== '' && keyword !== '') {
+        $.ajax({
+            url : '/api/searchObject',
+            type  : 'POST',
+            dataType: 'json',
+            contentType: "application/json",  // JSON request
+            data : JSON.stringify({
+                table: table,
+                column: column,
+                keyword: keyword
+            }),
+            success: function (result) {
+                let data = result.data;
+                let html = ''
+                let none = '<tr><td id="select-object-none" colspan="2" style="display: none;">검색된 데이터가 없습니다</td></tr>'
+                if (data[0].SHP_TYPE === 'node' || data[0].SHP_TYPE === 'station') {
+                    if (data.length > 0) {
+                        $('#search_object .modal-body .layer-setting table tbody tr').remove()
+
+                        for (let i = 0; i < data.length; i++) {
+                            number = i+1
+                            html = '<tr onclick="moveToObjectNode('+data[i].LAT+', '+data[i].LNG+', '+data[i][table+"_ID"]+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
+                            $('#search_object .modal-body .layer-setting table tbody').append(html)
+                        }
+                    } else {
+                        $('#search_object .modal-body .layer-setting table tbody').append(none);
+                    }
+                } else {
+                    if (data.length > 0) {
+                        for (let i = 0; i < data.length; i++) {
+                            number = i+1
+                            html = '<tr onclick="moveToObjectLink('+id+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
+                            $('#search_object .modal-body .layer-setting table tbody').append(html)
+                        }
+                    } else {
+                        $('#select-object-none').show();
+                    }
+                }
+            },
+            error: function (error) {
+                console.log(error)
+            },
+        })
+    } else {
+        toastOn('검색 조건을 확인해주세요')
+    }
+}
+
+function moveToObjectNode(lat, lng, idx) {
+    map.flyTo({
+        center: [lng, lat],
+        essential: true, // 이 옵션은 접근성 및 기타 요구 사항에 필요할 수 있음
+        zoom: 14 // 원하는 줌 레벨을 설정할 수 있습니다
+    });
+
+    map.setFilter(NODE_LAYER_ID+'-highlighted', ['==',$("#select-table").val()+'_ID', '']);
+    map.setFilter(NODE_LAYER_ID+'-highlighted', ['==', $("#select-table").val()+'_ID', String(idx)])
+}
+
+function moveToObjectLink(id) {
+    // TODO ajax으로 id값 selectOne을 통해 GEOMETRY를 불러온다
+    map.flyTo({
+        center: [lng, lat],
+        essential: true, // 이 옵션은 접근성 및 기타 요구 사항에 필요할 수 있음
+        zoom: 14 // 원하는 줌 레벨을 설정할 수 있습니다
+    });
+}
+
+function cancelSearchCoordinate() {
     $('#search_coordinate #lat').val('')
     $('#search_coordinate #lng').val('')
     hideModal("search_coordinate")

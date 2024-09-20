@@ -995,4 +995,18 @@ public class ApiController {
         br.close();
         return sb.toString();
     }
+
+    @ResponseBody
+    @RequestMapping(value="/searchObject", method=RequestMethod.POST, consumes = "application/json")
+    public Map<String, Object> searchObject(@RequestBody Map<String, String> params) throws Exception {
+        String table = params.get("table");
+        String column = params.get("column");
+        String keyword = params.get("keyword");
+
+        Map<String, Object> result = new HashMap<>();
+        System.out.println(shapeService.selectObject(table, column, keyword));
+        result.put("data", shapeService.selectObject(table, column, keyword));
+        return result;
+    }
+
 }

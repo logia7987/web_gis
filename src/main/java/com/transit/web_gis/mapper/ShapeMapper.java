@@ -11,6 +11,7 @@ public interface ShapeMapper {
     List<ShpVo> selectShpList();
     String getShpType(String fileName);
     List<String> getShpColumnNames(String fileName);
+    List<String> selectObject(String table, String column, String keyword);
     Map<String, Object> getDefaultLabel(String fileName);
     Map<String, Object> getDefaultColor(String fileName);
     Map<String, Object> getDefaultWeight(String fileName);

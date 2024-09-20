@@ -172,4 +172,10 @@
             </foreach>
         </trim>
     </insert>
+
+    <select id="selectObject" resultType="map">
+        SELECT *
+        FROM ${table}
+        WHERE ${column} LIKE '%' || #{keyword} || '%'
+    </select>
 </mapper>

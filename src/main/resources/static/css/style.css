@@ -1148,16 +1148,52 @@ th, td {
     position: absolute;
 }
 
-.coordinate_input {
+.coordinate_input, #search-column {
     width: 100%;
+    border: 1px solid #dee2e6;
+    line-height: 1.5;
+    font-size: 1rem;
+    font-weight: 400;
+    height: 35px;
+    border-radius: 0.375rem;
 }
 
 .coordinate_tit {
     width: 30%;
-    font-size: 0.8rem;
+    font-size: 1rem !important;
     font-weight: bold;
 }
 
-#select-table, #search-column {
-    width: 50%;
+#select-table, #search-column, #select-column {
+    font-size: 0.9rem;
+    width: 75%;
+}
+
+.search-object-tit {
+    font-size: 0.9rem;
+    letter-spacing: 5px;
+    width: 20%;
+    text-align: center;
+}
+
+.search-object-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.search-object-list > .search-object-item:nth-child(2), .search-object-list > .search-object-item:nth-child(3) {
+    margin-top: 10px;
+}
+
+#search-object-btn {
+    font-size: 0.9rem;
+    margin-left: 10px;
+    border: 0;
+    border-radius: 0.375rem;
+    padding: 10px;
+}
+
+#select-object-none {
+    font-size: 0.9rem;
 }
