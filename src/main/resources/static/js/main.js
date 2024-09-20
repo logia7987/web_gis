@@ -567,13 +567,9 @@ function changeEditMode() {
         startEditMode()
         $('.tab').hide()
         $('#tab3').show();
-        $("#searchObjectBtn").hide()
-        $("#searchCoordinateBtn").hide()
     } else if ( $('#btn-status').text() === '편집 모드') {
         hideAllTool();
 
-        $("#searchObjectBtn").show()
-        $("#searchCoordinateBtn").show()
         // 보기 모드로 전환
         startViewerMode()
 
