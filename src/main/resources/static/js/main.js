@@ -1216,6 +1216,9 @@ function startViewerMode() {
 
 
 function startEditMode() {
+    if (coordinateMarker) {
+        coordinateMarker.remove();
+    }
     toastOn("편집모드로 전환되었습니다.")
     $('#tab3 > div.tab2-content > div:nth-child(1),#searchObjectBtn ,#searchCoordinateBtn').hide()
     $(".tab-links").removeClass("active");
@@ -2754,18 +2757,31 @@ function saveToMatchObject() {
     addShpList()
 }
 
-function searchCoordinate() {
+let coordinateMarker = new mapboxgl.Marker()
+
+// 좌표검색 함수
+function searchCoordinate() { 
     let lat = parseFloat($('#search_coordinate #lat').val())
     let lng = parseFloat($('#search_coordinate #lng').val())
     let level = parseFloat(map.getZoom())
 
     if (!isNaN(lat) && !isNaN(lng) && lat !== '' && lng !== '') {
         if (lat >= 33.0 && lat <= 43.0 && lng >= 124.0 && lng <= 132.0) { // 한국 범위로 설정
+
+            if (coordinateMarker) {
+                coordinateMarker.remove();
+            }
+
             map.flyTo({
                 center: [lng, lat],
                 essential: true, // 이 옵션은 접근성 및 기타 요구 사항에 필요할 수 있음
                 zoom: level // 원하는 줌 레벨을 설정할 수 있습니다
             });
+
+            coordinateMarker = new mapboxgl.Marker({color : 'red'})
+                .setLngLat([lng, lat])
+                .addTo(map);
+
             $('#search_coordinate #lat').val('')
             $('#search_coordinate #lng').val('')
             hideModal("search_coordinate")
@@ -2779,8 +2795,10 @@ function searchCoordinate() {
     }
 }
 
+// 검색 제외 시킨 항목
 let noDisplayNodeColumn = ["FILE_NAME", "LABEL_COLUMN", "WEIGHT", "COLOR", "FONT_SIZE", "FONT_COLOR", "LNG", "LAT"]
 
+// 칼럼 조회 함수
 function searchColumn() {
     $.ajax({
         url : '/api/getShpProperties',
@@ -2790,7 +2808,7 @@ function searchColumn() {
         },
         success : function (data) {
             if ($('#search_object .modal-body .layer-setting table tbody tr').length > 1) {
-                let none = '<tr><td id="select-object-none" colspan="2" style="display: none;">검색된 데이터가 없습니다</td></tr>'
+                let none = '<tr><td id="select-object-none" colspan="2" style="display: block;">검색된 데이터가 없습니다</td></tr>'
                 $('#search_object .modal-body .layer-setting table tbody tr').remove()
                 $('#search_object .modal-body .layer-setting table tbody').append(none);
             }
@@ -2823,6 +2841,7 @@ function searchColumn() {
     })
 }
 
+// 객체 검색 함수
 function searchObject() {
     let table = $("#select-table").val()
     let column = $("#select-column").val()
@@ -2858,6 +2877,7 @@ function searchObject() {
             if (data[0].SHP_TYPE === 'node' || data[0].SHP_TYPE === 'station') {
                 if (data.length > 0) {
                     $('#search_object .modal-body .layer-setting table tbody tr').remove()
+                    $('#search_object .modal-body .layer-setting').css('height', '200px')
 
                     for (let i = 0; i < data.length; i++) {
                         number = i+1
@@ -2865,18 +2885,19 @@ function searchObject() {
                         $('#search_object .modal-body .layer-setting table tbody').append(html)
                     }
                 } else {
+                    $('#search_object .modal-body .layer-setting').css('height', 'auto')
                     $('#search_object .modal-body .layer-setting table tbody').append(none);
                 }
             } else {
-                if (data.length > 0) {
-                    for (let i = 0; i < data.length; i++) {
-                        number = i+1
-                        html = '<tr onclick="moveToObjectLink('+id+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
-                        $('#search_object .modal-body .layer-setting table tbody').append(html)
-                    }
-                } else {
-                    $('#select-object-none').show();
-                }
+                // if (data.length > 0) {
+                //     for (let i = 0; i < data.length; i++) {
+                //         number = i+1
+                //         html = '<tr onclick="moveToObjectLink('+id+')"><td>'+number+'</td><td>'+data[i][$("#select-column").val()]+'</td></tr>'
+                //         $('#search_object .modal-body .layer-setting table tbody').append(html)
+                //     }
+                // } else {
+                //     $('#select-object-none').show();
+                // }
             }
         },
         error: function (error) {
@@ -2885,6 +2906,18 @@ function searchObject() {
     })
 }
 
+// 객체 검색 취소 함수
+function cancelSearchObject() {
+    let none = '<tr><td id="select-object-none" colspan="2">검색된 데이터가 없습니다</td></tr>'
+    $('#select-table').val('none')
+    $('#select-column').val('none')
+    $('#search-column').val('')
+    $('#search_object .modal-body .layer-setting table tbody tr').remove()
+    $('#search_object .modal-body .layer-setting table tbody').append(none);
+    $('#search_object .modal-body .layer-setting').css('height', 'auto')
+}
+
+// 노드 검색 결과로 이동되는 함수
 async function moveToObjectNode(lat, lng, idx) {
     map.flyTo({
         center: [lng, lat],

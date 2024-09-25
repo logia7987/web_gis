@@ -13,7 +13,7 @@
             <!-- Modal Header -->
             <div class="modal-header" >
                 <h4 class="modal-title" style="font-size: 1rem">객체 검색</h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="cancelSearchObject()"></button>
             </div>
             <!-- Modal body -->
             <div class="modal-body" style="padding: 0">
@@ -38,7 +38,7 @@
                     </div>
                     <button id="search-object-btn" onclick="searchObject()">조회</button>
                 </div>
-                <div class="layer-setting" style="padding: 0; height: 300px; overflow-y: auto;">
+                <div class="layer-setting" style="padding: 0; height: auto; overflow-y: auto;">
                     <table>
                         <thead>
                         <tr>
