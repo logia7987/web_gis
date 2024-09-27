@@ -18,6 +18,7 @@ public interface ShapeMapper {
     Map<String, Object> getDefaultFontColor(String fileName);
     Map<String, Object> getDefaultFontSize(String fileName);
     Map<String, Object> checkShpType(Map<String, Object> commandMap);
+    List<Map<String, Object>> getTableData(Map<String, Object> commandMap);
     List<Map<String, Object>> getNodeShpData(Map<String, Object> commandMap);
     List<Map<String, Object>> getLinkShpData(Map<String, Object> commandMap);
     List<Map<String, Object>> getPolygonShpData(Map<String, Object> commandMap);

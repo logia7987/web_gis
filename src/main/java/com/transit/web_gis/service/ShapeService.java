@@ -47,7 +47,7 @@ public class ShapeService {
 //     리눅스 경로
 //    private static final File tempDir = new File("/app/shapefile_temp");
 //    private static final File geoDir = new File("/app/geoJson");
-        private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
+    private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
     private static final File geoDir = new File("C:\\mapbox\\geoJson");
 
     @Autowired
@@ -85,6 +85,9 @@ public class ShapeService {
 
     public Map<String, Object> checkShpType(Map<String, Object> commandMap) {
         return shapeMapper.checkShpType(commandMap);
+    }
+    public List<Map<String, Object>> getTableData(Map<String, Object> commandMap) {
+        return shapeMapper.getTableData(commandMap);
     }
     public List<Map<String, Object>> getNodeShpData(Map<String, Object> commandMap) {
         return shapeMapper.getNodeShpData(commandMap);

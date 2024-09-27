@@ -9,25 +9,42 @@ import com.transit.web_gis.vo.GeometryVo;
 import com.transit.web_gis.vo.ShpVo;
 import jakarta.servlet.http.HttpSession;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.geotools.api.data.FileDataStoreFactorySpi;
+import org.geotools.api.data.SimpleFeatureStore;
+import org.geotools.api.data.Transaction;
+import org.geotools.api.feature.simple.SimpleFeatureType;
+import org.geotools.api.feature.type.AttributeDescriptor;
 import org.geotools.api.referencing.operation.TransformException;
+import org.geotools.data.DefaultTransaction;
+import org.geotools.data.shapefile.ShapefileDataStore;
+import org.geotools.data.shapefile.ShapefileDataStoreFactory;
+import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.geojson.feature.FeatureJSON;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.geotools.api.referencing.FactoryException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.sql.Clob;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 
 @Controller
@@ -457,7 +474,6 @@ public class ApiController {
         return resultMap;
     }
 
-
     @ResponseBody
 //    @RequestMapping(value = "/getShpStyle", method = RequestMethod.POST)
     public Map<String, Object> getShpStyle(@RequestParam("fileName") String fileName) {
@@ -477,7 +493,6 @@ public class ApiController {
         resultMap.put("shpType", shpType);
         return resultMap;
     }
-
 
     @ResponseBody
     @RequestMapping(value = "/updateLabel", method = RequestMethod.POST)
@@ -674,7 +689,6 @@ public class ApiController {
         jdbcTemplate.update(insertSql);
     }
 
-
     public JSONObject convertToGeoJson(List<FeatureVo> features) throws ParseException, IOException {
         JSONObject result = new JSONObject();
         result.put("type", "FeatureCollection");
@@ -774,6 +788,7 @@ public class ApiController {
     }
 
     public String getGeoJsonLink(List<Map<String, Object>> datas) throws Exception{
+        System.out.println("geojson 으로 변경 중");
         JSONObject geojson = new JSONObject();
         JSONArray features = new JSONArray();
 
@@ -982,8 +997,6 @@ public class ApiController {
         return geojson.toJSONString();
     }
 
-
-
     private String clobToString(Clob clob) throws Exception {
         StringBuilder sb = new StringBuilder();
         Reader reader = clob.getCharacterStream();
@@ -1004,9 +1017,118 @@ public class ApiController {
         String keyword = params.get("keyword");
 
         Map<String, Object> result = new HashMap<>();
-        System.out.println(shapeService.selectObject(table, column, keyword));
+        //System.out.println(shapeService.selectObject(table, column, keyword));
         result.put("data", shapeService.selectObject(table, column, keyword));
         return result;
     }
 
+    @GetMapping("/downloadShp")
+    private ResponseEntity<InputStreamResource> convertToShpFile(@RequestParam("tableName") String tableName) throws Exception {
+
+        System.out.println("요청받은 테이블 이름: " + tableName);
+
+        String geoJsonStr = "";
+        Map<String, Object> commandMap = new HashMap<>();
+        commandMap.put("fileName", tableName);
+
+        // SHP 타입 확인
+        String shpType = (String) shapeService.checkShpType(commandMap).get("SHP_TYPE");
+        System.out.println("확인된 SHP 타입: " + shpType);
+
+        if (shpType.equals("node")) {
+            System.out.println("노드 데이터로 판별.");
+            geoJsonStr = getGeoJsonNode(shapeService.getTableData(commandMap));
+            System.out.println("노드 데이터에 대한 GeoJSON 생성 완료.");
+        } else {
+            System.out.println("링크 데이터로 판별.");
+            geoJsonStr = getGeoJsonLink(shapeService.getTableData(commandMap));
+            System.out.println("링크 데이터에 대한 GeoJSON 생성 완료.");
+        }
+
+        // 2. GeoJSON -> SimpleFeatureCollection 변환
+        FeatureJSON featureJSON = new FeatureJSON();
+        SimpleFeatureCollection featureCollection = (SimpleFeatureCollection) featureJSON.readFeatureCollection(new StringReader(geoJsonStr));
+        SimpleFeatureType featureType = featureCollection.getSchema();
+        for (AttributeDescriptor descriptor : featureType.getAttributeDescriptors()) {
+            System.out.println("속성 이름: " + descriptor.getLocalName());
+        }
+        System.out.println("GeoJSON을 SimpleFeatureCollection으로 변환 완료.");
+
+        // 3. SHP 파일들 생성 로직 (이미 구현된 GeoTools 활용)
+        File shpFile = new File(tempDir + tableName + ".shp");
+        System.out.println("SHP 파일 생성 시작: " + shpFile.getAbsolutePath());
+
+        createShapefile(featureCollection, shpFile);
+        System.out.println("SHP 파일 생성 완료: " + shpFile.getAbsolutePath());
+
+        // 4. Zip 파일 생성
+        File zipFile = new File(tempDir + tableName + ".zip");
+        System.out.println("Zip 파일 생성 시작: " + zipFile.getAbsolutePath());
+
+        try (FileOutputStream fos = new FileOutputStream(zipFile);
+             ZipOutputStream zipOut = new ZipOutputStream(fos)) {
+
+            File shxFile = new File(tempDir + tableName + ".shx");
+            File dbfFile = new File(tempDir + tableName + ".dbf");
+
+            addFileToZip(shpFile, zipOut);
+            addFileToZip(shxFile, zipOut);
+            addFileToZip(dbfFile, zipOut);
+
+            System.out.println("SHP, SHX, DBF 파일을 Zip에 추가 완료.");
+        }
+
+        // 5. HTTP 응답으로 zip 파일 전송
+        InputStreamResource resource = new InputStreamResource(new FileInputStream(zipFile));
+        System.out.println("HTTP 응답으로 Zip 파일 전송 준비 완료.");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + tableName + ".zip");
+
+        System.out.println("응답 전송 준비 완료: " + tableName + ".zip");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentLength(zipFile.length())
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
+    }
+
+
+    private void createShapefile(SimpleFeatureCollection featureCollection, File shpFile) throws IOException {
+        // Shapefile 생성 로직
+        Map<String, Serializable> params = new HashMap<>();
+        params.put("url", shpFile.toURI().toURL());
+
+        ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
+        ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
+
+        newDataStore.setCharset(StandardCharsets.UTF_8);
+        SimpleFeatureType featureType = featureCollection.getSchema();
+        newDataStore.createSchema(featureType);
+
+        try (Transaction transaction = new DefaultTransaction("create")) {
+            SimpleFeatureStore featureStore = (SimpleFeatureStore) newDataStore.getFeatureSource(newDataStore.getTypeNames()[0]);
+            featureStore.setTransaction(transaction);
+            featureStore.addFeatures(featureCollection);
+            transaction.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new IOException("Shapefile 생성 중 오류가 발생했습니다.", e);
+        } finally {
+            newDataStore.dispose();
+        }
+    }
+
+    private void addFileToZip(File file, ZipOutputStream zipOut) throws IOException {
+        try (FileInputStream fis = new FileInputStream(file)) {
+            ZipEntry zipEntry = new ZipEntry(file.getName());
+            zipOut.putNextEntry(zipEntry);
+            byte[] bytes = new byte[1024];
+            int length;
+            while ((length = fis.read(bytes)) >= 0) {
+                zipOut.write(bytes, 0, length);
+            }
+        }
+    }
 }

@@ -54,6 +54,11 @@
         FROM TRANSIT.${fileName}
     </select>
 
+    <select id="getTableData" resultType="map" parameterType="map">
+        SELECT *
+        FROM TRANSIT.${fileName}
+    </select>
+
     <select id="getNodeShpData" resultType="map" parameterType="map">
         SELECT *
         FROM TRANSIT.${fileName}
