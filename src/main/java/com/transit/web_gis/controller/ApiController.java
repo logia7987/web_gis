@@ -41,6 +41,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.sql.Clob;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.zip.ZipEntry;
@@ -788,7 +789,6 @@ public class ApiController {
     }
 
     public String getGeoJsonLink(List<Map<String, Object>> datas) throws Exception{
-        System.out.println("geojson 으로 변경 중");
         JSONObject geojson = new JSONObject();
         JSONArray features = new JSONArray();
 
@@ -830,10 +830,19 @@ public class ApiController {
 
                     geometry.put("coordinates", coordArray);
                 } else {
-                    if (value instanceof Number) {
+                    if (value == null) {
+                        properties.put(strKey, "");  // null일 경우 빈 문자열 추가
+                    } else if (value instanceof Number) {
                         properties.put(strKey, value.toString());
                     } else if (value instanceof String) {
                         properties.put(strKey, (String) value);
+                    } else if (value instanceof Boolean) {
+                        properties.put(strKey, value.toString());
+                    } else if (value instanceof Date) {
+                        // 날짜 형식 처리
+                        properties.put(strKey, new SimpleDateFormat("yyyy-MM-dd").format(value));
+                    } else {
+                        properties.put(strKey, value.toString());  // 기타 타입 처리
                     }
                 }
             }
@@ -982,7 +991,19 @@ public class ApiController {
             for( Map.Entry<String, Object> entry : data.entrySet() ){
                 String strKey = entry.getKey();
                 Object value = entry.getValue();
-                properties.put(strKey, value.toString());
+                // null 값 처리
+                if (value == null) {
+                    properties.put(strKey, ""); // null일 경우 빈 문자열 추가
+                } else if (value instanceof Number || value instanceof String) {
+                    properties.put(strKey, value.toString());
+                } else if (value instanceof Boolean) {
+                    properties.put(strKey, value.toString());
+                } else if (value instanceof Date) {
+                    // 날짜 형식 처리
+                    properties.put(strKey, new SimpleDateFormat("yyyy-MM-dd").format(value));
+                } else {
+                    properties.put(strKey, value.toString()); // 기타 타입 처리
+                }
 
                 //geometry 데이터 삽입
                 if (strKey.equals("LAT")) {

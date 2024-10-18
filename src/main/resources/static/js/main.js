@@ -1,4 +1,4 @@
-const VWORLD_KEY = '826BBF47-98D0-3A2F-A444-A413695AB7F8'
+const VWORLD_KEY = '67ABA89F-1755-3034-891A-6528975D1679'
 const language = new MapboxLanguage();
 
 const DEFAULT_ZOOMLVL = 14;
@@ -2099,9 +2099,17 @@ function changeTileSet() {
 
     const tileSets = {
         'vworld': getVworldTilesSet,
-        'naver': getNaverTileSet,
+        // 'naver': getNaverTileSet,
         'settle': getNaverSatelliteTileSet,
     };
+
+    // if (val === 'kakao') {
+    //     // getKakaoTileSet()
+    // } else if (val ==='vworld') {
+    //     getVworldTilesSet()
+    // } else if (val === 'settle') {
+    //     getNaverSatelliteTileSet()
+    // }
 
     // 선택된 값에 해당하는 타일셋 함수 호출
     if (tileSets[val]) {
@@ -2128,6 +2136,7 @@ function hideAllTileSets() {
     }
     if (map.getLayer('naver-satellite-tiles-layers')) {
         map.setLayoutProperty('naver-satellite-tiles-layers', 'visibility', 'none');
+        map.setLayoutProperty('hybrid-raster-tiles-layers', 'visibility', 'none');
     }
     if (map.getLayer('vworld-raster-tiles-layers')) {
         map.setLayoutProperty('vworld-raster-tiles-layers', 'visibility', 'none');
@@ -2202,12 +2211,7 @@ function getNaverTileSet() {
                 "https://map.pstatic.net/nrb/styles/basic/{z}/{x}/{y}.png?mt=bg.ol.sw.ar.lko"
             ],
             'tileSize': 256,
-            'attribution': '© Naver',
-            'headers': {
-                "Content-Type": "application/json;charset=UTF-8",
-                "X-Pubtrans-Authorization": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6IuydtOq4sOykgCIsImV4cCI6MTU5MTU3OTY5NywidXNlcklkIjoia2lqb29uIiwiYXV0aG9yaXRpZXMiOlsiUk9MRV9VU0VSIl19.DkKPHE7vSKgxcKHseROQ70IxzhV6omndSw0-aajX34I",
-                "Accept": "application/json"
-            }
+            'attribution': '© Naver'
         });
 
         map.addLayer({
@@ -2219,39 +2223,58 @@ function getNaverTileSet() {
         });
     }
 
-    setMapEvent();
+    // 스타일 로드 완료 후 추가적인 이벤트 설정
+    map.on('style.load', function () {
+        setMapEvent(); // 필요한 이벤트들을 다시 설정
+    });
 }
 
 function getNaverSatelliteTileSet() {
-    if (map.getSource('naver-satellite-tiles-source')) {
+    if (map.getSource('satellite-tiles-source')) {
         // 이미 Naver 위성 타일 소스가 있는 경우, 해당 레이어를 표시
-        map.setLayoutProperty('naver-satellite-tiles-layers', 'visibility', 'visible');
+        map.setLayoutProperty('satellite-tiles-layers', 'visibility', 'visible');
+        map.setLayoutProperty('hybrid-raster-tiles-source', 'visibility', 'visible');
     } else {
         // Naver 위성 타일 소스를 추가
-        map.addSource('naver-satellite-tiles-source', {
+        map.addSource('satellite-tiles-source', {
             'type': 'raster',
             'tiles': [
-                "https://map.pstatic.net/nrb/styles/satellite/{z}/{x}/{y}.png?mt=bg.ol.sw.ar.lko"
+                "https://api.vworld.kr/req/wmts/1.0.0/"+VWORLD_KEY+"/Satellite/{z}/{y}/{x}.jpeg"
             ],
             'tileSize': 256,
-            'attribution': '© Naver',
-            'headers': {
-                "Content-Type": "application/json;charset=UTF-8",
-                "X-Pubtrans-Authorization": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyTmFtZSI6IuydtOq4sOykgCIsImV4cCI6MTU5MTU3OTY5NywidXNlcklkIjoia2lqb29uIiwiYXV0aG9yaXRpZXMiOlsiUk9MRV9VU0VSIl19.DkKPHE7vSKgxcKHseROQ70IxzhV6omndSw0-aajX34I",
-                "Accept": "application/json"
-            }
+            'attribution': 'VWORLD'
         });
 
         map.addLayer({
-            'id': 'naver-satellite-tiles-layers',
+            'id': 'satellite-tiles-layers',
             'type': 'raster',
-            'source': 'naver-satellite-tiles-source',
-            'maxzoom': 22,
-            'minzoom': 0
+            'source': 'satellite-tiles-source',
+            'maxzoom': 19,
+            'minzoom': 6
+        });
+
+        map.addSource('hybrid-raster-tiles-source', {
+            'type': 'raster',
+            'tiles': [
+                "https://api.vworld.kr/req/wmts/1.0.0/"+VWORLD_KEY+"/Hybrid/{z}/{y}/{x}.png"
+            ],
+            'tileSize': 256,
+            'attribution': 'VWORLD'
+        });
+
+        map.addLayer({
+            'id': 'hybrid-raster-tiles-layers',
+            'type': 'raster',
+            'source': 'hybrid-raster-tiles-source',
+            'maxzoom': 19,
+            'minzoom': 6
         });
     }
 
-    setMapEvent();
+    // 스타일 로드 완료 후 추가적인 이벤트 설정
+    map.on('style.load', function () {
+        setMapEvent(); // 필요한 이벤트들을 다시 설정
+    });
 }
 
 function setMapEvent() {
