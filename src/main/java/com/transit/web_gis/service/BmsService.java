@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BmsService {
@@ -39,4 +40,8 @@ public class BmsService {
     public int updateStationGeometry(HashMap<String, Object> map) { return bmsMapper.updateStationGeometry(map);}
 
     public int updateNodeGeometry(HashMap<String, Object> map) { return bmsMapper.updateNodeGeometry(map);}
+
+    public List<Map<String, Object>> getNGGNode() {
+        return bmsMapper.getNGGNode();
+    }
 }

@@ -12,14 +12,21 @@ import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.geotools.api.data.FileDataStoreFactorySpi;
 import org.geotools.api.data.SimpleFeatureStore;
 import org.geotools.api.data.Transaction;
+import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.feature.type.AttributeDescriptor;
 import org.geotools.api.referencing.operation.TransformException;
+import org.geotools.data.DataUtilities;
 import org.geotools.data.DefaultTransaction;
+import org.geotools.data.collection.ListFeatureCollection;
 import org.geotools.data.shapefile.ShapefileDataStore;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.data.simple.SimpleFeatureIterator;
+import org.geotools.feature.simple.SimpleFeatureBuilder;
+import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geojson.feature.FeatureJSON;
+import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -79,6 +86,9 @@ public class ApiController {
     private ShapeService shapeService;
 
     @Autowired
+    private BmsService bmsService;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -90,6 +100,11 @@ public class ApiController {
     // 리눅스 경로
 //    private static final File tempDir = new File("/app/shapefile_temp");
 //    private static final File geoDir = new File("/app/geoJson");
+
+    @GetMapping("/node")
+    public void voidTest() {
+        System.out.println(bmsService.getNGGNode());
+    }
 
     @PostMapping(value = "/uploadShapeFiles", consumes = "multipart/form-data", produces = "application/json; charset=UTF-8")
     @ResponseBody
@@ -992,7 +1007,7 @@ public class ApiController {
                 String strKey = entry.getKey();
                 Object value = entry.getValue();
                 // null 값 처리
-                if (value == null) {
+                if (value == null || value == "") {
                     properties.put(strKey, ""); // null일 경우 빈 문자열 추가
                 } else if (value instanceof Number || value instanceof String) {
                     properties.put(strKey, value.toString());
@@ -1069,11 +1084,25 @@ public class ApiController {
         // 2. GeoJSON -> SimpleFeatureCollection 변환
         FeatureJSON featureJSON = new FeatureJSON();
         SimpleFeatureCollection featureCollection = (SimpleFeatureCollection) featureJSON.readFeatureCollection(new StringReader(geoJsonStr));
-        SimpleFeatureType featureType = featureCollection.getSchema();
-        for (AttributeDescriptor descriptor : featureType.getAttributeDescriptors()) {
-            System.out.println("속성 이름: " + descriptor.getLocalName());
+
+        SimpleFeatureType originalFeatureType = featureCollection.getSchema();
+        SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
+        builder.init(originalFeatureType);
+        builder.setCRS(DefaultGeographicCRS.WGS84); // 좌표계를 EPSG:4326으로 설정
+        SimpleFeatureType featureTypeWithCRS = builder.buildFeatureType();
+
+
+        // 새로운 좌표계를 갖는 SimpleFeatureCollection 생성
+        List<SimpleFeature> reprojectedFeatures = new ArrayList<>();
+        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureTypeWithCRS);
+        try (SimpleFeatureIterator iterator = featureCollection.features()) {
+            while (iterator.hasNext()) {
+                SimpleFeature feature = iterator.next();
+                featureBuilder.addAll(feature.getAttributes());
+                reprojectedFeatures.add(featureBuilder.buildFeature(feature.getID()));
+            }
         }
-        System.out.println("GeoJSON을 SimpleFeatureCollection으로 변환 완료.");
+        featureCollection = new ListFeatureCollection(featureTypeWithCRS, reprojectedFeatures);
 
         // 3. SHP 파일들 생성 로직 (이미 구현된 GeoTools 활용)
         File shpFile = new File(tempDir + tableName + ".shp");

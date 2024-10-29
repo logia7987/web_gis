@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface BmsMapper {
@@ -23,6 +24,6 @@ public interface BmsMapper {
     // shp 파일 링크 포인트 추가
 
     // shp 파일 노드
-
+    List<Map<String, Object>> getNGGNode();
 }
 

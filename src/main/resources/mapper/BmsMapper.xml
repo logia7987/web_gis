@@ -202,4 +202,9 @@
         INSERT INTO GBMS.TS_FILE (FILE_ID, FILE_NAME, REG_DT)
         VALUES (#{fileId}, #{fileName}, TO_DATE(sysdate,'yyyy.mm.dd hh24:mi'))
     </insert>
+
+    <select id="getNGGNode" resultType="map">
+        SELECT *
+        FROM NGGBMS.XNODE
+    </select>
 </mapper>
