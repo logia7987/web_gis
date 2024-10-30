@@ -231,7 +231,7 @@ public class ShapeService {
                 }
 
                 // 편집모드 선택을 위한 객체 ID 부여
-                createTableSql.append(", \"").append(tableName).append("_ID\" NUMBER");
+                createTableSql.append(", \"").append(tableName + "_ID\" NUMBER");
 
                 // 분류를 위한 공통 컬럼
                 createTableSql.append(", \"FILE_NAME\" VARCHAR2(100)");
@@ -242,7 +242,6 @@ public class ShapeService {
                 createTableSql.append(", \"COLOR\" VARCHAR2(100)");
                 createTableSql.append(", \"FONT_SIZE\" VARCHAR2(100)");
                 createTableSql.append(", \"FONT_COLOR\" VARCHAR2(100)");
-
 
                 JSONObject geometry = (JSONObject) firstFeature.get("geometry");
                 String typeString = checkFeatureType(geometry);

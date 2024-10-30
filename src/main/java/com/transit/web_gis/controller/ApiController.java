@@ -26,6 +26,7 @@ import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geojson.feature.FeatureJSON;
+import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -1085,41 +1086,112 @@ public class ApiController {
         FeatureJSON featureJSON = new FeatureJSON();
         SimpleFeatureCollection featureCollection = (SimpleFeatureCollection) featureJSON.readFeatureCollection(new StringReader(geoJsonStr));
 
+        // 기존 FeatureType 가져오기
         SimpleFeatureType originalFeatureType = featureCollection.getSchema();
         SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
         builder.init(originalFeatureType);
         builder.setCRS(DefaultGeographicCRS.WGS84); // 좌표계를 EPSG:4326으로 설정
-        SimpleFeatureType featureTypeWithCRS = builder.buildFeatureType();
 
+        // 속성명에 따라 속성을 Double로 정의
+        Set<String> addedAttributes = new HashSet<>(); // 추가된 속성 이름을 추적
+        for (AttributeDescriptor attributeDescriptor : originalFeatureType.getAttributeDescriptors()) {
+            String attributeName = attributeDescriptor.getName().getLocalPart();
+            if (addedAttributes.contains(attributeName) ||
+                attributeName.equals("FILE_NAME") ||
+                attributeName.equals("SHP_TYPE") ||
+                attributeName.equals("LABEL_COLUMN") ||
+                attributeName.equals("WEIGHT") ||
+                attributeName.equals("COLOR") ||
+                attributeName.equals("FONT_SIZE") ||
+                attributeName.equals("FONT_COLOR") ||
+                attributeName.equals("GEOMETRY") ||
+                attributeName.equals("iconId") ||
+                attributeName.equals("featureId") ||
+                attributeName.equals("label") ||
+                attributeName.equals("emptyLabel") ||
+                attributeName.equals("F_LNG") ||
+                attributeName.equals("F_LAT") ||
+                attributeName.equals("T_LNG") ||
+                attributeName.equals("T_LAT")) {
+                builder.remove(attributeName);
+                continue;
+            }
+            builder.remove(attributeName);
+            // 중복된 컬럼 이름 방지
+            if (attributeName.contains("LAT") || attributeName.contains("LON") ||
+                    attributeName.contains("_X") || attributeName.contains("_Y") ||
+                    attributeName.contains("LNG")) {
+                builder.add(attributeName, Double.class); // Double 타입으로 추가
+            } else {
+                builder.add(attributeName, attributeDescriptor.getType().getBinding()); // 기존 타입 유지
+            }
+            addedAttributes.add(attributeName); // 추가된 속성 이름 기록
+        }
+      
+        SimpleFeatureType featureTypeWithCRS = builder.buildFeatureType();
 
         // 새로운 좌표계를 갖는 SimpleFeatureCollection 생성
         List<SimpleFeature> reprojectedFeatures = new ArrayList<>();
-        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureTypeWithCRS);
         try (SimpleFeatureIterator iterator = featureCollection.features()) {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
-                featureBuilder.addAll(feature.getAttributes());
+
+                // 각 피처에 대해 새로운 SimpleFeatureBuilder 생성
+                SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureTypeWithCRS);
+                
+                for (AttributeDescriptor attributeDescriptor : feature.getType().getAttributeDescriptors()) {
+                    String attributeName = attributeDescriptor.getName().getLocalPart();
+                    if (attributeName.equals("FILE_NAME") ||
+                        attributeName.equals("SHP_TYPE") ||
+                        attributeName.equals("LABEL_COLUMN") ||
+                        attributeName.equals("WEIGHT") ||
+                        attributeName.equals("COLOR") ||
+                        attributeName.equals("FONT_SIZE") ||
+                        attributeName.equals("FONT_COLOR") ||
+                        attributeName.equals("GEOMETRY") ||
+                        attributeName.equals("iconId") ||
+                        attributeName.equals("featureId") ||
+                        attributeName.equals("label") ||
+                        attributeName.equals("emptyLabel") ||
+                        attributeName.equals("F_LNG") ||
+                        attributeName.equals("F_LAT") ||
+                        attributeName.equals("T_LNG") ||
+                        attributeName.equals("T_LAT")) {
+                        continue;
+                    }
+
+                    Object value = feature.getAttribute(attributeName);
+                    if (value instanceof String) {
+                        if (attributeName.contains("LAT") || attributeName.contains("LON") ||
+                            attributeName.contains("_X") || attributeName.contains("_Y") ||
+                            attributeName.contains("LNG")) {
+                            value = Double.valueOf((String) value);
+                        }
+                    }
+                    featureBuilder.set(attributeName, value);
+                }
+
                 reprojectedFeatures.add(featureBuilder.buildFeature(feature.getID()));
             }
         }
         featureCollection = new ListFeatureCollection(featureTypeWithCRS, reprojectedFeatures);
 
         // 3. SHP 파일들 생성 로직 (이미 구현된 GeoTools 활용)
-        File shpFile = new File(tempDir + tableName + ".shp");
+        File shpFile = new File(tableName + ".shp");
         System.out.println("SHP 파일 생성 시작: " + shpFile.getAbsolutePath());
 
         createShapefile(featureCollection, shpFile);
         System.out.println("SHP 파일 생성 완료: " + shpFile.getAbsolutePath());
 
         // 4. Zip 파일 생성
-        File zipFile = new File(tempDir + tableName + ".zip");
+        File zipFile = new File(tableName + ".zip");
         System.out.println("Zip 파일 생성 시작: " + zipFile.getAbsolutePath());
 
         try (FileOutputStream fos = new FileOutputStream(zipFile);
              ZipOutputStream zipOut = new ZipOutputStream(fos)) {
 
-            File shxFile = new File(tempDir + tableName + ".shx");
-            File dbfFile = new File(tempDir + tableName + ".dbf");
+            File shxFile = new File(tableName + ".shx");
+            File dbfFile = new File(tableName + ".dbf");
 
             addFileToZip(shpFile, zipOut);
             addFileToZip(shxFile, zipOut);
@@ -1157,6 +1229,9 @@ public class ApiController {
         SimpleFeatureType featureType = featureCollection.getSchema();
         newDataStore.createSchema(featureType);
 
+        // WGS 84 범위 설정
+        ReferencedEnvelope envelope = featureCollection.getBounds();
+        
         try (Transaction transaction = new DefaultTransaction("create")) {
             SimpleFeatureStore featureStore = (SimpleFeatureStore) newDataStore.getFeatureSource(newDataStore.getTypeNames()[0]);
             featureStore.setTransaction(transaction);
