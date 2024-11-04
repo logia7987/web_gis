@@ -15,6 +15,7 @@ import org.geotools.api.data.Transaction;
 import org.geotools.api.feature.simple.SimpleFeature;
 import org.geotools.api.feature.simple.SimpleFeatureType;
 import org.geotools.api.feature.type.AttributeDescriptor;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.api.referencing.operation.TransformException;
 import org.geotools.data.DataUtilities;
 import org.geotools.data.DefaultTransaction;
@@ -27,12 +28,15 @@ import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geojson.feature.FeatureJSON;
 import org.geotools.geometry.jts.ReferencedEnvelope;
+import org.geotools.referencing.CRS;
 import org.geotools.referencing.crs.DefaultGeographicCRS;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.geotools.api.referencing.FactoryException;
+import org.locationtech.jts.geom.*;
+import org.locationtech.jts.io.WKTReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -836,7 +840,9 @@ public class ApiController {
 
                 if (strKey.equals("GEOMETRY")) {
                     String geometryString = clobToString((Clob) entry.getValue());
-
+                    if (geometryString.equals("")) {
+                        continue;
+                    }
                     JSONArray coordArray = (JSONArray) ((JSONObject) new JSONParser().parse(geometryString)).get("coordinates");
 
                     String geoDataType = (String) ((JSONObject) new JSONParser().parse(geometryString)).get("type");
@@ -1035,6 +1041,9 @@ public class ApiController {
     }
 
     private String clobToString(Clob clob) throws Exception {
+        if (clob == null) {
+            throw new Exception("Clob object is null");
+        }
         StringBuilder sb = new StringBuilder();
         Reader reader = clob.getCharacterStream();
         BufferedReader br = new BufferedReader(reader);
@@ -1096,9 +1105,20 @@ public class ApiController {
         Set<String> addedAttributes = new HashSet<>(); // 추가된 속성 이름을 추적
         for (AttributeDescriptor attributeDescriptor : originalFeatureType.getAttributeDescriptors()) {
             String attributeName = attributeDescriptor.getName().getLocalPart();
+
+            // Geometry 속성 추가
+            if (attributeName.equals("geometry")) {
+                builder.add("geometry", Geometry.class);
+                builder.add("geom", Geometry.class);
+                builder.add("the_geom", Geometry.class);
+                addedAttributes.add(attributeName);
+                continue;
+            }
+
             if (addedAttributes.contains(attributeName) ||
                 attributeName.equals("FILE_NAME") ||
                 attributeName.equals("SHP_TYPE") ||
+                attributeName.equals("GRAY") ||
                 attributeName.equals("LABEL_COLUMN") ||
                 attributeName.equals("WEIGHT") ||
                 attributeName.equals("COLOR") ||
@@ -1136,12 +1156,12 @@ public class ApiController {
             while (iterator.hasNext()) {
                 SimpleFeature feature = iterator.next();
 
-                // 각 피처에 대해 새로운 SimpleFeatureBuilder 생성
                 SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(featureTypeWithCRS);
-                
+
                 for (AttributeDescriptor attributeDescriptor : feature.getType().getAttributeDescriptors()) {
                     String attributeName = attributeDescriptor.getName().getLocalPart();
                     if (attributeName.equals("FILE_NAME") ||
+                        attributeName.equals("GRAY") ||
                         attributeName.equals("SHP_TYPE") ||
                         attributeName.equals("LABEL_COLUMN") ||
                         attributeName.equals("WEIGHT") ||
@@ -1161,14 +1181,63 @@ public class ApiController {
                     }
 
                     Object value = feature.getAttribute(attributeName);
-                    if (value instanceof String) {
-                        if (attributeName.contains("LAT") || attributeName.contains("LON") ||
-                            attributeName.contains("_X") || attributeName.contains("_Y") ||
-                            attributeName.contains("LNG")) {
-                            value = Double.valueOf((String) value);
+                    if (attributeName.equals("geometry")) {
+                        String wktString = value.toString();
+                        System.out.println(wktString);
+                        GeometryFactory geometryFactory = new GeometryFactory();
+
+                        if (wktString.indexOf("POINT") > -1) {
+                            // WKT 문자열에서 좌표를 추출
+                            String[] parts = wktString.replace("POINT (", "").replace(")", "").split(" ");
+                            double longitude = Double.parseDouble(parts[0]);
+                            double latitude = Double.parseDouble(parts[1]);
+
+                            // 2차원 포인트 생성
+                            Point point = geometryFactory.createPoint(new Coordinate(longitude, latitude));
+                            featureBuilder.set("geometry", point);
+                            featureBuilder.set("geom", point);
+                            featureBuilder.set("the_geom", point);
+                        } else if (wktString.indexOf("MULTILINESTRING") > -1) {
+                            // WKT 문자열에서 좌표를 추출
+                            String lineString = wktString.replace("MULTILINESTRING (", "").replace(")", "");
+                            String[] coordinatePairs = lineString.split(", "); // 각 좌표 쌍을 분리
+                            Coordinate[] coordinates = new Coordinate[coordinatePairs.length];
+
+                            for (int i = 0; i < coordinatePairs.length; i++) {
+                                String[] parts = coordinatePairs[i].trim().split(" ");
+                                double longitude = Double.parseDouble(parts[0]);
+                                double latitude = Double.parseDouble(parts[1]);
+                                coordinates[i] = new Coordinate(longitude, latitude);
+                            }
+
+                            // 2차원 라인스트링 생성
+                            LineString lineStringGeom = geometryFactory.createLineString(coordinates);
+                            featureBuilder.set("geometry", lineStringGeom);
+                            featureBuilder.set("geom", lineStringGeom);
+                            featureBuilder.set("the_geom", lineStringGeom);
+                        } else if (wktString.indexOf("LINESTRING") > -1) {
+                            // WKT 문자열에서 좌표를 추출
+                            String lineString = wktString.replace("LINESTRING (", "").replace(")", "");
+                            String[] coordinatePairs = lineString.split(", "); // 각 좌표 쌍을 분리
+                            Coordinate[] coordinates = new Coordinate[coordinatePairs.length];
+
+                            for (int i = 0; i < coordinatePairs.length; i++) {
+                                String[] parts = coordinatePairs[i].trim().split(" ");
+                                double longitude = Double.parseDouble(parts[0]);
+                                double latitude = Double.parseDouble(parts[1]);
+                                coordinates[i] = new Coordinate(longitude, latitude);
+                            }
+
+                            // 2차원 라인스트링 생성
+                            LineString lineStringGeom = geometryFactory.createLineString(coordinates);
+                            featureBuilder.set("geometry", lineStringGeom);
+                            featureBuilder.set("geom", lineStringGeom);
+                            featureBuilder.set("the_geom", lineStringGeom);
                         }
+
+                    } else {
+                        featureBuilder.set(attributeName, value);
                     }
-                    featureBuilder.set(attributeName, value);
                 }
 
                 reprojectedFeatures.add(featureBuilder.buildFeature(feature.getID()));
@@ -1192,12 +1261,12 @@ public class ApiController {
 
             File shxFile = new File(tableName + ".shx");
             File dbfFile = new File(tableName + ".dbf");
+            File prjFile = new File(tableName + ".prj");
 
             addFileToZip(shpFile, zipOut);
             addFileToZip(shxFile, zipOut);
             addFileToZip(dbfFile, zipOut);
-
-            System.out.println("SHP, SHX, DBF 파일을 Zip에 추가 완료.");
+            addFileToZip(prjFile, zipOut);
         }
 
         // 5. HTTP 응답으로 zip 파일 전송
@@ -1217,7 +1286,7 @@ public class ApiController {
     }
 
 
-    private void createShapefile(SimpleFeatureCollection featureCollection, File shpFile) throws IOException {
+    private void createShapefile(SimpleFeatureCollection featureCollection, File shpFile) throws IOException, FactoryException {
         // Shapefile 생성 로직
         Map<String, Serializable> params = new HashMap<>();
         params.put("url", shpFile.toURI().toURL());
@@ -1225,17 +1294,25 @@ public class ApiController {
         ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
         ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
 
-        newDataStore.setCharset(StandardCharsets.UTF_8);
+        // 좌표계를 EPSG:4326으로 설정
+        CoordinateReferenceSystem crs = CRS.decode("EPSG:4326");
+
+        // 데이터 스토어에 좌표계를 적용
+        newDataStore.forceSchemaCRS(crs);
+
+        // FeatureType 생성
         SimpleFeatureType featureType = featureCollection.getSchema();
         newDataStore.createSchema(featureType);
 
-        // WGS 84 범위 설정
-        ReferencedEnvelope envelope = featureCollection.getBounds();
-        
+        // 문자 인코딩 설정
+        newDataStore.setCharset(StandardCharsets.UTF_8);
+
         try (Transaction transaction = new DefaultTransaction("create")) {
             SimpleFeatureStore featureStore = (SimpleFeatureStore) newDataStore.getFeatureSource(newDataStore.getTypeNames()[0]);
             featureStore.setTransaction(transaction);
             featureStore.addFeatures(featureCollection);
+
+            // transaction 커밋
             transaction.commit();
         } catch (Exception e) {
             e.printStackTrace();
@@ -1244,6 +1321,7 @@ public class ApiController {
             newDataStore.dispose();
         }
     }
+
 
     private void addFileToZip(File file, ZipOutputStream zipOut) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
