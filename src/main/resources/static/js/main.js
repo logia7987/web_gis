@@ -807,7 +807,9 @@ function handleFeatureSelection(e, layerId) {
     // 편집모드 클릭과 일반클릭을 분리
     // TODO 맵 클릭 시 링크 선 선택 해제 추가
     if (isEdit()) {
-        if (e.features !== undefined) {
+        if (selectedShp !== undefined && draw.getAll().features.length > 0) {
+            toastOn("편집 중인 객체가 있습니다. 저장 후 다시 선택해주세요.")
+        } else if (e.features !== undefined) {
             // 이전 객체에 대한 히스토리 내역 초기화
             historyStack = [];
 
@@ -3005,6 +3007,8 @@ function updateFeature() {
                     setLinkNodeStationFeature();
 
                     toastOn("정상적으로 수정되었습니다.")
+
+                    selectedShp = undefined;
                 } else {
                     toastOn("정보 수정에 실패하였습니다.")
                 }
@@ -3366,77 +3370,77 @@ function uploadShpTable(flag) {
     if (loadData === undefined) {
         toastOn("불러온 SHP 파일이 없습니다!")
         return;
-    }
-
-    viewLoading();
-
-    if (!isSaving) {
-        isSaving = true;
-        let selectedLabel = matchObj.label
-
-        $.ajax({
-            url : '/api/uploadShpTable',
-            type : 'POST',
-            data : {
-                fileName : fileNm,
-                idxArr: JSON.stringify(shpDataIdxArr),
-                isAllChecked : isAllChecked,
-                shpType : shpType,
-                label: selectedLabel,
-                confirmFlag : flag
-            },
-            success : function (result){
-                if (result.result === "success") {
-
-                    let html = '<div class="table-div" data-table-name="'+fileNm+'" onclick="getShpData(this)">'
-
-                    let dataType = loadData.data.features[0].geometry.type;
-                    if (dataType === 'Point') {
-                        html += '<i class= "fa-brands fa-hashnode"aria-hidden="true"></i>'
-                    } else if (dataType.indexOf("LineString") > -1) {
-                        html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
-                    } else {
-                        html += '<i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>'
-                    }
-
-                    html += '<span class="table-name">'+fileNm+'</span>'
-                    html += '<span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" aria-label="불러온 파일" data-bs-original-title="불러온 파일">'
-                    html += '<i class="fas fa-check" aria-hidden="true"></i>'
-                    html += '</span>'
-                    html += '<div class="table-row"></div>'
-                    html += '</div>'
-
-                    clearShpList();
-
-                    if ($("[data-table-name='"+fileNm+"']").length === 0) {
-                        $(".attr-list").append(html);
-                        $(".table-div:last-child").click();
-                    } else {
-                        if (!$("[data-table-name='"+fileNm+"']").find(".option-selected").is(":visible")) {
-                            $("[data-table-name='"+fileNm+"']").click();
-                        }
-                    }
-
-                    toastOn("성공적으로 저장되었습니다.");
-
-                    $(".tab-links:eq(0)").click();
-
-                } else if (result.message != "" || flag === false) {
-                    // toastOn(result.message);
-                    $("#modal_confirmFile").modal('show');
-                }
-                isSaving = false;
-
-                finishLoading()
-            },
-            error : function (error){
-                console.log(error)
-                toastOn("파일 업로드 중 오류가 발생했습니다.");
-                isSaving = false;
-            }
-        })
     } else {
-        toastOn("현재 저장중인 파일이 있습니다. 잠시만 기다려주세요.");
+        viewLoading();
+
+        if (!isSaving) {
+            isSaving = true;
+            let selectedLabel = matchObj.label
+
+            $.ajax({
+                url : '/api/uploadShpTable',
+                type : 'POST',
+                data : {
+                    fileName : fileNm,
+                    idxArr: JSON.stringify(shpDataIdxArr),
+                    isAllChecked : isAllChecked,
+                    shpType : shpType,
+                    label: selectedLabel,
+                    confirmFlag : flag
+                },
+                success : function (result){
+                    if (result.result === "success") {
+
+                        let html = '<div class="table-div" data-table-name="'+fileNm+'" onclick="getShpData(this)">'
+
+                        let dataType = loadData.data.features[0].geometry.type;
+                        if (dataType === 'Point') {
+                            html += '<i class= "fa-brands fa-hashnode"aria-hidden="true"></i>'
+                        } else if (dataType.indexOf("LineString") > -1) {
+                            html += '<i class="fa-solid fa-share-nodes" aria-hidden="true"></i>'
+                        } else {
+                            html += '<i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>'
+                        }
+
+                        html += '<span class="table-name">'+fileNm+'</span>'
+                        html += '<span class="option-selected" data-bs-placement="right" data-bs-toggle="tooltip" aria-label="불러온 파일" data-bs-original-title="불러온 파일">'
+                        html += '<i class="fas fa-check" aria-hidden="true"></i>'
+                        html += '</span>'
+                        html += '<div class="table-row"></div>'
+                        html += '</div>'
+
+                        clearShpList();
+
+                        if ($("[data-table-name='"+fileNm+"']").length === 0) {
+                            $(".attr-list").append(html);
+                            $(".table-div:last-child").click();
+                        } else {
+                            if (!$("[data-table-name='"+fileNm+"']").find(".option-selected").is(":visible")) {
+                                $("[data-table-name='"+fileNm+"']").click();
+                            }
+                        }
+
+                        toastOn("성공적으로 저장되었습니다.");
+
+                        $(".tab-links:eq(0)").click();
+
+                    } else if (result.message != "" || flag === false) {
+                        // toastOn(result.message);
+                        $("#modal_confirmFile").modal('show');
+                    }
+                    isSaving = false;
+
+                    finishLoading()
+                },
+                error : function (error){
+                    console.log(error)
+                    toastOn("파일 업로드 중 오류가 발생했습니다.");
+                    isSaving = false;
+                }
+            })
+        } else {
+            toastOn("현재 저장중인 파일이 있습니다. 잠시만 기다려주세요.");
+        }
     }
 }
 

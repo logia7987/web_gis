@@ -183,9 +183,7 @@ public class ApiController {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 return shapeService.convertShpToGeoJSON(shpFile, tempDir);
-            } catch (IOException | FactoryException e) {
-                throw new RuntimeException(e);
-            } catch (TransformException e) {
+            } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         });
@@ -1182,59 +1180,9 @@ public class ApiController {
 
                     Object value = feature.getAttribute(attributeName);
                     if (attributeName.equals("geometry")) {
-                        String wktString = value.toString();
-                        System.out.println(wktString);
-                        GeometryFactory geometryFactory = new GeometryFactory();
-
-                        if (wktString.indexOf("POINT") > -1) {
-                            // WKT 문자열에서 좌표를 추출
-                            String[] parts = wktString.replace("POINT (", "").replace(")", "").split(" ");
-                            double longitude = Double.parseDouble(parts[0]);
-                            double latitude = Double.parseDouble(parts[1]);
-
-                            // 2차원 포인트 생성
-                            Point point = geometryFactory.createPoint(new Coordinate(longitude, latitude));
-                            featureBuilder.set("geometry", point);
-                            featureBuilder.set("geom", point);
-                            featureBuilder.set("the_geom", point);
-                        } else if (wktString.indexOf("MULTILINESTRING") > -1) {
-                            // WKT 문자열에서 좌표를 추출
-                            String lineString = wktString.replace("MULTILINESTRING (", "").replace(")", "");
-                            String[] coordinatePairs = lineString.split(", "); // 각 좌표 쌍을 분리
-                            Coordinate[] coordinates = new Coordinate[coordinatePairs.length];
-
-                            for (int i = 0; i < coordinatePairs.length; i++) {
-                                String[] parts = coordinatePairs[i].trim().split(" ");
-                                double longitude = Double.parseDouble(parts[0]);
-                                double latitude = Double.parseDouble(parts[1]);
-                                coordinates[i] = new Coordinate(longitude, latitude);
-                            }
-
-                            // 2차원 라인스트링 생성
-                            LineString lineStringGeom = geometryFactory.createLineString(coordinates);
-                            featureBuilder.set("geometry", lineStringGeom);
-                            featureBuilder.set("geom", lineStringGeom);
-                            featureBuilder.set("the_geom", lineStringGeom);
-                        } else if (wktString.indexOf("LINESTRING") > -1) {
-                            // WKT 문자열에서 좌표를 추출
-                            String lineString = wktString.replace("LINESTRING (", "").replace(")", "");
-                            String[] coordinatePairs = lineString.split(", "); // 각 좌표 쌍을 분리
-                            Coordinate[] coordinates = new Coordinate[coordinatePairs.length];
-
-                            for (int i = 0; i < coordinatePairs.length; i++) {
-                                String[] parts = coordinatePairs[i].trim().split(" ");
-                                double longitude = Double.parseDouble(parts[0]);
-                                double latitude = Double.parseDouble(parts[1]);
-                                coordinates[i] = new Coordinate(longitude, latitude);
-                            }
-
-                            // 2차원 라인스트링 생성
-                            LineString lineStringGeom = geometryFactory.createLineString(coordinates);
-                            featureBuilder.set("geometry", lineStringGeom);
-                            featureBuilder.set("geom", lineStringGeom);
-                            featureBuilder.set("the_geom", lineStringGeom);
-                        }
-
+                        featureBuilder.set("geometry", value);
+                        featureBuilder.set("geom", value);
+                        featureBuilder.set("the_geom", value);
                     } else {
                         featureBuilder.set(attributeName, value);
                     }
