@@ -99,19 +99,19 @@ public class ApiController {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // 테스트 경로
-    private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
-    private static final File geoDir = new File("C:\\mapbox\\geoJson");
+//    private static final File tempDir = new File("C:\\mapbox\\shapefile_temp");
+//    private static final File geoDir = new File("C:\\mapbox\\geoJson");
 
     // 리눅스 경로
-//    private static final File tempDir = new File("/app/shapefile_temp");
-//    private static final File geoDir = new File("/app/geoJson");
+    private static final File tempDir = new File("/app/shapefile_temp");
+    private static final File geoDir = new File("/app/geoJson");
 
     @GetMapping("/node")
     public void voidTest() {
         System.out.println(bmsService.getNGGNode());
     }
 
-    @PostMapping(value = "/uploadShapeFiles", consumes = "multipart/form-data", produces = "application/json; charset=UTF-8")
+    @PostMapping(value = "/uploadShapeFiles", consumes = "multipart/form-data", produces = "application/json;")
     @ResponseBody
     public Map<String, Object> uploadShapeFiles(@RequestParam("shpData") List<MultipartFile> files, HttpSession session) throws IOException, ParseException {
         Map<String, Object> result = new HashMap<>();
@@ -397,6 +397,8 @@ public class ApiController {
 
         Map<String, Object> commandMap = new HashMap<>();
         Map<String, Object> resultMap = new HashMap<>();
+
+        tableName = tableName.toUpperCase();
 
         commandMap.put("fileName", tableName);
         int hasShp = shapeService.checkHasShpFile(commandMap);

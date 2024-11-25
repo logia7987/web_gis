@@ -2103,6 +2103,7 @@ function changeTileSet() {
         'vworld': getVworldTilesSet,
         // 'naver': getNaverTileSet,
         'settle': getNaverSatelliteTileSet,
+        // 'kakao': getKakaoTileSet,
     };
 
     // if (val === 'kakao') {
@@ -2181,10 +2182,12 @@ function getKakaoTileSet() {
         // 이미 Kakao 타일 소스가 있는 경우, 해당 레이어를 표시
         map.setLayoutProperty('kakao-raster-tiles-layers', 'visibility', 'visible');
     } else {
-        // Kakao 타일 소스를 추가
+        // Kakao 타일 소스를 추가 (EPSG:3857로 변경)
         map.addSource('kakao-raster-tiles-source', {
             'type': 'raster',
-            'tiles': ['http://map.daumcdn.net/map_k3f_prod/bakery/image_map_png/PNG01/v26_gxuw0/{z}/{y}/{x}.png'],
+            'tiles': [
+                'http://localhost:8080/proxy/kakao-tiles?z={z}&y={y}&x={x}'
+            ],
             'tileSize': 256,
             'attribution': '© Kakao'
         });
@@ -2210,7 +2213,7 @@ function getNaverTileSet() {
         map.addSource('naver-tiles-source', {
             'type': 'raster',
             'tiles': [
-                "https://map.pstatic.net/nrb/styles/basic/{z}/{x}/{y}.png?mt=bg.ol.sw.ar.lko"
+                "http://localhost:8080/proxy/naver-tiles?z={z}&x={x}&y={y}" // 프록시 서버를 통해 요청
             ],
             'tileSize': 256,
             'attribution': '© Naver'
