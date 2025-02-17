@@ -1235,6 +1235,51 @@ public class ApiController {
                 .body(resource);
     }
 
+    @GetMapping("/downloadGeoJson")
+    private ResponseEntity<InputStreamResource> downloadGeoJson(@RequestParam("tableName") String tableName) throws Exception {
+        System.out.println("요청받은 테이블 이름: " + tableName);
+
+        // GeoJSON 문자열 생성
+        String geoJsonStr = "";
+        Map<String, Object> commandMap = new HashMap<>();
+        commandMap.put("fileName", tableName);
+
+        // SHP 타입 확인
+        String shpType = (String) shapeService.checkShpType(commandMap).get("SHP_TYPE");
+        System.out.println("확인된 타입: " + shpType);
+
+        if (shpType.equals("node")) {
+            System.out.println("노드 데이터로 판별.");
+            geoJsonStr = getGeoJsonNode(shapeService.getTableData(commandMap));
+        } else {
+            System.out.println("링크 데이터로 판별.");
+            geoJsonStr = getGeoJsonLink(shapeService.getTableData(commandMap));
+        }
+
+        System.out.println("파일 생성중.");
+        // GeoJSON 파일 생성
+        File geoJsonFile = new File(tableName + ".geojson");
+        try (FileWriter writer = new FileWriter(geoJsonFile)) {
+            writer.write(geoJsonStr);
+        }
+        System.out.println("파일 생성 완료.");
+
+        System.out.println("HTTP 응답 준비 .");
+        // HTTP 응답 준비
+        InputStreamResource resource = new InputStreamResource(new FileInputStream(geoJsonFile));
+
+        System.out.println("HTTP 응답 준비 완료.");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + tableName + ".geojson");
+
+        System.out.println("간다잇.");
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentLength(geoJsonFile.length())
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(resource);
+    }
 
     private void createShapefile(SimpleFeatureCollection featureCollection, File shpFile) throws IOException, FactoryException {
         // Shapefile 생성 로직

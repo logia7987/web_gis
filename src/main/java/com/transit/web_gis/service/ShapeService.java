@@ -364,6 +364,8 @@ public class ShapeService {
             }
         }
 
+        int totalSize = (bArr == null) ? features.size() : indicesToSave.size();
+
         JSONObject sampleFeature = features.get(0);
         JSONObject properties = (JSONObject) sampleFeature.get("properties");
 
@@ -398,75 +400,83 @@ public class ShapeService {
 
         insertSql.append(")");
 
-        valuesSql.append(",? ,? ,? ,? ,? ,? ,? ,? ,? ,'2' ,'#888' ,'12' ,'#000')");
+        valuesSql.append(",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?)");
 
         String sql = insertSql + " " + valuesSql;
 
         // insert 실행
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                try {
-                    int actualIndex = (bArr == null) ? i : (int) indicesToSave.toArray()[i];
-                    JSONObject feature = features.get(actualIndex);
-                    JSONObject properties = (JSONObject) feature.get("properties");
-                    JSONObject geometry = (JSONObject) feature.get("geometry");
+        for (int offset = 0; offset < totalSize; offset += 550) {
+            final int currentOffset = offset;
+            jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    try {
+                        int actualIndex = currentOffset + i;
+                        actualIndex = (bArr == null) ? actualIndex : (int) indicesToSave.toArray()[actualIndex];
+                        
+                        JSONObject feature = features.get(actualIndex);
+                        JSONObject properties = (JSONObject) feature.get("properties");
+                        JSONObject geometry = (JSONObject) feature.get("geometry");
 
-                    // MultiLineString 과 LineString 을 구분하여 입력하기 위한 타입 구분
-                    String geomType = (String) geometry.get("type");
-                    JSONArray coordinates;
+                        // MultiLineString 과 LineString 을 구분하여 입력하기 위한 타입 구분
+                        String geomType = (String) geometry.get("type");
+                        JSONArray coordinates;
 
-                    if (geomType.equals("LineString")) {
-                        coordinates = (JSONArray) geometry.get("coordinates");
-                    } else if (geomType.equals("MultiLineString")) {
-                        coordinates = (JSONArray) ((JSONArray) geometry.get("coordinates")).get(0);
-                    } else {
-                        throw new SQLException("Unsupported geometry type: " + geomType);
+                        if (geomType.equals("LineString")) {
+                            coordinates = (JSONArray) geometry.get("coordinates");
+                        } else if (geomType.equals("MultiLineString")) {
+                            coordinates = (JSONArray) ((JSONArray) geometry.get("coordinates")).get(0);
+                        } else {
+                            throw new SQLException("Unsupported geometry type: " + geomType);
+                        }
+
+//                        coordinates = transformCoordinates(coordinates, true);
+
+                        geometry.put("type", "LineString");
+                        geometry.put("coordinates", coordinates);
+
+                        // properties 설정
+                        int parameterIndex = 1;
+                        for (Object key : properties.keySet()) {
+                            ps.setString(parameterIndex++, String.valueOf(properties.get(key)));
+                        }
+
+                        // 나머지 필드 설정
+                        ps.setInt(parameterIndex++, i+1);
+                        ps.setString(parameterIndex++, tableName);
+                        ps.setString(parameterIndex++, "link");
+                        ps.setString(parameterIndex++, geometry.toString());
+
+                        // 변환된 좌표로 시작점과 끝점 설정
+                        JSONArray fromCoordinate = (JSONArray) coordinates.get(0);
+                        JSONArray toCoordinate = (JSONArray) coordinates.get(coordinates.size()-1);
+
+                        // F_LNG, F_LAT
+                        ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
+                        ps.setString(parameterIndex++, fromCoordinate.get(1).toString());
+                        // T_LNG, T_LAT
+                        ps.setString(parameterIndex++, toCoordinate.get(0).toString());
+                        ps.setString(parameterIndex++, toCoordinate.get(1).toString());
+                        // 라벨 설정
+                        ps.setString(parameterIndex++, label);
+                        
+                        // 추가 파라미터 설정
+                        ps.setString(parameterIndex++, "2");        // WEIGHT
+                        ps.setString(parameterIndex++, "#888");     // COLOR
+                        ps.setString(parameterIndex++, "12");       // FONT_SIZE
+                        ps.setString(parameterIndex++, "#000");     // FONT_COLOR
+
+                    } catch (Exception e) {
+                        throw new SQLException("Error processing feature at index " + i, e);
                     }
-
-//                    if (isWithinWGS84Range()) {
-//
-//                    }
-                    coordinates = transformCoordinates(coordinates, true);
-
-                    geometry.put("type", "LineString");
-                    geometry.put("coordinates", coordinates);
-
-                    // properties 설정
-                    int parameterIndex = 1;
-                    for (Object key : properties.keySet()) {
-                        ps.setString(parameterIndex++, String.valueOf(properties.get(key)));
-                    }
-
-                    // 나머지 필드 설정
-                    ps.setInt(parameterIndex++, i+1);
-                    ps.setString(parameterIndex++, tableName);
-                    ps.setString(parameterIndex++, "link");
-                    ps.setString(parameterIndex++, geometry.toString());
-
-                    // 변환된 좌표로 시작점과 끝점 설정
-                    JSONArray fromCoordinate = (JSONArray) coordinates.get(0);
-                    JSONArray toCoordinate = (JSONArray) coordinates.get(coordinates.size()-1);
-
-                    // F_LNG, F_LAT
-                    ps.setString(parameterIndex++, fromCoordinate.get(0).toString());
-                    ps.setString(parameterIndex++, fromCoordinate.get(1).toString());
-                    // T_LNG, T_LAT
-                    ps.setString(parameterIndex++, toCoordinate.get(0).toString());
-                    ps.setString(parameterIndex++, toCoordinate.get(1).toString());
-                    // 라벨
-                    ps.setString(parameterIndex, label);
-
-                } catch (Exception e) {
-                    throw new SQLException("Error processing feature at index " + i, e);
                 }
-            }
 
-            @Override
-            public int getBatchSize() {
-                return (bArr == null) ? features.size() : indicesToSave.size();
-            }
-        });
+                @Override
+                public int getBatchSize() {
+                    return Math.min(550, totalSize - currentOffset);
+                }
+            });
+        }
     }
 
     private void savePolygon(String tableName, List<JSONObject> features, String shpType, String[] bArr, String label) {
@@ -570,7 +580,6 @@ public class ShapeService {
         ShapefileDataStore store = null;
 
         try {
-            // ShapefileDataStore 생성
             store = new ShapefileDataStore(shpFile.toURI().toURL());
             File prjFile = new File(shpFile.getAbsolutePath().replace(".shp", ".prj"));
 
@@ -600,18 +609,47 @@ public class ShapeService {
                 fjson.writeFeatureCollection(featureCollection, writer);
                 geoJson = writer.toString();
 
-                // ISO-8859-1일 경우 UTF-8로 변환
+                // charset 변환 처리
                 if ("ISO-8859-1".equalsIgnoreCase(store.getCharset().name())) {
-                    System.out.println("CHARSET => " + store.getCharset().name());
                     byte[] byteArray = geoJson.getBytes(StandardCharsets.ISO_8859_1);
                     geoJson = new String(byteArray, Charset.forName("EUC-KR"));
                 }
 
-                // 파일명에서 .shp 확장자 제거
+                // GeoJSON 파싱 및 좌표 변환
+                JSONParser parser = new JSONParser();
+                JSONObject geoJsonObj = (JSONObject) parser.parse(geoJson);
+                JSONArray features = (JSONArray) geoJsonObj.get("features");
+
+                // 각 feature의 coordinates 변환
+                for (Object featureObj : features) {
+                    JSONObject feature = (JSONObject) featureObj;
+                    JSONObject geometry = (JSONObject) feature.get("geometry");
+                    String type = (String) geometry.get("type");
+                    
+                    if ("LineString".equals(type)) {
+                        JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+                        geometry.put("coordinates", transformCoordinates(coordinates, true));
+                    } else if ("MultiLineString".equals(type)) {
+                        JSONArray multiCoordinates = (JSONArray) geometry.get("coordinates");
+                        for (int i = 0; i < multiCoordinates.size(); i++) {
+                            multiCoordinates.set(i, transformCoordinates((JSONArray) multiCoordinates.get(i), true));
+                        }
+                    } else if ("Point".equals(type)) {
+                        JSONArray coordinates = (JSONArray) geometry.get("coordinates");
+                        geometry.put("coordinates", transformCoordinates(coordinates, false));
+                    }
+                }
+
+                // 변환된 GeoJSON을 문자열로 변환
+                geoJson = geoJsonObj.toString();
+
+                // 파일명 처리
                 String targetText = shpFile.getName().replace(".shp", "");
                 geoJson = geoJson.replace(targetText, "");
 
                 return geoJson;
+            } catch (ParseException e) {
+                throw new RuntimeException("Failed to parse GeoJSON", e);
             }
         } finally {
             if (store != null) {
@@ -666,12 +704,18 @@ public class ShapeService {
                         if (coordinate.size() >= 2) {
                             srcCoord.x = Double.parseDouble(coordinate.get(0).toString());
                             srcCoord.y = Double.parseDouble(coordinate.get(1).toString());
+                            
+                            System.out.println("원본 좌표 - X: " + srcCoord.x + ", Y: " + srcCoord.y);
 
                             transform.transform(srcCoord, destCoord);
 
+                            System.out.println("변환 후 좌표 (보정 전) - X: " + destCoord.x + ", Y: " + destCoord.y);
+                            System.out.println("변환 후 좌표 (보정 후) - X: " + (destCoord.x + 0.00289028) + ", Y: " + (destCoord.y - 0.000020));
+
                             JSONArray transformedCoord = new JSONArray();
+                            //
                             transformedCoord.add(destCoord.x + 0.00289028); // 10.405초 보정
-                            transformedCoord.add(destCoord.y);
+                            transformedCoord.add(destCoord.y + 0.000020);
                             transformedCoordinates.add(transformedCoord);
                         }
                     } else {

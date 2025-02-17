@@ -5,6 +5,7 @@
         SELECT table_name
         FROM all_tables
         WHERE owner = 'TRANSIT'
+        AND table_name NOT IN ('XROUTE_LINK_COMPONENT', 'XSTN_MATCHING')
     </select>
 
     <select id="getShpType" resultType="String" parameterType="String">
