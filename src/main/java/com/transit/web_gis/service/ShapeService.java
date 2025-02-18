@@ -730,6 +730,7 @@ public class ShapeService {
           if (coord instanceof JSONArray) {
             JSONArray coordinate = (JSONArray) coord;
             if (coordinate.size() >= 2) {
+              // Math.round(coordinate.x * 1000000) / 1000000.0
               double x = Double.parseDouble(coordinate.get(0).toString());
               double y = Double.parseDouble(coordinate.get(1).toString());
 
@@ -738,8 +739,12 @@ public class ShapeService {
                 continue;
               }
 
+              ShapeUtil shapeUtil = new ShapeUtil();
               // ShapeUtil을 사용한 좌표 변환
-              double[] wgsCoord = ShapeUtil.tm2wgs(x, y);
+
+              x = Math.round(x * 1000000) / 1000000.0;
+              y = Math.round(y * 1000000) / 1000000.0;
+              double[] wgsCoord = shapeUtil.TM2WGS(x, y);
 
               System.out.println("변환된 좌표: " + wgsCoord[0] + ", " + wgsCoord[1]);
 
@@ -761,7 +766,10 @@ public class ShapeService {
           double y = Double.parseDouble(coordinates.get(1).toString());
 
           // ShapeUtil을 사용한 좌표 변환
-          double[] wgsCoord = ShapeUtil.tm2wgs(x, y);
+          ShapeUtil shapeUtil = new ShapeUtil();
+          x = Math.round(x * 1000000) / 1000000.0;
+          y = Math.round(y * 1000000) / 1000000.0;
+          double[] wgsCoord = shapeUtil.TM2WGS(x, y);
 
           transformedCoordinates.add(wgsCoord[0]); // 경도
           transformedCoordinates.add(wgsCoord[1]); // 위도
