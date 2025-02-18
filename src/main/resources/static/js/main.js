@@ -2067,7 +2067,7 @@ function initBasicTileSet() {
     // 맵박스 초기화
     map = new mapboxgl.Map({
         container: "map",
-        style: 'mapbox://styles/mapbox/streets-v12',
+        style: 'mapbox://styles/mapbox/streets-v8',
         center: [126.88271541564299, 37.48151056694073],
         zoom: 14,
     });
